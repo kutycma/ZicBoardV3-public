@@ -1,0 +1,1995 @@
+{
+  "name": "EZ-Zic",
+  "description": "EZ-Zic user theme for ZicBoard.",
+  "version": "0.4.0",
+  "images": "",
+  "config": {
+    "PANEL_TYPE": "Xiao-V2board",
+    "API_CONFIG": {
+      "urlMode": "static",
+      "showCheckBackend": false,
+      "staticBaseUrl": [],
+      "autoConfig": {
+        "useSameProtocol": true,
+        "appendApiPath": true,
+        "apiPath": "/api/v1"
+      }
+    },
+    "API_MIDDLEWARE_ENABLED": false,
+    "API_MIDDLEWARE_URL": "",
+    "API_MIDDLEWARE_KEY": "",
+    "API_MIDDLEWARE_PATH": "/ez/ez",
+    "SITE_CONFIG": {
+      "siteName": "EZ THEME",
+      "siteDescription": "EZ UI",
+      "copyright": "(c) 2026 EZ THEME. All Rights Reserved.",
+      "showLogo": true,
+      "landingText": {
+        "vi-VN": "Kham pha kha nang khong gioi han cua mang toan cau",
+        "en-US": "Explore unlimited possibilities of the global network",
+        "ja-JP": "Explore unlimited possibilities of the global network",
+        "ko-KR": "Explore unlimited possibilities of the global network",
+        "ru-RU": "Explore unlimited possibilities of the global network",
+        "fa-IR": "Explore unlimited possibilities of the global network"
+      },
+      "customLandingPage": ""
+    },
+    "DEFAULT_CONFIG": {
+      "defaultLanguage": "vi-VN",
+      "defaultTheme": "light",
+      "primaryColor": "#355cc2",
+      "enableLandingPage": true
+    },
+    "AUTH_CONFIG": {
+      "autoAgreeTerms": true,
+      "verificationCode": {
+        "showCheckSpamTip": true,
+        "checkSpamTipDelay": 1000
+      },
+      "popup": {
+        "enabled": false,
+        "title": "Thong bao",
+        "content": "",
+        "cooldownHours": 0,
+        "closeWaitSeconds": 3
+      }
+    },
+    "AUTH_LAYOUT_CONFIG": {
+      "layoutType": "center",
+      "splitLayout": {
+        "leftContent": {
+          "backgroundImage": "",
+          "siteName": {
+            "show": true,
+            "color": "white"
+          },
+          "greeting": {
+            "show": true,
+            "color": "white"
+          }
+        }
+      }
+    },
+    "SHOP_CONFIG": {
+      "showHotSaleBadge": false,
+      "showPlanFeatureCards": true,
+      "autoSelectMaxPeriod": false,
+      "hidePeriodTabs": false,
+      "lowStockThreshold": 5,
+      "enableDiscountCalculation": true,
+      "periodOrder": [
+        "three_year_price",
+        "two_year_price",
+        "year_price",
+        "half_year_price",
+        "quarter_price",
+        "month_price",
+        "onetime_price"
+      ],
+      "popup": {
+        "enabled": true,
+        "title": "Thong bao",
+        "content": "",
+        "cooldownHours": 0,
+        "closeWaitSeconds": 0
+      }
+    },
+    "ORDER_CONFIG": {
+      "confirmOrder": true,
+      "confirmOrderContent": "<p>Vui long kiem tra ky don hang truoc khi thanh toan.</p>"
+    },
+    "DASHBOARD_CONFIG": {
+      "showUserEmail": false,
+      "importButtonHighlightBtnbgcolor": false,
+      "enableResetTraffic": true,
+      "resetTrafficDisplayMode": "low",
+      "lowTrafficThreshold": 10,
+      "enableRenewPlan": true,
+      "renewPlanDisplayMode": "always",
+      "expiringThreshold": 7,
+      "showOnlineDevicesLimit": true,
+      "showImportSubscription": true
+    },
+    "CLIENT_CONFIG": {
+      "showDownloadCard": true,
+      "showIOS": true,
+      "showAndroid": true,
+      "showMacOS": true,
+      "showWindows": true,
+      "showLinux": true,
+      "showOpenWrt": true,
+      "clientLinks": {
+        "ios": "",
+        "android": "",
+        "macos": "",
+        "windows": "",
+        "linux": "",
+        "openwrt": ""
+      },
+      "showShadowrocket": true,
+      "showSurge": true,
+      "showStash": true,
+      "showQuantumultX": true,
+      "showHiddifyIOS": true,
+      "showSingboxIOS": true,
+      "showLoon": true,
+      "showFlClashAndroid": true,
+      "showV2rayNG": true,
+      "showClashAndroid": true,
+      "showSurfboard": true,
+      "showClashMetaAndroid": true,
+      "showNekobox": true,
+      "showSingboxAndroid": true,
+      "showHiddifyAndroid": true,
+      "showFlClashWindows": true,
+      "showClashVergeWindows": true,
+      "showClashWindows": true,
+      "showNekoray": true,
+      "showSingboxWindows": true,
+      "showHiddifyWindows": true,
+      "showFlClashMac": true,
+      "showClashVergeMac": true,
+      "showClashX": true,
+      "showClashMetaX": true,
+      "showSurgeMac": true,
+      "showStashMac": true,
+      "showQuantumultXMac": true,
+      "showSingboxMac": true,
+      "showHiddifyMac": true
+    },
+    "PROFILE_CONFIG": {
+      "showGiftCardRedeem": false,
+      "showRecentDevices": true
+    },
+    "SECURITY_CONFIG": {
+      "enableFrontendDomainCheck": false
+    },
+    "AUTHORIZED_DOMAINS": [],
+    "CAPTCHA_CONFIG": {
+      "captchaType": "google",
+      "google": {
+        "verifyUrl": "https://www.google.com/recaptcha/api/siteverify"
+      },
+      "cloudflare": {
+        "verifyUrl": "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+      }
+    },
+    "CUSTOM_HEADERS": {
+      "enabled": false,
+      "headers": {}
+    },
+    "PAYMENT_CONFIG": {
+      "openPaymentInNewTab": true,
+      "qrcodeSize": 200,
+      "qrcodeColor": "#000000",
+      "qrcodeBackground": "#ffffff",
+      "autoCheckPayment": true,
+      "autoCheckInterval": 5000,
+      "autoCheckMaxTimes": 60,
+      "useSafariPaymentModal": true,
+      "autoSelectFirstMethod": true
+    },
+    "WALLET_CONFIG": {
+      "presetAmounts": [
+        6,
+        30,
+        68,
+        128,
+        256,
+        328,
+        648,
+        1280
+      ],
+      "defaultSelectedAmount": null,
+      "minimumDepositAmount": 1
+    },
+    "INVITE_CONFIG": {
+      "showCommissionBadge": false,
+      "recordsPerPage": 10,
+      "inviteLinkConfig": {
+        "linkMode": "auto",
+        "customDomain": ""
+      }
+    },
+    "BROWSER_RESTRICT_CONFIG": {
+      "enabled": true,
+      "restrictBrowsers": {
+        "360": true,
+        "QQ": true,
+        "WeChat": true,
+        "Baidu": true,
+        "Sogou": true,
+        "UC": false,
+        "Maxthon": false
+      },
+      "recommendedBrowsers": {
+        "Chrome": "https://www.google.com/chrome/",
+        "Edge": "https://www.microsoft.com/edge"
+      }
+    },
+    "TICKET_CONFIG": {
+      "includeUserInfoInTicket": true,
+      "popup": {
+        "enabled": true,
+        "title": "Thong bao",
+        "content": "<p>Vui long mo ta ro van de va dinh kem anh neu can.</p>",
+        "cooldownHours": 24,
+        "closeWaitSeconds": 0
+      },
+      "isImageHosting": false,
+      "imgbbApiKey": ""
+    },
+    "TRAFFICLOG_CONFIG": {
+      "enableTrafficLog": true,
+      "showTrafficTable": true,
+      "daysToShow": 30,
+      "sumDailyTraffic": false
+    },
+    "NODES_CONFIG": {
+      "showNodeRate": true,
+      "showNodeDetails": false,
+      "allowViewNodeInfo": true
+    },
+    "CUSTOMER_SERVICE_CONFIG": {
+      "enabled": false,
+      "type": "crisp",
+      "customHtml": "",
+      "embedMode": "embed",
+      "showWhenNotLoggedIn": true,
+      "iconPosition": {
+        "desktop": {
+          "left": "20px",
+          "bottom": "20px"
+        },
+        "mobile": {
+          "right": "20px",
+          "bottom": "100px"
+        }
+      }
+    },
+    "NAVIGATION_CONFIG": {
+      "thirdNavItem": "invite",
+      "fourthNavItem": "docs"
+    },
+    "MORE_PAGE_CONFIG": {
+      "enableCustomCards": false,
+      "customCards": [
+        {
+          "id": "github",
+          "title": "GitHub",
+          "description": "Mo GitHub",
+          "svgIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"icon icon-tabler icon-tabler-brand-github\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path stroke=\"none\" d=\"M0 0h24v24H0z\" fill=\"none\"/><path d=\"M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5\" /></svg>",
+          "url": "https://github.com",
+          "openInNewTab": true
+        },
+        {
+          "id": "telegram",
+          "title": "Telegram",
+          "description": "Mo nhom Telegram",
+          "svgIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"icon icon-tabler icon-tabler-brand-telegram\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path stroke=\"none\" d=\"M0 0h24v24H0z\" fill=\"none\"/><path d=\"M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4\" /></svg>",
+          "url": "",
+          "openInNewTab": true
+        }
+      ]
+    }
+  },
+  "configs": [
+    {
+      "label": "Theme background URL",
+      "placeholder": "Background image URL used by the Blade theme wrapper",
+      "field_name": "background_url",
+      "field_type": "input",
+      "default_value": "",
+      "description": "URL ảnh nền dùng cho wrapper Blade của theme. Để trống nếu không muốn override ảnh nền."
+    },
+    {
+      "label": "PANEL_TYPE",
+      "placeholder": "Value for PANEL_TYPE",
+      "field_name": "PANEL_TYPE",
+      "field_type": "input",
+      "default_value": "Xiao-V2board",
+      "description": "Loại backend/panel để theme chọn logic tương thích. Với ZicBoard nên giữ giá trị ZicBoard."
+    },
+    {
+      "label": "API_CONFIG.urlMode",
+      "placeholder": "Value for API_CONFIG.urlMode",
+      "field_name": "API_CONFIG.urlMode",
+      "field_type": "input",
+      "default_value": "static",
+      "description": "Chế độ xác định API: auto tự lấy theo domain hiện tại, static dùng danh sách URL cố định."
+    },
+    {
+      "label": "API_CONFIG.showCheckBackend",
+      "placeholder": "true or false",
+      "field_name": "API_CONFIG.showCheckBackend",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt bước kiểm tra backend trước khi gọi API. Thường nên tắt nếu backend ổn định."
+    },
+    {
+      "label": "API_CONFIG.staticBaseUrl",
+      "placeholder": "JSON array",
+      "field_name": "API_CONFIG.staticBaseUrl",
+      "field_type": "textarea",
+      "default_value": "[]",
+      "description": "Danh sách URL API cố định dạng JSON array, dùng khi urlMode là static."
+    },
+    {
+      "label": "API_CONFIG.autoConfig.useSameProtocol",
+      "placeholder": "true or false",
+      "field_name": "API_CONFIG.autoConfig.useSameProtocol",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Khi bật, API sẽ dùng cùng giao thức http/https với trang hiện tại."
+    },
+    {
+      "label": "API_CONFIG.autoConfig.appendApiPath",
+      "placeholder": "true or false",
+      "field_name": "API_CONFIG.autoConfig.appendApiPath",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Khi bật, tự nối thêm apiPath vào domain hiện tại để tạo API base URL."
+    },
+    {
+      "label": "API_CONFIG.autoConfig.apiPath",
+      "placeholder": "Value for API_CONFIG.autoConfig.apiPath",
+      "field_name": "API_CONFIG.autoConfig.apiPath",
+      "field_type": "input",
+      "default_value": "/api/v1",
+      "description": "Đường dẫn API được nối thêm khi dùng chế độ auto, ví dụ /api/v3."
+    },
+    {
+      "label": "API_MIDDLEWARE_ENABLED",
+      "placeholder": "true or false",
+      "field_name": "API_MIDDLEWARE_ENABLED",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt proxy middleware trung gian cho API. Chỉ bật khi bạn có middleware riêng."
+    },
+    {
+      "label": "API_MIDDLEWARE_URL",
+      "placeholder": "Value for API_MIDDLEWARE_URL",
+      "field_name": "API_MIDDLEWARE_URL",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Domain hoặc URL gốc của middleware API trung gian."
+    },
+    {
+      "label": "API_MIDDLEWARE_KEY",
+      "placeholder": "Value for API_MIDDLEWARE_KEY",
+      "field_name": "API_MIDDLEWARE_KEY",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Khóa xác thực gửi tới middleware API nếu middleware yêu cầu."
+    },
+    {
+      "label": "API_MIDDLEWARE_PATH",
+      "placeholder": "Value for API_MIDDLEWARE_PATH",
+      "field_name": "API_MIDDLEWARE_PATH",
+      "field_type": "input",
+      "default_value": "/ez/ez",
+      "description": "Đường dẫn endpoint middleware được nối sau API_MIDDLEWARE_URL."
+    },
+    {
+      "label": "SITE_CONFIG.siteName",
+      "placeholder": "Value for SITE_CONFIG.siteName",
+      "field_name": "SITE_CONFIG.siteName",
+      "field_type": "input",
+      "default_value": "EZ THEME",
+      "description": "Tên website hiển thị trong giao diện người dùng, title và các vị trí nhận diện thương hiệu."
+    },
+    {
+      "label": "SITE_CONFIG.siteDescription",
+      "placeholder": "Value for SITE_CONFIG.siteDescription",
+      "field_name": "SITE_CONFIG.siteDescription",
+      "field_type": "input",
+      "default_value": "EZ UI",
+      "description": "Mô tả ngắn của website, dùng trên các trang giới thiệu hoặc thông tin hệ thống."
+    },
+    {
+      "label": "SITE_CONFIG.copyright",
+      "placeholder": "Value for SITE_CONFIG.copyright",
+      "field_name": "SITE_CONFIG.copyright",
+      "field_type": "input",
+      "default_value": "(c) 2026 EZ THEME. All Rights Reserved.",
+      "description": "Dòng bản quyền hiển thị ở chân trang. Có thể dùng biểu thức năm hiện tại nếu theme hỗ trợ."
+    },
+    {
+      "label": "SITE_CONFIG.showLogo",
+      "placeholder": "true or false",
+      "field_name": "SITE_CONFIG.showLogo",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị logo trên thanh điều hướng."
+    },
+    {
+      "label": "SITE_CONFIG.landingText.vi-VN",
+      "placeholder": "Value for SITE_CONFIG.landingText.vi-VN",
+      "field_name": "SITE_CONFIG.landingText.vi-VN",
+      "field_type": "input",
+      "default_value": "Kham pha kha nang khong gioi han cua mang toan cau",
+      "description": "Slogan tiếng Việt hiển thị trên Landing Page."
+    },
+    {
+      "label": "SITE_CONFIG.landingText.en-US",
+      "placeholder": "Value for SITE_CONFIG.landingText.en-US",
+      "field_name": "SITE_CONFIG.landingText.en-US",
+      "field_type": "input",
+      "default_value": "Explore unlimited possibilities of the global network",
+      "description": "Slogan tiếng Anh hiển thị trên Landing Page."
+    },
+    {
+      "label": "SITE_CONFIG.landingText.ja-JP",
+      "placeholder": "Value for SITE_CONFIG.landingText.ja-JP",
+      "field_name": "SITE_CONFIG.landingText.ja-JP",
+      "field_type": "input",
+      "default_value": "Explore unlimited possibilities of the global network"
+    },
+    {
+      "label": "SITE_CONFIG.landingText.ko-KR",
+      "placeholder": "Value for SITE_CONFIG.landingText.ko-KR",
+      "field_name": "SITE_CONFIG.landingText.ko-KR",
+      "field_type": "input",
+      "default_value": "Explore unlimited possibilities of the global network"
+    },
+    {
+      "label": "SITE_CONFIG.landingText.ru-RU",
+      "placeholder": "Value for SITE_CONFIG.landingText.ru-RU",
+      "field_name": "SITE_CONFIG.landingText.ru-RU",
+      "field_type": "input",
+      "default_value": "Explore unlimited possibilities of the global network"
+    },
+    {
+      "label": "SITE_CONFIG.landingText.fa-IR",
+      "placeholder": "Value for SITE_CONFIG.landingText.fa-IR",
+      "field_name": "SITE_CONFIG.landingText.fa-IR",
+      "field_type": "input",
+      "default_value": "Explore unlimited possibilities of the global network"
+    },
+    {
+      "label": "SITE_CONFIG.customLandingPage",
+      "placeholder": "Value for SITE_CONFIG.customLandingPage",
+      "field_name": "SITE_CONFIG.customLandingPage",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Đường dẫn trang Landing tùy chỉnh, ví dụ landingpage.html. Để trống để dùng landing mặc định."
+    },
+    {
+      "label": "DEFAULT_CONFIG.defaultLanguage",
+      "placeholder": "Value for DEFAULT_CONFIG.defaultLanguage",
+      "field_name": "DEFAULT_CONFIG.defaultLanguage",
+      "field_type": "input",
+      "default_value": "vi-VN",
+      "description": "Ngôn ngữ mặc định khi người dùng mở giao diện lần đầu."
+    },
+    {
+      "label": "DEFAULT_CONFIG.defaultTheme",
+      "placeholder": "Value for DEFAULT_CONFIG.defaultTheme",
+      "field_name": "DEFAULT_CONFIG.defaultTheme",
+      "field_type": "input",
+      "default_value": "light",
+      "description": "Theme sáng/tối mặc định khi người dùng chưa chọn giao diện."
+    },
+    {
+      "label": "DEFAULT_CONFIG.primaryColor",
+      "placeholder": "Value for DEFAULT_CONFIG.primaryColor",
+      "field_name": "DEFAULT_CONFIG.primaryColor",
+      "field_type": "input",
+      "default_value": "#355cc2",
+      "description": "Màu chủ đạo của hệ thống, nhập mã HEX như #00947c."
+    },
+    {
+      "label": "DEFAULT_CONFIG.enableLandingPage",
+      "placeholder": "true or false",
+      "field_name": "DEFAULT_CONFIG.enableLandingPage",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt Landing Page. Tắt sẽ chuyển người dùng thẳng vào trang đăng nhập."
+    },
+    {
+      "label": "AUTH_CONFIG.autoAgreeTerms",
+      "placeholder": "true or false",
+      "field_name": "AUTH_CONFIG.autoAgreeTerms",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Tự động tích chọn đồng ý điều khoản dịch vụ khi đăng ký."
+    },
+    {
+      "label": "AUTH_CONFIG.verificationCode.showCheckSpamTip",
+      "placeholder": "true or false",
+      "field_name": "AUTH_CONFIG.verificationCode.showCheckSpamTip",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện nhắc kiểm tra hộp thư rác sau khi gửi mã xác nhận email."
+    },
+    {
+      "label": "AUTH_CONFIG.verificationCode.checkSpamTipDelay",
+      "placeholder": "Number value",
+      "field_name": "AUTH_CONFIG.verificationCode.checkSpamTipDelay",
+      "field_type": "input",
+      "default_value": "1000",
+      "description": "Độ trễ hiển thị nhắc kiểm tra spam, tính bằng mili-giây."
+    },
+    {
+      "label": "AUTH_CONFIG.popup.enabled",
+      "placeholder": "true or false",
+      "field_name": "AUTH_CONFIG.popup.enabled",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt popup thông báo trên trang đăng nhập/đăng ký."
+    },
+    {
+      "label": "AUTH_CONFIG.popup.title",
+      "placeholder": "Value for AUTH_CONFIG.popup.title",
+      "field_name": "AUTH_CONFIG.popup.title",
+      "field_type": "input",
+      "default_value": "Thong bao",
+      "description": "Tiêu đề popup thông báo trên trang đăng nhập/đăng ký."
+    },
+    {
+      "label": "AUTH_CONFIG.popup.content",
+      "placeholder": "Value for AUTH_CONFIG.popup.content",
+      "field_name": "AUTH_CONFIG.popup.content",
+      "field_type": "textarea",
+      "default_value": "",
+      "description": "Nội dung popup, hỗ trợ HTML."
+    },
+    {
+      "label": "AUTH_CONFIG.popup.cooldownHours",
+      "placeholder": "Number value",
+      "field_name": "AUTH_CONFIG.popup.cooldownHours",
+      "field_type": "input",
+      "default_value": "0",
+      "description": "Thời gian chờ trước khi popup hiện lại, tính bằng giờ. Đặt 0 để luôn hiện khi tải lại trang."
+    },
+    {
+      "label": "AUTH_CONFIG.popup.closeWaitSeconds",
+      "placeholder": "Number value",
+      "field_name": "AUTH_CONFIG.popup.closeWaitSeconds",
+      "field_type": "input",
+      "default_value": "3",
+      "description": "Số giây bắt buộc người dùng chờ trước khi được đóng popup."
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.layoutType",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.layoutType",
+      "field_name": "AUTH_LAYOUT_CONFIG.layoutType",
+      "field_type": "input",
+      "default_value": "center",
+      "description": "Kiểu bố cục trang đăng nhập: center là form giữa màn hình, split là bố cục chia đôi."
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage",
+      "field_type": "textarea",
+      "default_value": ""
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.show",
+      "placeholder": "true or false",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.show",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.color",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.color",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.color",
+      "field_type": "textarea",
+      "default_value": "white"
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.show",
+      "placeholder": "true or false",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.show",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.color",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.color",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.color",
+      "field_type": "textarea",
+      "default_value": "white"
+    },
+    {
+      "label": "SHOP_CONFIG.showHotSaleBadge",
+      "placeholder": "true or false",
+      "field_name": "SHOP_CONFIG.showHotSaleBadge",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện nhãn Hot trên tab hoặc gói cước bán chạy."
+    },
+    {
+      "label": "SHOP_CONFIG.showPlanFeatureCards",
+      "placeholder": "true or false",
+      "field_name": "SHOP_CONFIG.showPlanFeatureCards",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện các thẻ tính năng bên dưới gói cước trong cửa hàng."
+    },
+    {
+      "label": "SHOP_CONFIG.autoSelectMaxPeriod",
+      "placeholder": "true or false",
+      "field_name": "SHOP_CONFIG.autoSelectMaxPeriod",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Tự động chọn chu kỳ mua dài nhất khi người dùng mở gói."
+    },
+    {
+      "label": "SHOP_CONFIG.hidePeriodTabs",
+      "placeholder": "true or false",
+      "field_name": "SHOP_CONFIG.hidePeriodTabs",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Ẩn thanh chọn chu kỳ gói cước trong cửa hàng."
+    },
+    {
+      "label": "SHOP_CONFIG.lowStockThreshold",
+      "placeholder": "Number value",
+      "field_name": "SHOP_CONFIG.lowStockThreshold",
+      "field_type": "input",
+      "default_value": "5",
+      "description": "Ngưỡng cảnh báo gói cước sắp hết hàng."
+    },
+    {
+      "label": "SHOP_CONFIG.enableDiscountCalculation",
+      "placeholder": "true or false",
+      "field_name": "SHOP_CONFIG.enableDiscountCalculation",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Tự động tính và hiển thị số tiền tiết kiệm khi mua chu kỳ dài."
+    },
+    {
+      "label": "SHOP_CONFIG.periodOrder",
+      "placeholder": "JSON array",
+      "field_name": "SHOP_CONFIG.periodOrder",
+      "field_type": "textarea",
+      "default_value": "[\n  \"three_year_price\",\n  \"two_year_price\",\n  \"year_price\",\n  \"half_year_price\",\n  \"quarter_price\",\n  \"month_price\",\n  \"onetime_price\"\n]",
+      "description": "Thứ tự ưu tiên hiển thị các chu kỳ giá, nhập dạng JSON array."
+    },
+    {
+      "label": "SHOP_CONFIG.popup.enabled",
+      "placeholder": "true or false",
+      "field_name": "SHOP_CONFIG.popup.enabled",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt popup thông báo riêng trên trang cửa hàng."
+    },
+    {
+      "label": "SHOP_CONFIG.popup.title",
+      "placeholder": "Value for SHOP_CONFIG.popup.title",
+      "field_name": "SHOP_CONFIG.popup.title",
+      "field_type": "input",
+      "default_value": "Thong bao",
+      "description": "Tiêu đề popup trên trang cửa hàng."
+    },
+    {
+      "label": "SHOP_CONFIG.popup.content",
+      "placeholder": "Value for SHOP_CONFIG.popup.content",
+      "field_name": "SHOP_CONFIG.popup.content",
+      "field_type": "textarea",
+      "default_value": "",
+      "description": "Nội dung popup cửa hàng, hỗ trợ HTML."
+    },
+    {
+      "label": "SHOP_CONFIG.popup.cooldownHours",
+      "placeholder": "Number value",
+      "field_name": "SHOP_CONFIG.popup.cooldownHours",
+      "field_type": "input",
+      "default_value": "0",
+      "description": "Thời gian chờ trước khi popup cửa hàng hiện lại, tính bằng giờ."
+    },
+    {
+      "label": "SHOP_CONFIG.popup.closeWaitSeconds",
+      "placeholder": "Number value",
+      "field_name": "SHOP_CONFIG.popup.closeWaitSeconds",
+      "field_type": "input",
+      "default_value": "0",
+      "description": "Số giây bắt buộc chờ trước khi được đóng popup cửa hàng."
+    },
+    {
+      "label": "ORDER_CONFIG.confirmOrder",
+      "placeholder": "true or false",
+      "field_name": "ORDER_CONFIG.confirmOrder",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Yêu cầu người dùng xác nhận thêm một lần trước khi tạo hóa đơn thanh toán."
+    },
+    {
+      "label": "ORDER_CONFIG.confirmOrderContent",
+      "placeholder": "Value for ORDER_CONFIG.confirmOrderContent",
+      "field_name": "ORDER_CONFIG.confirmOrderContent",
+      "field_type": "textarea",
+      "default_value": "<p>Vui long kiem tra ky don hang truoc khi thanh toan.</p>",
+      "description": "Nội dung hộp xác nhận trước khi tạo đơn hàng, hỗ trợ HTML."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.showUserEmail",
+      "placeholder": "true or false",
+      "field_name": "DASHBOARD_CONFIG.showUserEmail",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện email người dùng trong lời chào trên Dashboard."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.importButtonHighlightBtnbgcolor",
+      "placeholder": "true or false",
+      "field_name": "DASHBOARD_CONFIG.importButtonHighlightBtnbgcolor",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Làm nổi bật nút đồng bộ ứng dụng trên Dashboard."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.enableResetTraffic",
+      "placeholder": "true or false",
+      "field_name": "DASHBOARD_CONFIG.enableResetTraffic",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật tính năng mua reset dung lượng trên Dashboard."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.resetTrafficDisplayMode",
+      "placeholder": "Value for DASHBOARD_CONFIG.resetTrafficDisplayMode",
+      "field_name": "DASHBOARD_CONFIG.resetTrafficDisplayMode",
+      "field_type": "input",
+      "default_value": "low",
+      "description": "Điều kiện hiện nút reset dung lượng: always, low hoặc depleted."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.lowTrafficThreshold",
+      "placeholder": "Number value",
+      "field_name": "DASHBOARD_CONFIG.lowTrafficThreshold",
+      "field_type": "input",
+      "default_value": "10",
+      "description": "Ngưỡng phần trăm dung lượng còn lại để xem là sắp hết."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.enableRenewPlan",
+      "placeholder": "true or false",
+      "field_name": "DASHBOARD_CONFIG.enableRenewPlan",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Cho phép gia hạn nhanh gói cước đang dùng."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.renewPlanDisplayMode",
+      "placeholder": "Value for DASHBOARD_CONFIG.renewPlanDisplayMode",
+      "field_name": "DASHBOARD_CONFIG.renewPlanDisplayMode",
+      "field_type": "input",
+      "default_value": "always",
+      "description": "Điều kiện hiện nút gia hạn: always, expiring hoặc expired."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.expiringThreshold",
+      "placeholder": "Number value",
+      "field_name": "DASHBOARD_CONFIG.expiringThreshold",
+      "field_type": "input",
+      "default_value": "7",
+      "description": "Ngưỡng số ngày để xem gói cước là sắp hết hạn."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.showOnlineDevicesLimit",
+      "placeholder": "true or false",
+      "field_name": "DASHBOARD_CONFIG.showOnlineDevicesLimit",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện số thiết bị online/giới hạn thiết bị trên Dashboard."
+    },
+    {
+      "label": "DASHBOARD_CONFIG.showImportSubscription",
+      "placeholder": "true or false",
+      "field_name": "DASHBOARD_CONFIG.showImportSubscription",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện nút Đồng bộ ứng dụng/Import Subscription trên Dashboard."
+    },
+    {
+      "label": "CLIENT_CONFIG.showDownloadCard",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showDownloadCard",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện/ẩn toàn bộ khu vực hướng dẫn và tải client."
+    },
+    {
+      "label": "CLIENT_CONFIG.showIOS",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showIOS",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt mục tải client cho iOS."
+    },
+    {
+      "label": "CLIENT_CONFIG.showAndroid",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showAndroid",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt mục tải client cho Android."
+    },
+    {
+      "label": "CLIENT_CONFIG.showMacOS",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showMacOS",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt mục tải client cho macOS."
+    },
+    {
+      "label": "CLIENT_CONFIG.showWindows",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showWindows",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt mục tải client cho Windows."
+    },
+    {
+      "label": "CLIENT_CONFIG.showLinux",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showLinux",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt mục tải client cho Linux."
+    },
+    {
+      "label": "CLIENT_CONFIG.showOpenWrt",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showOpenWrt",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt mục tải client cho OpenWrt."
+    },
+    {
+      "label": "CLIENT_CONFIG.clientLinks.ios",
+      "placeholder": "Value for CLIENT_CONFIG.clientLinks.ios",
+      "field_name": "CLIENT_CONFIG.clientLinks.ios",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Link tải client trực tiếp cho iOS."
+    },
+    {
+      "label": "CLIENT_CONFIG.clientLinks.android",
+      "placeholder": "Value for CLIENT_CONFIG.clientLinks.android",
+      "field_name": "CLIENT_CONFIG.clientLinks.android",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Link tải client trực tiếp cho Android."
+    },
+    {
+      "label": "CLIENT_CONFIG.clientLinks.macos",
+      "placeholder": "Value for CLIENT_CONFIG.clientLinks.macos",
+      "field_name": "CLIENT_CONFIG.clientLinks.macos",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Link tải client trực tiếp cho macOS."
+    },
+    {
+      "label": "CLIENT_CONFIG.clientLinks.windows",
+      "placeholder": "Value for CLIENT_CONFIG.clientLinks.windows",
+      "field_name": "CLIENT_CONFIG.clientLinks.windows",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Link tải client trực tiếp cho Windows."
+    },
+    {
+      "label": "CLIENT_CONFIG.clientLinks.linux",
+      "placeholder": "Value for CLIENT_CONFIG.clientLinks.linux",
+      "field_name": "CLIENT_CONFIG.clientLinks.linux",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Link tải client trực tiếp cho Linux."
+    },
+    {
+      "label": "CLIENT_CONFIG.clientLinks.openwrt",
+      "placeholder": "Value for CLIENT_CONFIG.clientLinks.openwrt",
+      "field_name": "CLIENT_CONFIG.clientLinks.openwrt",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Link tải client trực tiếp cho OpenWrt."
+    },
+    {
+      "label": "CLIENT_CONFIG.showShadowrocket",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showShadowrocket",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Shadowrocket trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showSurge",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showSurge",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Surge iOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showStash",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showStash",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Stash iOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showQuantumultX",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showQuantumultX",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Quantumult X iOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showHiddifyIOS",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showHiddifyIOS",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Hiddify iOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showSingboxIOS",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showSingboxIOS",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Sing-box iOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showLoon",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showLoon",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Loon iOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showFlClashAndroid",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showFlClashAndroid",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị FlClash Android trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showV2rayNG",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showV2rayNG",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị v2rayNG trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showClashAndroid",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showClashAndroid",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Clash Android trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showSurfboard",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showSurfboard",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Surfboard trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showClashMetaAndroid",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showClashMetaAndroid",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Clash Meta Android trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showNekobox",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showNekobox",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Nekobox trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showSingboxAndroid",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showSingboxAndroid",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Sing-box Android trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showHiddifyAndroid",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showHiddifyAndroid",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Hiddify Android trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showFlClashWindows",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showFlClashWindows",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị FlClash Windows trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showClashVergeWindows",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showClashVergeWindows",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Clash Verge Windows trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showClashWindows",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showClashWindows",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Clash Windows trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showNekoray",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showNekoray",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Nekoray trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showSingboxWindows",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showSingboxWindows",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Sing-box Windows trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showHiddifyWindows",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showHiddifyWindows",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Hiddify Windows trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showFlClashMac",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showFlClashMac",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị FlClash macOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showClashVergeMac",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showClashVergeMac",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Clash Verge macOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showClashX",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showClashX",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị ClashX trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showClashMetaX",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showClashMetaX",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Clash MetaX trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showSurgeMac",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showSurgeMac",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Surge macOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showStashMac",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showStashMac",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Stash macOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showQuantumultXMac",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showQuantumultXMac",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Quantumult X macOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showSingboxMac",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showSingboxMac",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Sing-box macOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "CLIENT_CONFIG.showHiddifyMac",
+      "placeholder": "true or false",
+      "field_name": "CLIENT_CONFIG.showHiddifyMac",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt hiển thị Hiddify macOS trong danh sách đồng bộ một chạm."
+    },
+    {
+      "label": "PROFILE_CONFIG.showGiftCardRedeem",
+      "placeholder": "true or false",
+      "field_name": "PROFILE_CONFIG.showGiftCardRedeem",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện ô đổi mã quà tặng trong trang hồ sơ cá nhân."
+    },
+    {
+      "label": "PROFILE_CONFIG.showRecentDevices",
+      "placeholder": "true or false",
+      "field_name": "PROFILE_CONFIG.showRecentDevices",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện lịch sử thiết bị đăng nhập gần đây trong trang hồ sơ."
+    },
+    {
+      "label": "SECURITY_CONFIG.enableFrontendDomainCheck",
+      "placeholder": "true or false",
+      "field_name": "SECURITY_CONFIG.enableFrontendDomainCheck",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "AUTHORIZED_DOMAINS",
+      "placeholder": "JSON array",
+      "field_name": "AUTHORIZED_DOMAINS",
+      "field_type": "textarea",
+      "default_value": "[]"
+    },
+    {
+      "label": "CAPTCHA_CONFIG.captchaType",
+      "placeholder": "Value for CAPTCHA_CONFIG.captchaType",
+      "field_name": "CAPTCHA_CONFIG.captchaType",
+      "field_type": "input",
+      "default_value": "google",
+      "description": "Loại captcha dùng cho đăng ký: google hoặc cloudflare."
+    },
+    {
+      "label": "CAPTCHA_CONFIG.google.verifyUrl",
+      "placeholder": "Value for CAPTCHA_CONFIG.google.verifyUrl",
+      "field_name": "CAPTCHA_CONFIG.google.verifyUrl",
+      "field_type": "input",
+      "default_value": "https://www.google.com/recaptcha/api/siteverify",
+      "description": "Endpoint xác minh Google reCAPTCHA."
+    },
+    {
+      "label": "CAPTCHA_CONFIG.cloudflare.verifyUrl",
+      "placeholder": "Value for CAPTCHA_CONFIG.cloudflare.verifyUrl",
+      "field_name": "CAPTCHA_CONFIG.cloudflare.verifyUrl",
+      "field_type": "input",
+      "default_value": "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      "description": "Endpoint xác minh Cloudflare Turnstile."
+    },
+    {
+      "label": "CUSTOM_HEADERS.enabled",
+      "placeholder": "true or false",
+      "field_name": "CUSTOM_HEADERS.enabled",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "PAYMENT_CONFIG.openPaymentInNewTab",
+      "placeholder": "true or false",
+      "field_name": "PAYMENT_CONFIG.openPaymentInNewTab",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "PAYMENT_CONFIG.qrcodeSize",
+      "placeholder": "Number value",
+      "field_name": "PAYMENT_CONFIG.qrcodeSize",
+      "field_type": "input",
+      "default_value": "200"
+    },
+    {
+      "label": "PAYMENT_CONFIG.qrcodeColor",
+      "placeholder": "Value for PAYMENT_CONFIG.qrcodeColor",
+      "field_name": "PAYMENT_CONFIG.qrcodeColor",
+      "field_type": "input",
+      "default_value": "#000000"
+    },
+    {
+      "label": "PAYMENT_CONFIG.qrcodeBackground",
+      "placeholder": "Value for PAYMENT_CONFIG.qrcodeBackground",
+      "field_name": "PAYMENT_CONFIG.qrcodeBackground",
+      "field_type": "input",
+      "default_value": "#ffffff"
+    },
+    {
+      "label": "PAYMENT_CONFIG.autoCheckPayment",
+      "placeholder": "true or false",
+      "field_name": "PAYMENT_CONFIG.autoCheckPayment",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "PAYMENT_CONFIG.autoCheckInterval",
+      "placeholder": "Number value",
+      "field_name": "PAYMENT_CONFIG.autoCheckInterval",
+      "field_type": "input",
+      "default_value": "5000"
+    },
+    {
+      "label": "PAYMENT_CONFIG.autoCheckMaxTimes",
+      "placeholder": "Number value",
+      "field_name": "PAYMENT_CONFIG.autoCheckMaxTimes",
+      "field_type": "input",
+      "default_value": "60"
+    },
+    {
+      "label": "PAYMENT_CONFIG.useSafariPaymentModal",
+      "placeholder": "true or false",
+      "field_name": "PAYMENT_CONFIG.useSafariPaymentModal",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "PAYMENT_CONFIG.autoSelectFirstMethod",
+      "placeholder": "true or false",
+      "field_name": "PAYMENT_CONFIG.autoSelectFirstMethod",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "WALLET_CONFIG.presetAmounts",
+      "placeholder": "JSON array",
+      "field_name": "WALLET_CONFIG.presetAmounts",
+      "field_type": "textarea",
+      "default_value": "[\n  6,\n  30,\n  68,\n  128,\n  256,\n  328,\n  648,\n  1280\n]",
+      "description": "Danh sách mức tiền nạp gợi ý, nhập dạng JSON array."
+    },
+    {
+      "label": "WALLET_CONFIG.defaultSelectedAmount",
+      "placeholder": "null or a value",
+      "field_name": "WALLET_CONFIG.defaultSelectedAmount",
+      "field_type": "input",
+      "default_value": "null",
+      "description": "Mức tiền được chọn sẵn khi mở trang nạp. Đặt null nếu không chọn sẵn."
+    },
+    {
+      "label": "WALLET_CONFIG.minimumDepositAmount",
+      "placeholder": "Number value",
+      "field_name": "WALLET_CONFIG.minimumDepositAmount",
+      "field_type": "input",
+      "default_value": "1",
+      "description": "Số tiền nạp tối thiểu mà người dùng được phép nạp."
+    },
+    {
+      "label": "INVITE_CONFIG.showCommissionBadge",
+      "placeholder": "true or false",
+      "field_name": "INVITE_CONFIG.showCommissionBadge",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện nhãn phần trăm hoa hồng trên thanh điều hướng."
+    },
+    {
+      "label": "INVITE_CONFIG.recordsPerPage",
+      "placeholder": "Number value",
+      "field_name": "INVITE_CONFIG.recordsPerPage",
+      "field_type": "input",
+      "default_value": "10",
+      "description": "Số dòng lịch sử hoa hồng hiển thị trên mỗi trang."
+    },
+    {
+      "label": "INVITE_CONFIG.inviteLinkConfig.linkMode",
+      "placeholder": "Value for INVITE_CONFIG.inviteLinkConfig.linkMode",
+      "field_name": "INVITE_CONFIG.inviteLinkConfig.linkMode",
+      "field_type": "input",
+      "default_value": "auto",
+      "description": "Chế độ tạo link mời: auto dùng domain hiện tại, custom dùng domain riêng."
+    },
+    {
+      "label": "INVITE_CONFIG.inviteLinkConfig.customDomain",
+      "placeholder": "Value for INVITE_CONFIG.inviteLinkConfig.customDomain",
+      "field_name": "INVITE_CONFIG.inviteLinkConfig.customDomain",
+      "field_type": "input",
+      "default_value": "",
+      "description": "Domain riêng dùng cho link mời khi linkMode là custom."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.enabled",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.enabled",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt tính năng chặn hoặc giới hạn một số trình duyệt dễ gây lỗi giao diện."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.360",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.360",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt chặn trình duyệt 360 khi tính năng giới hạn trình duyệt đang bật."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.QQ",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.QQ",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt chặn trình duyệt QQ khi tính năng giới hạn trình duyệt đang bật."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.WeChat",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.WeChat",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt chặn trình duyệt WeChat khi tính năng giới hạn trình duyệt đang bật."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.Baidu",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.Baidu",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt chặn trình duyệt Baidu khi tính năng giới hạn trình duyệt đang bật."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.Sogou",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.Sogou",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt chặn trình duyệt Sogou khi tính năng giới hạn trình duyệt đang bật."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.UC",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.UC",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt chặn trình duyệt UC khi tính năng giới hạn trình duyệt đang bật."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.Maxthon",
+      "placeholder": "true or false",
+      "field_name": "BROWSER_RESTRICT_CONFIG.restrictBrowsers.Maxthon",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt chặn trình duyệt Maxthon khi tính năng giới hạn trình duyệt đang bật."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.recommendedBrowsers.Chrome",
+      "placeholder": "Value for BROWSER_RESTRICT_CONFIG.recommendedBrowsers.Chrome",
+      "field_name": "BROWSER_RESTRICT_CONFIG.recommendedBrowsers.Chrome",
+      "field_type": "input",
+      "default_value": "https://www.google.com/chrome/",
+      "description": "Link tải trình duyệt Chrome được khuyến nghị."
+    },
+    {
+      "label": "BROWSER_RESTRICT_CONFIG.recommendedBrowsers.Edge",
+      "placeholder": "Value for BROWSER_RESTRICT_CONFIG.recommendedBrowsers.Edge",
+      "field_name": "BROWSER_RESTRICT_CONFIG.recommendedBrowsers.Edge",
+      "field_type": "input",
+      "default_value": "https://www.microsoft.com/edge",
+      "description": "Link tải trình duyệt Edge được khuyến nghị."
+    },
+    {
+      "label": "TICKET_CONFIG.includeUserInfoInTicket",
+      "placeholder": "true or false",
+      "field_name": "TICKET_CONFIG.includeUserInfoInTicket",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Tự động kèm thông tin gói cước và trạng thái user vào ticket để hỗ trợ dễ hơn."
+    },
+    {
+      "label": "TICKET_CONFIG.popup.enabled",
+      "placeholder": "true or false",
+      "field_name": "TICKET_CONFIG.popup.enabled",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt popup lưu ý khi người dùng mở trang gửi ticket."
+    },
+    {
+      "label": "TICKET_CONFIG.popup.title",
+      "placeholder": "Value for TICKET_CONFIG.popup.title",
+      "field_name": "TICKET_CONFIG.popup.title",
+      "field_type": "input",
+      "default_value": "Thong bao",
+      "description": "Tiêu đề popup lưu ý gửi ticket."
+    },
+    {
+      "label": "TICKET_CONFIG.popup.content",
+      "placeholder": "Value for TICKET_CONFIG.popup.content",
+      "field_name": "TICKET_CONFIG.popup.content",
+      "field_type": "textarea",
+      "default_value": "<p>Vui long mo ta ro van de va dinh kem anh neu can.</p>",
+      "description": "Nội dung popup lưu ý gửi ticket, hỗ trợ HTML."
+    },
+    {
+      "label": "TICKET_CONFIG.popup.cooldownHours",
+      "placeholder": "Number value",
+      "field_name": "TICKET_CONFIG.popup.cooldownHours",
+      "field_type": "input",
+      "default_value": "24",
+      "description": "Thời gian chờ trước khi popup ticket hiện lại, tính bằng giờ."
+    },
+    {
+      "label": "TICKET_CONFIG.popup.closeWaitSeconds",
+      "placeholder": "Number value",
+      "field_name": "TICKET_CONFIG.popup.closeWaitSeconds",
+      "field_type": "input",
+      "default_value": "0",
+      "description": "Số giây bắt buộc chờ trước khi được đóng popup ticket."
+    },
+    {
+      "label": "TICKET_CONFIG.isImageHosting",
+      "placeholder": "true or false",
+      "field_name": "TICKET_CONFIG.isImageHosting",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      }
+    },
+    {
+      "label": "TICKET_CONFIG.imgbbApiKey",
+      "placeholder": "Value for TICKET_CONFIG.imgbbApiKey",
+      "field_name": "TICKET_CONFIG.imgbbApiKey",
+      "field_type": "input",
+      "default_value": ""
+    },
+    {
+      "label": "TRAFFICLOG_CONFIG.enableTrafficLog",
+      "placeholder": "true or false",
+      "field_name": "TRAFFICLOG_CONFIG.enableTrafficLog",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Cho phép người dùng xem biểu đồ thống kê dung lượng đã dùng."
+    },
+    {
+      "label": "TRAFFICLOG_CONFIG.showTrafficTable",
+      "placeholder": "true or false",
+      "field_name": "TRAFFICLOG_CONFIG.showTrafficTable",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Cho phép hiển thị bảng kê dung lượng chi tiết theo từng ngày."
+    },
+    {
+      "label": "TRAFFICLOG_CONFIG.daysToShow",
+      "placeholder": "Number value",
+      "field_name": "TRAFFICLOG_CONFIG.daysToShow",
+      "field_type": "input",
+      "default_value": "30",
+      "description": "Số ngày lịch sử dung lượng tối đa được hiển thị."
+    },
+    {
+      "label": "TRAFFICLOG_CONFIG.sumDailyTraffic",
+      "placeholder": "true or false",
+      "field_name": "TRAFFICLOG_CONFIG.sumDailyTraffic",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Gộp dữ liệu lưu lượng theo ngày trước khi hiển thị."
+    },
+    {
+      "label": "NODES_CONFIG.showNodeRate",
+      "placeholder": "true or false",
+      "field_name": "NODES_CONFIG.showNodeRate",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện hệ số nhân dung lượng của server/node."
+    },
+    {
+      "label": "NODES_CONFIG.showNodeDetails",
+      "placeholder": "true or false",
+      "field_name": "NODES_CONFIG.showNodeDetails",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Hiện trực tiếp host và port của node. Thường nên tắt để bảo mật."
+    },
+    {
+      "label": "NODES_CONFIG.allowViewNodeInfo",
+      "placeholder": "true or false",
+      "field_name": "NODES_CONFIG.allowViewNodeInfo",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Cho phép người dùng bấm Chi tiết để xem thông tin node."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.enabled",
+      "placeholder": "true or false",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.enabled",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Bật/tắt live chat hỗ trợ trực tuyến."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.type",
+      "placeholder": "Value for CUSTOMER_SERVICE_CONFIG.type",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.type",
+      "field_type": "input",
+      "default_value": "crisp",
+      "description": "Loại hệ thống hỗ trợ: crisp hoặc other."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.customHtml",
+      "placeholder": "Value for CUSTOMER_SERVICE_CONFIG.customHtml",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.customHtml",
+      "field_type": "textarea",
+      "default_value": "",
+      "description": "Mã nhúng live chat hoặc script hỗ trợ, ví dụ Crisp Chat."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.embedMode",
+      "placeholder": "Value for CUSTOMER_SERVICE_CONFIG.embedMode",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.embedMode",
+      "field_type": "input",
+      "default_value": "embed",
+      "description": "Chế độ nhúng live chat: embed nhúng toàn trang, popup mở link/chat riêng."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.showWhenNotLoggedIn",
+      "placeholder": "true or false",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.showWhenNotLoggedIn",
+      "field_type": "select",
+      "default_value": "true",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Có hiển thị khung chat khi khách chưa đăng nhập hay không."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.iconPosition.desktop.left",
+      "placeholder": "Value for CUSTOMER_SERVICE_CONFIG.iconPosition.desktop.left",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.iconPosition.desktop.left",
+      "field_type": "input",
+      "default_value": "20px",
+      "description": "Giá trị CSS điều chỉnh vị trí bên trái của nút live chat trên desktop."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.iconPosition.desktop.bottom",
+      "placeholder": "Value for CUSTOMER_SERVICE_CONFIG.iconPosition.desktop.bottom",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.iconPosition.desktop.bottom",
+      "field_type": "input",
+      "default_value": "20px",
+      "description": "Giá trị CSS điều chỉnh vị trí phía dưới của nút live chat trên desktop."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.iconPosition.mobile.right",
+      "placeholder": "Value for CUSTOMER_SERVICE_CONFIG.iconPosition.mobile.right",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.iconPosition.mobile.right",
+      "field_type": "input",
+      "default_value": "20px",
+      "description": "Giá trị CSS điều chỉnh vị trí bên phải của nút live chat trên mobile."
+    },
+    {
+      "label": "CUSTOMER_SERVICE_CONFIG.iconPosition.mobile.bottom",
+      "placeholder": "Value for CUSTOMER_SERVICE_CONFIG.iconPosition.mobile.bottom",
+      "field_name": "CUSTOMER_SERVICE_CONFIG.iconPosition.mobile.bottom",
+      "field_type": "input",
+      "default_value": "100px",
+      "description": "Giá trị CSS điều chỉnh vị trí phía dưới của nút live chat trên mobile."
+    },
+    {
+      "label": "NAVIGATION_CONFIG.thirdNavItem",
+      "placeholder": "Value for NAVIGATION_CONFIG.thirdNavItem",
+      "field_name": "NAVIGATION_CONFIG.thirdNavItem",
+      "field_type": "input",
+      "default_value": "invite",
+      "description": "Mục menu thứ 3 trên thanh điều hướng: invite, docs, tickets, nodes, orders, traffic hoặc profile."
+    },
+    {
+      "label": "NAVIGATION_CONFIG.fourthNavItem",
+      "placeholder": "Value for NAVIGATION_CONFIG.fourthNavItem",
+      "field_name": "NAVIGATION_CONFIG.fourthNavItem",
+      "field_type": "input",
+      "default_value": "docs",
+      "description": "Mục menu thứ 4 trên thanh điều hướng. Để trống nếu không muốn thêm mục này."
+    },
+    {
+      "label": "MORE_PAGE_CONFIG.enableCustomCards",
+      "placeholder": "true or false",
+      "field_name": "MORE_PAGE_CONFIG.enableCustomCards",
+      "field_type": "select",
+      "default_value": "false",
+      "select_options": {
+        "true": "true",
+        "false": "false"
+      },
+      "description": "Cho phép thêm các thẻ liên kết ngoài tùy chỉnh trong trang More."
+    },
+    {
+      "label": "MORE_PAGE_CONFIG.customCards",
+      "placeholder": "JSON array",
+      "field_name": "MORE_PAGE_CONFIG.customCards",
+      "field_type": "textarea",
+      "default_value": "[\n  {\n    \"id\": \"github\",\n    \"title\": \"GitHub\",\n    \"description\": \"Mo GitHub\",\n    \"svgIcon\": \"<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" class=\\\"icon icon-tabler icon-tabler-brand-github\\\" width=\\\"24\\\" height=\\\"24\\\" viewBox=\\\"0 0 24 24\\\" stroke-width=\\\"2\\\" stroke=\\\"currentColor\\\" fill=\\\"none\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path stroke=\\\"none\\\" d=\\\"M0 0h24v24H0z\\\" fill=\\\"none\\\"/><path d=\\\"M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5\\\" /></svg>\",\n    \"url\": \"https://github.com\",\n    \"openInNewTab\": true\n  },\n  {\n    \"id\": \"telegram\",\n    \"title\": \"Telegram\",\n    \"description\": \"Mo nhom Telegram\",\n    \"svgIcon\": \"<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" class=\\\"icon icon-tabler icon-tabler-brand-telegram\\\" width=\\\"24\\\" height=\\\"24\\\" viewBox=\\\"0 0 24 24\\\" stroke-width=\\\"2\\\" stroke=\\\"currentColor\\\" fill=\\\"none\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path stroke=\\\"none\\\" d=\\\"M0 0h24v24H0z\\\" fill=\\\"none\\\"/><path d=\\\"M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4\\\" /></svg>\",\n    \"url\": \"\",\n    \"openInNewTab\": true\n  }\n]",
+      "description": "Danh sách thẻ liên kết ngoài tùy chỉnh, nhập dạng JSON array."
+    }
+  ]
+}

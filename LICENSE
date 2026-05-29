@@ -1,0 +1,67 @@
+ZicBoard Commercial Source License
+Version 1.0 - 2026-05-25
+
+Copyright (c) 2026 ZicBoard. All rights reserved in the ZicBoard additions and
+commercial components.
+
+1. Commercial Components
+
+"Commercial Components" means ZicBoard-owned source code, modifications,
+documentation, protected runtime components, branding, distribution scripts,
+and other additions not licensed under a separately identified third-party
+license.
+
+Subject to payment and an active license issued by the licensor identified on
+the purchase invoice or license order, the customer receives a non-exclusive,
+non-transferable, non-sublicensable license to install and use the Commercial
+Components only for the licensed installations and term shown in that order or
+in the licensing service.
+
+The customer may make backup copies and internal modifications required to run
+a licensed installation. Those copies and modifications remain subject to this
+license and may not be distributed.
+
+Except where applicable law cannot be waived, the customer may not copy for
+unlicensed use, publish, redistribute, sublicense, sell, rent, host for third
+parties, remove licensing controls, bypass activation, extract or replace
+protected components for the purpose of avoiding a license, or enable another
+party to do so.
+
+A license ends automatically on breach or when the purchased term ends. On
+termination the customer must stop using and remove the Commercial Components,
+apart from archival material required by law.
+
+THE COMMERCIAL COMPONENTS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. TO THE
+MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR IS NOT LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM USE OF THE COMMERCIAL COMPONENTS.
+
+2. Upstream MIT Components
+
+ZicBoard is developed from Xiao V2Board. Portions originating from that
+project remain available under the following upstream MIT notice. This MIT
+grant applies to the upstream portions and does not license ZicBoard-owned
+Commercial Components described above.
+
+MIT License
+
+Copyright (c) 2019 Tokumeikoi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
