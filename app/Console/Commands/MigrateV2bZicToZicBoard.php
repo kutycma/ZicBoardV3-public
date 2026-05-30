@@ -257,6 +257,7 @@ class MigrateV2bZicToZicBoard extends Command
                     CONSTRAINT `v2_user_subscription_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `v2_user` (`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ");
+            $this->alignSubscriptionUserColumnCollations();
             return;
         }
 
@@ -284,6 +285,8 @@ class MigrateV2bZicToZicBoard extends Command
         $this->ensureColumn('v2_user_subscription', 'user_note', "ADD `user_note` varchar(255) DEFAULT NULL AFTER `remarks`");
         $this->ensureColumn('v2_user_subscription', 'created_at', "ADD `created_at` int(11) NOT NULL DEFAULT '0'");
         $this->ensureColumn('v2_user_subscription', 'updated_at', "ADD `updated_at` int(11) NOT NULL DEFAULT '0'");
+
+        $this->alignSubscriptionUserColumnCollations();
 
         $this->abortIfBlankValues('v2_user_subscription', 'token');
         $this->abortIfBlankValues('v2_user_subscription', 'uuid');
@@ -742,6 +745,71 @@ class MigrateV2bZicToZicBoard extends Command
         DB::statement("ALTER TABLE `{$table}` {$definition}");
     }
 
+    private function alignSubscriptionUserColumnCollations()
+    {
+        foreach (['token', 'uuid', 'name_sni', 'network_settings', 'remarks'] as $column) {
+            $this->alignStringColumnCollation('v2_user_subscription', $column, 'v2_user', $column);
+        }
+    }
+
+    private function alignStringColumnCollation($targetTable, $targetColumn, $sourceTable, $sourceColumn)
+    {
+        $source = $this->columnMetadata($sourceTable, $sourceColumn);
+        $target = $this->columnMetadata($targetTable, $targetColumn);
+
+        if (!$source || !$target ||
+            !$source->character_set_name || !$source->collation_name ||
+            !$target->character_set_name || !$target->collation_name) {
+            return;
+        }
+
+        if ($source->character_set_name === $target->character_set_name &&
+            $source->collation_name === $target->collation_name) {
+            return;
+        }
+
+        $charset = $this->safeSqlName($source->character_set_name);
+        $collation = $this->safeSqlName($source->collation_name);
+        $nullable = $target->is_nullable === 'YES' ? 'NULL' : 'NOT NULL';
+        $default = $target->column_default === null
+            ? ''
+            : ' DEFAULT ' . DB::connection()->getPdo()->quote((string)$target->column_default);
+
+        DB::statement("
+            ALTER TABLE `{$targetTable}`
+            MODIFY `{$targetColumn}` {$target->column_type}
+                CHARACTER SET {$charset}
+                COLLATE {$collation}
+                {$nullable}{$default}
+        ");
+    }
+
+    private function columnMetadata($table, $column)
+    {
+        return DB::selectOne("
+            SELECT
+                COLUMN_TYPE AS column_type,
+                CHARACTER_SET_NAME AS character_set_name,
+                COLLATION_NAME AS collation_name,
+                IS_NULLABLE AS is_nullable,
+                COLUMN_DEFAULT AS column_default
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = ?
+                AND TABLE_NAME = ?
+                AND COLUMN_NAME = ?
+            LIMIT 1
+        ", [DB::getDatabaseName(), $table, $column]);
+    }
+
+    private function safeSqlName($name)
+    {
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $name)) {
+            throw new \RuntimeException("Ten charset/collation khong hop le: {$name}");
+        }
+
+        return $name;
+    }
+
     private function requireTable($table)
     {
         if (!Schema::hasTable($table)) {
@@ -992,6 +1060,9 @@ class MigrateV2bZicToZicBoard extends Command
             $this->line('- Sua token/uuid cho moi user thanh gia tri duy nhat, sau do chay lai command.');
         } elseif (strpos($message, 'bi thieu token') !== false || strpos($message, 'bi thieu uuid') !== false) {
             $this->line('- Tao token/uuid cho cac user bi thieu truoc khi migrate. Khong nen de trong vi link sub va license phu thuoc vao hai gia tri nay.');
+        } elseif (strpos($message, 'Illegal mix of collations') !== false) {
+            $this->line('- Schema legacy va schema moi dang khac collation. Hay cap nhat code moi roi chay lai command, command se tu can collation cua v2_user_subscription theo v2_user.');
+            $this->line('- Neu can sua tay tren database, hay de token/uuid/name_sni/network_settings/remarks cua v2_user_subscription cung charset/collation voi cac cot tuong ung trong v2_user.');
         } elseif (strpos($message, 'v2_user_device bi trung binding') !== false) {
             $this->line('- Xoa hoac gop cac dong device trung cung subscription_id + hwid_hash, sau do chay lai command.');
             $this->line('- Neu khong can lich su device cu, co the truncate v2_user_device truoc khi chay lai.');
