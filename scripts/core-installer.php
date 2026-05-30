@@ -16,7 +16,7 @@ try {
             installOrUpdateCore($root, $action);
             break;
         case 'health':
-            healthCheck();
+            healthCheck($root);
             break;
         case 'status':
             printStatus($root);
@@ -140,11 +140,14 @@ function installOrUpdateCore(string $root, string $action): void
     echo "Installed zicboard-core {$state['core_version']} for {$target}.\n";
 }
 
-function healthCheck(): void
+function healthCheck(string $root): void
 {
     $url = getenv('ZICBOARD_CORE_HEALTH_URL') ?: 'http://127.0.0.1:18080/health';
     $lastError = 'no response';
-    $deadline = time() + 30;
+    $deadline = time() + 45;
+    $lastRpcAttempt = 0;
+    $state = readJsonFile($root . DIRECTORY_SEPARATOR . '.zicboard' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'state.json', []);
+    $expectedHash = strtolower(trim((string)($state['core_sha256'] ?? '')));
 
     do {
         $context = stream_context_create([
@@ -156,12 +159,34 @@ function healthCheck(): void
         $body = @file_get_contents($url, false, $context);
         if ($body !== false) {
             $decoded = json_decode($body, true);
-            if (is_array($decoded) && ($decoded['status'] ?? null) === 'ok') {
-                $license = $decoded['license'] ?? [];
+            if (is_array($decoded) && in_array(($decoded['status'] ?? null), ['ok', 'degraded'], true)) {
+                $runningHash = strtolower(trim((string)($decoded['core_sha256'] ?? '')));
+                if ($expectedHash !== '' && $runningHash !== '' && !hash_equals($expectedHash, $runningHash)) {
+                    throw new RuntimeException('Core health check failed: running core checksum does not match installed artifact');
+                }
+
+                $license = $decoded['license'] ?? $decoded;
                 if (!empty($license['protected_features_enabled'])) {
                     echo "Core health check passed.\n";
                     return;
                 }
+
+                if (time() - $lastRpcAttempt >= 5) {
+                    $lastRpcAttempt = time();
+                    try {
+                        $rpcStatus = coreRpcCall($root, 'license.refresh');
+                        if (is_array($rpcStatus) && !empty($rpcStatus['protected_features_enabled'])) {
+                            echo "Core health check passed.\n";
+                            return;
+                        }
+                        $license = is_array($rpcStatus) ? $rpcStatus : $license;
+                    } catch (Throwable $e) {
+                        $lastError = $e->getMessage();
+                        sleep(2);
+                        continue;
+                    }
+                }
+
                 $lastError = 'license is not active for protected features: ' . ($license['error'] ?? $license['status'] ?? 'unknown');
             } else {
                 $lastError = 'invalid response';
@@ -171,6 +196,63 @@ function healthCheck(): void
     } while (time() < $deadline);
 
     throw new RuntimeException('Core health check failed: ' . $lastError);
+}
+
+function coreRpcCall(string $root, string $method)
+{
+    $env = array_merge(
+        readEnvFile($root . DIRECTORY_SEPARATOR . '.env'),
+        readEnvFile($root . DIRECTORY_SEPARATOR . '.zicboard' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'core.env')
+    );
+    $secret = getenv('ZICBOARD_CORE_RPC_SECRET') ?: ($env['ZICBOARD_CORE_RPC_SECRET'] ?? '');
+    if ($secret === '') {
+        throw new RuntimeException('ZICBOARD_CORE_RPC_SECRET is not configured');
+    }
+
+    $url = getenv('ZICBOARD_CORE_RPC_URL') ?: ($env['ZICBOARD_CORE_RPC_URL'] ?? 'http://127.0.0.1:18080/rpc');
+    if (stripos((string)$url, 'http://127.0.0.1:') !== 0 && stripos((string)$url, 'http://localhost:') !== 0) {
+        throw new RuntimeException('ZICBOARD_CORE_RPC_URL must point to localhost');
+    }
+
+    $body = json_encode([
+        'request_id' => bin2hex(random_bytes(16)),
+        'schema_version' => 1,
+        'method' => $method,
+        'payload' => new stdClass(),
+    ], JSON_UNESCAPED_SLASHES);
+    if ($body === false) {
+        throw new RuntimeException('Unable to encode core RPC request');
+    }
+
+    $timestamp = (string)time();
+    $headers = [
+        'Content-Type: application/json',
+        'X-ZicBoard-Timestamp: ' . $timestamp,
+        'X-ZicBoard-Signature: ' . hash_hmac('sha256', $timestamp . "\n" . $body, $secret),
+    ];
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'timeout' => 10,
+            'ignore_errors' => true,
+            'header' => implode("\r\n", $headers),
+            'content' => $body,
+        ],
+    ]);
+    $response = @file_get_contents((string)$url, false, $context);
+    if ($response === false) {
+        throw new RuntimeException('core RPC request failed');
+    }
+    $decoded = json_decode($response, true);
+    if (!is_array($decoded)) {
+        throw new RuntimeException('core RPC returned invalid JSON');
+    }
+    if (($decoded['status'] ?? null) !== 'ok') {
+        $error = is_array($decoded['error'] ?? null) ? $decoded['error'] : [];
+        $message = $error['message'] ?? $error['code'] ?? 'core RPC request failed';
+        throw new RuntimeException((string)$message);
+    }
+    return $decoded['data'] ?? null;
 }
 
 function printStatus(string $root): void
