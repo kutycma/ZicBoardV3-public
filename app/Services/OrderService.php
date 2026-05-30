@@ -52,6 +52,7 @@ class OrderService
         $plan = Plan::find($order->plan_id);
         DB::beginTransaction();
         $subscriptionService = new SubscriptionService();
+        $singleSubscriptionMode = !$subscriptionService->isMultipleSubscriptionEnabled();
         $primarySubscription = $subscriptionService->getPrimaryForUser($this->user);
         $this->subscription = $subscriptionService->resolveOrderTarget($this->user, $order);
         $createdSubscription = false;
@@ -114,11 +115,15 @@ class OrderService
             abort(500, 'Mở gói đăng ký thất bại');
         }
 
+        if ($singleSubscriptionMode) {
+            $subscriptionService->disableOtherActiveSubscriptions($this->subscription);
+        }
+
         if (!$this->user->save()) {
             DB::rollBack();
             abort(500, 'Kích hoạt thất bại');
         }
-        if (($createdSubscription || $targetWasPrimary) && !$subscriptionService->syncUserSummary($this->subscription)) {
+        if (($createdSubscription || $targetWasPrimary || $singleSubscriptionMode) && !$subscriptionService->syncUserSummary($this->subscription)) {
             DB::rollBack();
             abort(500, 'Đồng bộ thông tin gói đăng ký thất bại');
         }
@@ -142,6 +147,7 @@ class OrderService
         }
 
         $subscriptionService = new SubscriptionService();
+        $singleSubscriptionMode = !$subscriptionService->isMultipleSubscriptionEnabled();
         $subscription = $subscriptionService->resolveOrderTarget($user, $order);
         if ($subscription) {
             $order->subscription_id = $subscription->id;
@@ -150,7 +156,7 @@ class OrderService
         if ($order->period === 'reset_price') {
             $order->type = 4;
         } else if ($subscription && $order->plan_id !== $subscription->plan_id) {
-            if (!(int)config('zicboard.plan_change_enable', 1)) abort(500, 'Hiện không cho phép đổi gói, vui lòng liên hệ CSKH hoặc gửi ticket');
+            if (!$singleSubscriptionMode && !(int)config('zicboard.plan_change_enable', 1)) abort(500, 'Hiện không cho phép đổi gói, vui lòng liên hệ CSKH hoặc gửi ticket');
             $order->type = 3;
             if ((int)config('zicboard.surplus_enable', 1)) $this->getSurplusValue($subscription, $order);
             if ($order->surplus_amount >= $order->total_amount) {

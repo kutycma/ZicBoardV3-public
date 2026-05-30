@@ -126,6 +126,14 @@ class OrderController extends Controller
         if (!$subscription && $request->input('period') === 'reset_price') {
             $subscription = $subscriptionService->getRenewableForPlan($user, (int)$request->input('plan_id'));
         }
+        if (
+            !$subscription
+            && !$requestedSubscriptionId
+            && $request->input('period') !== 'reset_price'
+            && !$subscriptionService->isMultipleSubscriptionEnabled()
+        ) {
+            $subscription = $subscriptionService->getPrimaryForUser($user);
+        }
 
         if (!$plan) {
             abort(500, __('Subscription plan does not exist'));
@@ -260,6 +268,7 @@ class OrderController extends Controller
             'trade_no' => $tradeNo,
             'total_amount' => isset($order->handling_amount) ? ($order->total_amount + $order->handling_amount) : $order->total_amount,
             'user_id' => $order->user_id,
+            'order_id' => $order->id,
             'stripe_token' => $request->input('token')
         ]);
         return response([

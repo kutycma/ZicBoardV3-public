@@ -215,6 +215,8 @@
     "config.safe.limitMinutes": "Thời gian phạt (phút)",
     "config.safe.passwordLimit": "Giới hạn dò mật khẩu",
     "config.safe.passwordLimitHelp": "Giới hạn số lần đăng nhập thất bại liên tiếp.",
+    "config.subscribe.multipleSubscription": "Cho phép mua nhiều gói",
+    "config.subscribe.multipleSubscriptionHelp": "Khi tắt, mỗi user chỉ giữ một gói active; mua gói mới sẽ ghi đè gói hiện có.",
     "config.subscribe.planChange": "Cho phép đổi gói cước",
     "config.subscribe.planChangeHelp": "Cho phép người dùng thay đổi gói cước đăng ký.",
     "config.subscribe.deviceHwid": "Bật nhận diện thiết bị HWID",

@@ -105,6 +105,11 @@ class SubscriptionService
         return null;
     }
 
+    public function isMultipleSubscriptionEnabled()
+    {
+        return (int)config('zicboard.multiple_subscription_enable', 1) === 1;
+    }
+
     public function resolveOrderTarget(User $user, Order $order)
     {
         if ($order->subscription_id) {
@@ -117,6 +122,10 @@ class SubscriptionService
 
         if ($order->period === 'reset_price') {
             return $this->getRenewableForPlan($user, (int)$order->plan_id);
+        }
+
+        if (!$this->isMultipleSubscriptionEnabled()) {
+            return $this->getPrimaryForUser($user);
         }
 
         return null;
@@ -229,6 +238,14 @@ class SubscriptionService
         }
 
         return $user->update($params);
+    }
+
+    public function disableOtherActiveSubscriptions(UserSubscription $subscription)
+    {
+        return UserSubscription::where('user_id', $subscription->user_id)
+            ->where('id', '!=', $subscription->id)
+            ->where('status', self::STATUS_ACTIVE)
+            ->update(['status' => self::STATUS_DISABLED]);
     }
 
     public function isAvailable(UserSubscription $subscription)

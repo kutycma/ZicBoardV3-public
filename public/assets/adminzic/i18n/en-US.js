@@ -215,6 +215,8 @@
     "config.safe.limitMinutes": "Penalty time in minutes",
     "config.safe.passwordLimit": "Password brute-force limit",
     "config.safe.passwordLimitHelp": "Limit repeated failed login attempts.",
+    "config.subscribe.multipleSubscription": "Allow multiple subscriptions",
+    "config.subscribe.multipleSubscriptionHelp": "When disabled, each user keeps one active subscription; buying a new plan replaces the current one.",
     "config.subscribe.planChange": "Allow plan changes",
     "config.subscribe.planChangeHelp": "Allow users to change their subscription plan.",
     "config.subscribe.deviceHwid": "Enable HWID device recognition",

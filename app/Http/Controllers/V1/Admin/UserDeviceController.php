@@ -51,6 +51,7 @@ class UserDeviceController extends Controller
             ->orderBy('v2_user_device.id', 'DESC')
             ->forPage($current, $pageSize)
             ->get();
+        $res = (new UserDeviceService())->withOnlineState($res);
 
         return response([
             'data' => $res,

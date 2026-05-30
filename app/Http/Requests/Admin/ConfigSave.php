@@ -43,6 +43,7 @@ class ConfigSave extends FormRequest
         'currency' => '',
         'currency_symbol' => '',
         // subscribe
+        'multiple_subscription_enable' => 'in:0,1',
         'plan_change_enable' => 'in:0,1',
         'device_hwid_enable' => 'in:0,1',
         'change_sni_enable' => 'in:0,1',

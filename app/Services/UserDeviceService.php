@@ -8,6 +8,7 @@ use App\Models\UserSubscription;
 use App\Services\Core\ProtectedFeatureService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class UserDeviceService
@@ -19,6 +20,8 @@ class UserDeviceService
     const STATUS_PENDING = 'pending';
     const STATUS_BOUND = 'bound';
     const STATUS_BANNED = 'banned';
+    const ONLINE_STATE_TTL = 120;
+    const ONLINE_NODE_STALE_SECONDS = 120;
 
     public function registerFromRequest(UserSubscription $subscription, Request $request)
     {
@@ -180,6 +183,100 @@ class UserDeviceService
         return $protectedFeatures->translateAlive($data, $subscriptionIdMap);
     }
 
+    public function recordOnlineDevicesFromNodeAlive(array $rawData, string $nodeType, int $nodeId): void
+    {
+        if (!$this->isHwidEnabled() || empty($rawData)) {
+            return;
+        }
+
+        try {
+            $records = (new ProtectedFeatureService())->mapOnlineDevices($rawData, $nodeType, $nodeId);
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        if (!$records) {
+            return;
+        }
+
+        foreach ($records as $deviceId => $record) {
+            if (!is_array($record)) {
+                continue;
+            }
+
+            $deviceId = (int)($record['device_id'] ?? $deviceId);
+            if ($deviceId <= 0) {
+                continue;
+            }
+
+            $cacheKey = $this->onlineDeviceCacheKey($deviceId);
+            $state = Cache::get($cacheKey, []);
+            $nodeMap = $this->onlineNodeMapFromState(is_array($state) ? $state : []);
+
+            $recordNodeType = (string)($record['node_type'] ?? $nodeType);
+            $recordNodeId = (int)($record['node_id'] ?? $nodeId);
+            $nodeKey = $recordNodeType . ':' . $recordNodeId;
+            $ips = $this->sanitizeOnlineIps($record['online_ips'] ?? []);
+            $lastSeenAt = (int)($record['online_last_seen_at'] ?? time());
+
+            if (!$ips) {
+                unset($nodeMap[$nodeKey]);
+            } else {
+                $nodeMap[$nodeKey] = [
+                    'node_type' => $recordNodeType,
+                    'node_id' => $recordNodeId,
+                    'online_ips' => $ips,
+                    'online_ip_count' => count($ips),
+                    'online_last_seen_at' => $lastSeenAt
+                ];
+            }
+
+            $nextState = $this->buildOnlineState($nodeMap);
+            Cache::put($cacheKey, $nextState, self::ONLINE_STATE_TTL);
+        }
+    }
+
+    public function withOnlineState($devices)
+    {
+        if (!$devices || !method_exists($devices, 'pluck')) {
+            return $devices;
+        }
+
+        $ids = array_values(array_filter($devices->pluck('id')->map(function ($id) {
+            return (int)$id;
+        })->all()));
+        if (!$ids) {
+            return $devices;
+        }
+
+        $keys = [];
+        $keyToId = [];
+        foreach ($ids as $id) {
+            $key = $this->onlineDeviceCacheKey($id);
+            $keys[] = $key;
+            $keyToId[$key] = $id;
+        }
+
+        $cachedStates = Cache::many($keys);
+        $statesById = [];
+        foreach ($cachedStates as $key => $state) {
+            if (isset($keyToId[$key])) {
+                $statesById[$keyToId[$key]] = $this->normalizeOnlineState(is_array($state) ? $state : []);
+            }
+        }
+
+        foreach ($devices as $device) {
+            $state = $statesById[(int)$device->id] ?? $this->emptyOnlineState();
+            $device->is_online = $state['is_online'];
+            $device->online_ips = $state['online_ips'];
+            $device->online_ip_count = $state['online_ip_count'];
+            $device->online_nodes = $state['online_nodes'];
+            $device->online_last_seen_at = $state['online_last_seen_at'];
+        }
+
+        return $devices;
+    }
+
     private function readHwid(Request $request)
     {
         $hwid = trim((string)$request->header(self::HWID_HEADER, ''));
@@ -285,6 +382,148 @@ class UserDeviceService
         }
 
         return $result;
+    }
+
+    private function onlineDeviceCacheKey(int $deviceId): string
+    {
+        return 'DEVICE_ONLINE_STATE_' . $deviceId;
+    }
+
+    private function onlineNodeMapFromState(array $state): array
+    {
+        if (isset($state['online_node_map']) && is_array($state['online_node_map'])) {
+            return $state['online_node_map'];
+        }
+
+        $nodeMap = [];
+        foreach (($state['online_nodes'] ?? []) as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+            $nodeType = (string)($node['node_type'] ?? '');
+            $nodeId = (int)($node['node_id'] ?? 0);
+            if ($nodeType === '' || $nodeId <= 0) {
+                continue;
+            }
+            $nodeMap[$nodeType . ':' . $nodeId] = $node;
+        }
+        return $nodeMap;
+    }
+
+    private function buildOnlineState(array $nodeMap): array
+    {
+        $now = time();
+        $activeNodeMap = [];
+        foreach ($nodeMap as $nodeKey => $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+            $lastSeenAt = (int)($node['online_last_seen_at'] ?? 0);
+            if ($lastSeenAt <= 0 || $now - $lastSeenAt > self::ONLINE_NODE_STALE_SECONDS) {
+                continue;
+            }
+            $ips = $this->sanitizeOnlineIps($node['online_ips'] ?? []);
+            if (!$ips) {
+                continue;
+            }
+            $activeNodeMap[$nodeKey] = [
+                'node_type' => (string)($node['node_type'] ?? ''),
+                'node_id' => (int)($node['node_id'] ?? 0),
+                'online_ips' => $ips,
+                'online_ip_count' => count($ips),
+                'online_last_seen_at' => $lastSeenAt
+            ];
+        }
+
+        $state = $this->normalizeOnlineState([
+            'online_node_map' => $activeNodeMap,
+            'online_nodes' => array_values($activeNodeMap)
+        ]);
+        $state['online_node_map'] = $activeNodeMap;
+        return $state;
+    }
+
+    private function normalizeOnlineState(array $state): array
+    {
+        $nodes = [];
+        $ipMap = [];
+        $lastSeenAt = null;
+
+        foreach (($state['online_nodes'] ?? []) as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+            $nodeType = (string)($node['node_type'] ?? '');
+            $nodeId = (int)($node['node_id'] ?? 0);
+            $ips = $this->sanitizeOnlineIps($node['online_ips'] ?? []);
+            $nodeLastSeenAt = (int)($node['online_last_seen_at'] ?? 0);
+            if ($nodeType === '' || $nodeId <= 0 || !$ips || $nodeLastSeenAt <= 0) {
+                continue;
+            }
+
+            foreach ($ips as $ip) {
+                $ipMap[$ip] = true;
+            }
+            if ($lastSeenAt === null || $nodeLastSeenAt > $lastSeenAt) {
+                $lastSeenAt = $nodeLastSeenAt;
+            }
+            $nodes[] = [
+                'node_type' => $nodeType,
+                'node_id' => $nodeId,
+                'online_ips' => $ips,
+                'online_ip_count' => count($ips),
+                'online_last_seen_at' => $nodeLastSeenAt
+            ];
+        }
+
+        usort($nodes, function ($a, $b) {
+            return ($b['online_last_seen_at'] ?? 0) <=> ($a['online_last_seen_at'] ?? 0);
+        });
+
+        $ips = array_keys($ipMap);
+        sort($ips);
+
+        return [
+            'is_online' => count($nodes) > 0,
+            'online_ips' => $ips,
+            'online_ip_count' => count($ips),
+            'online_nodes' => $nodes,
+            'online_last_seen_at' => $lastSeenAt
+        ];
+    }
+
+    private function emptyOnlineState(): array
+    {
+        return [
+            'is_online' => false,
+            'online_ips' => [],
+            'online_ip_count' => 0,
+            'online_nodes' => [],
+            'online_last_seen_at' => null
+        ];
+    }
+
+    private function sanitizeOnlineIps($ips): array
+    {
+        if (!is_array($ips)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($ips as $ip) {
+            if (!is_scalar($ip)) {
+                continue;
+            }
+            $ip = trim((string)$ip);
+            if ($ip === '') {
+                continue;
+            }
+            $result[substr($ip, 0, self::IP_MAX_LENGTH)] = true;
+        }
+
+        $values = array_keys($result);
+        sort($values);
+        return $values;
     }
 
     private function normalizeNodeTraffic(array $data): array

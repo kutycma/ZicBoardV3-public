@@ -51,7 +51,8 @@ class PaymentService
             'trade_no' => $order['trade_no'],
             'total_amount' => $order['total_amount'],
             'user_id' => $order['user_id'],
-            'stripe_token' => $order['stripe_token']
+            'order_id' => $order['order_id'] ?? ($order['id'] ?? null),
+            'stripe_token' => $order['stripe_token'] ?? null
         ]);
     }
 

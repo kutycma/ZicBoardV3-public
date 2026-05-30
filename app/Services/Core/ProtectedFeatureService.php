@@ -125,6 +125,17 @@ class ProtectedFeatureService
         return is_array($result['data'] ?? null) ? $result['data'] : [];
     }
 
+    public function mapOnlineDevices(array $data, string $nodeType, int $nodeId): array
+    {
+        $result = (new CoreRpcClient())->call('device.map_online_devices', [
+            'data' => $data,
+            'node_type' => $nodeType,
+            'node_id' => $nodeId,
+            'now' => time(),
+        ]);
+        return is_array($result['data'] ?? null) ? $result['data'] : [];
+    }
+
     public static function redactServerSecrets(array $server)
     {
         $blocked = ['private' . '_key', 'ech' . '_key'];

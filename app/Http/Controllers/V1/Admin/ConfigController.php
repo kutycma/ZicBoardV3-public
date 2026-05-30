@@ -106,6 +106,7 @@ class ConfigController extends Controller
                 'currency_symbol' => config('zicboard.currency_symbol', 'VND'),
             ],
             'subscribe' => [
+                'multiple_subscription_enable' => (int)config('zicboard.multiple_subscription_enable', 1),
                 'plan_change_enable' => (int)config('zicboard.plan_change_enable', 1),
                 'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 1),
                 'change_sni_enable' => (int)config('zicboard.change_sni_enable', 1),

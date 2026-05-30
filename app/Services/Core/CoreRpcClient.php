@@ -67,4 +67,31 @@ class CoreRpcClient
 
         return $decoded['data'] ?? null;
     }
+
+    public function verifyCoreIntegrity(): void
+    {
+        $healthUrl = preg_replace('#/rpc$#', '/health', $this->endpoint);
+        $response = $this->client->get($healthUrl);
+        $data = json_decode((string)$response->getBody(), true);
+
+        $runningHash = strtolower(trim((string)($data['core_sha256'] ?? '')));
+        if ($runningHash === '') {
+            throw new RuntimeException('Core health response is invalid');
+        }
+
+        $statePath = base_path('.zicboard/core/state.json');
+        if (!is_file($statePath)) {
+            return;
+        }
+
+        $state = json_decode((string)file_get_contents($statePath), true);
+        $expectedHash = strtolower(trim((string)($state['core_sha256'] ?? '')));
+        if ($expectedHash === '') {
+            return;
+        }
+
+        if (!hash_equals($expectedHash, $runningHash)) {
+            throw new RuntimeException('Core binary integrity verification failed');
+        }
+    }
 }

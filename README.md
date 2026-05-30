@@ -49,42 +49,14 @@ bash update.sh
 ```
 
 The script updates the PHP panel with `git pull --ff-only`, installs PHP
-dependencies, applies ZicBoard migrations, downloads a signed `zicboard-core`
-binary through the configured license endpoint, restarts the core service when
+dependencies, applies ZicBoard migrations, prepares the licensed runtime when
 available, and verifies the local health endpoint.
 
-## Public Release Repository
+## Commercial License
 
-The customer-facing repository is generated from this private repository with:
-
-```powershell
-.\packaging\publish-public.ps1
-```
-
-The generated repository is expected at the sibling path
-`D:\code\ZicBoard\ZicBoardV3-public`. Do not use this project's `public/`
-directory as the public Git repository; `public/` is the web document root.
-
-The publish script uses an allowlist and forbidden-content scanner. It refuses
-to publish if private Go source, license-server source, runtime secrets, or
-protected PHP logic markers are present. Protected commercial operations are
-served by the licensed `zicboard-core` process through authenticated local RPC.
-
-## ZicBoard Core
-
-`zicboard-core` is built from the private `core/` directory and distributed as a
-signed binary through the license/download endpoint. The public Git repository
-contains `bin/.gitignore`, but does not commit `bin/zicboard-core`.
-
-Commercial runtime routes require an active local core entitlement. Protected
-server preparation, node configuration, subscription encryption and device
-mapping are implemented inside the core binary rather than in public PHP code.
-
-Build release binaries with:
-
-```powershell
-.\packaging\build-core.ps1 -Version 0.1.0
-```
+Some commercial features require a valid ZicBoard license. The installer and
+update script will prepare the licensed runtime automatically when the server is
+configured with a valid license key.
 
 ## Configuration
 

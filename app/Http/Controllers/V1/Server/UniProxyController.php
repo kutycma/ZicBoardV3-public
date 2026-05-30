@@ -147,7 +147,9 @@ class UniProxyController extends Controller
                 'error' => 'Invalid online data format'
             ], 400);
         }
-        $data = (new UserDeviceService())->translateNodeAliveData($data);
+        $deviceService = new UserDeviceService();
+        $deviceService->recordOnlineDevicesFromNodeAlive($data, $this->nodeType, (int)$this->nodeInfo->id);
+        $data = $deviceService->translateNodeAliveData($data);
         $updateAt = time();
         $cacheKeys = array_map(function ($uid) {
             return 'ALIVE_IP_SUBSCRIPTION_' . $uid;

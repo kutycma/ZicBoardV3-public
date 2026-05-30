@@ -50,6 +50,7 @@ class UserDeviceController extends Controller
             ->orderBy('v2_user_device.last_seen_at', 'DESC')
             ->orderBy('v2_user_device.id', 'DESC')
             ->get();
+        $devices = (new UserDeviceService())->withOnlineState($devices);
 
         return response([
             'data' => $devices

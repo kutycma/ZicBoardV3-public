@@ -21,6 +21,7 @@ class UserDeviceController extends Controller
             ->select([
                 'id',
                 'subscription_id',
+                'uuid',
                 'status',
                 'hwid',
                 'user_agent',
@@ -34,6 +35,7 @@ class UserDeviceController extends Controller
             ->orderBy('last_seen_at', 'DESC')
             ->orderBy('id', 'DESC')
             ->get();
+        $devices = (new UserDeviceService())->withOnlineState($devices);
 
         return response([
             'data' => $devices
