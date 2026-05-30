@@ -40,6 +40,7 @@ class ZicBoardUpdate extends Command
     public function handle()
     {
         \Artisan::call('config:clear');
+        \Artisan::call('route:clear');
         \Artisan::call('view:clear');
         \Artisan::call('config:cache');
         DB::connection()->getPdo();
