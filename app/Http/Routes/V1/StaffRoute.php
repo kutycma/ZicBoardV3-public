@@ -9,7 +9,7 @@ class StaffRoute
     {
         $router->group([
             'prefix' => 'staff',
-            'middleware' => ['staff', 'commercial.license']
+            'middleware' => ['staff']
         ], function ($router) {
             // Ticket
             $router->get ('/ticket/fetch', 'V1\\Staff\\TicketController@fetch');

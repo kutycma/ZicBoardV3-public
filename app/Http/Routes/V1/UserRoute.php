@@ -9,7 +9,7 @@ class UserRoute
     {
         $router->group([
             'prefix' => 'user',
-            'middleware' => ['user', 'commercial.license']
+            'middleware' => ['user']
         ], function ($router) {
             // User
             $router->get ('/unbindTelegram', 'V1\\User\\UserController@unbindTelegram');

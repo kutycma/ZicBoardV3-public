@@ -9,7 +9,6 @@ class ServerRoute
     {
         $router->group([
             'prefix' => 'server',
-            'middleware' => 'commercial.license'
         ], function ($router) {
             $router->any('/{class}/{action}', function($class, $action) {
                 $controllers = [

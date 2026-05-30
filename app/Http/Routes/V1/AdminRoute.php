@@ -9,7 +9,7 @@ class AdminRoute
     {
         $router->group([
             'prefix' => config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key')))),
-            'middleware' => ['admin', 'commercial.license', 'log'],
+            'middleware' => ['admin', 'log'],
         ], function ($router) {
             // Config
             $router->get ('/config/fetch', 'V1\\Admin\\ConfigController@fetch');

@@ -9,7 +9,6 @@ class GuestRoute
     {
         $router->group([
             'prefix' => 'guest',
-            'middleware' => 'commercial.license'
         ], function ($router) {
             // Telegram
             $router->post('/telegram/webhook', 'V1\\Guest\\TelegramController@webhook');

@@ -94,5 +94,5 @@ Route::get('/' . config('zicboard.secure_path', config('zicboard.frontend_admin_
 });
 
 if (!empty(config('zicboard.subscribe_path'))) {
-    Route::get(config('zicboard.subscribe_path'), 'V1\\Client\\ClientController@subscribe')->middleware(['client', 'commercial.license']);
+    Route::get(config('zicboard.subscribe_path'), 'V1\\Client\\ClientController@subscribe')->middleware(['client']);
 }

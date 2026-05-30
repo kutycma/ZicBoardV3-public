@@ -9,7 +9,6 @@ class ServerRoute
     {
         $router->group([
             'prefix' => 'server',
-            'middleware' => 'commercial.license'
         ], function ($router) {
             $router->any('/config', function() {
                 $ctrl = \App::make("\\App\\Http\\Controllers\\V2\\Server\\ServerController");

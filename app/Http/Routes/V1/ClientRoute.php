@@ -9,7 +9,7 @@ class ClientRoute
     {
         $router->group([
             'prefix' => 'client',
-            'middleware' => ['client', 'commercial.license']
+            'middleware' => ['client']
         ], function ($router) {
             // Client
             if (empty(config('zicboard.subscribe_path'))) {

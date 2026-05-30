@@ -9,7 +9,6 @@ class PassportRoute
     {
         $router->group([
             'prefix' => 'passport',
-            'middleware' => 'commercial.license'
         ], function ($router) {
             // Auth
             $router->post('/auth/register', 'V1\\Passport\\AuthController@register');
