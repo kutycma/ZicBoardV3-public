@@ -101,6 +101,6 @@ class UserDeviceController extends Controller
 
     private function isHwidEnabled()
     {
-        return (int)config('zicboard.device_hwid_enable', 1) === 1;
+        return (int)config('zicboard.device_hwid_enable', 0) === 1;
     }
 }

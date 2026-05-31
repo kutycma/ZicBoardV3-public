@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1\User;
 use App\Http\Controllers\Controller;
 use App\Models\Knowledge;
 use App\Models\User;
+use App\Services\SubscriptionService;
 use App\Services\UserService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
@@ -20,14 +21,24 @@ class KnowledgeController extends Controller
                 ->toArray();
             if (!$knowledge) abort(500, __('Article does not exist'));
             $user = User::find($request->user['id']);
+            if (!$user) {
+                abort(500, __('The user does not exist'));
+            }
+            $subscriptionService = new SubscriptionService();
+            $subscription = $subscriptionService->getPrimaryForUser($user);
+            if ($subscription) {
+                $user = $subscriptionService->applyToUser($user, $subscription);
+            }
             $userService = new UserService();
             if (!$userService->isAvailable($user)) {
                 $this->formatAccessData($knowledge['body']);
             }
-            $subscribeUrl = (string)(Helper::getSubscribeUrl($user['token']) ?? '');
-            $subscribeToken = (int)config('zicboard.device_hwid_enable', 1) === 1
+            $subscribeTokenValue = $subscription ? $subscription->token : $user['token'];
+            $subscribeUrlDetail = Helper::getSubscribeUrlDetail((string)$subscribeTokenValue);
+            $subscribeUrl = (string)($subscribeUrlDetail['url'] ?? '');
+            $subscribeToken = (int)config('zicboard.device_hwid_enable', 0) === 1
                 ? ''
-                : $user['token'];
+                : $subscribeTokenValue;
             $knowledge['body'] = str_replace('{{siteName}}', config('zicboard.app_name', 'ZicBoard'), $knowledge['body']);
             $knowledge['body'] = str_replace('{{subscribeUrl}}', $subscribeUrl, $knowledge['body']);
             $knowledge['body'] = str_replace('{{urlEncodeSubscribeUrl}}', urlencode($subscribeUrl), $knowledge['body']);

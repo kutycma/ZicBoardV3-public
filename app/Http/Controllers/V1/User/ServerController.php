@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1\User;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ServerService;
+use App\Services\SubscriptionService;
 use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,7 +15,7 @@ class ServerController extends Controller
 {
     public function fetch(Request $request)
     {
-        if ((int)config('zicboard.device_hwid_enable', 1) === 1) {
+        if ((int)config('zicboard.device_hwid_enable', 0) === 1) {
             $eTag = sha1('hwid-protected');
             if (strpos((string)$request->header('If-None-Match'), $eTag) !== false) {
                 abort(304);
@@ -26,6 +27,20 @@ class ServerController extends Controller
         }
 
         $user = User::find($request->user['id']);
+        if (!$user) {
+            abort(500, __('The user does not exist'));
+        }
+        $subscriptionService = new SubscriptionService();
+        $subscription = $subscriptionService->getPrimaryForUser($user);
+        if ($request->input('subscription_id')) {
+            $selectedSubscription = $subscriptionService->getForUser($user, $request->input('subscription_id'));
+            if ($selectedSubscription && $selectedSubscription->status === SubscriptionService::STATUS_ACTIVE) {
+                $subscription = $selectedSubscription;
+            }
+        }
+        if ($subscription) {
+            $user = $subscriptionService->applyToUser($user, $subscription);
+        }
         $servers = [];
         $userService = new UserService();
         if ($userService->isAvailable($user)) {

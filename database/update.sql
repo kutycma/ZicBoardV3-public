@@ -1024,3 +1024,17 @@ ADD `network_settings` varchar(255) DEFAULT NULL AFTER `name_sni`;
 
 ALTER TABLE `v2_user_subscription`
 ADD `user_note` varchar(255) DEFAULT NULL AFTER `remarks`;
+
+CREATE TABLE IF NOT EXISTS `v2_happ_subscribe_cache` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `cache_key` varchar(96) NOT NULL,
+  `encrypted_url` text NOT NULL,
+  `expires_at` int(11) NOT NULL,
+  `stale_until` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `v2_happ_subscribe_cache_key_unique` (`cache_key`),
+  KEY `v2_happ_subscribe_cache_expires_at_index` (`expires_at`),
+  KEY `v2_happ_subscribe_cache_stale_until_index` (`stale_until`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

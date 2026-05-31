@@ -642,6 +642,21 @@ CREATE TABLE `v2_user_subscription` (
                                         CONSTRAINT `v2_user_subscription_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `v2_user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS `v2_happ_subscribe_cache`;
+CREATE TABLE `v2_happ_subscribe_cache` (
+                              `id` int(11) NOT NULL AUTO_INCREMENT,
+                              `cache_key` varchar(96) NOT NULL,
+                              `encrypted_url` text NOT NULL,
+                              `expires_at` int(11) NOT NULL,
+                              `stale_until` int(11) NOT NULL,
+                              `created_at` int(11) NOT NULL,
+                              `updated_at` int(11) NOT NULL,
+                              PRIMARY KEY (`id`),
+                              UNIQUE KEY `v2_happ_subscribe_cache_key_unique` (`cache_key`),
+                              KEY `v2_happ_subscribe_cache_expires_at_index` (`expires_at`),
+                              KEY `v2_happ_subscribe_cache_stale_until_index` (`stale_until`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS `v2_user_device`;
 CREATE TABLE `v2_user_device` (
                               `id` int(11) NOT NULL AUTO_INCREMENT,

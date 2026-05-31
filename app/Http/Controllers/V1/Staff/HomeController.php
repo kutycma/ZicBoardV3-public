@@ -31,7 +31,7 @@ class HomeController extends Controller
                 'commission_balance' => $user->commission_balance,
                 'commission_rate' => $user->commission_rate ?? config('zicboard.invite_commission', 10),
                 'discount' => $user->discount ?? '0',
-                'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 1),
+                'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 0),
                 'staff' => [
                     'domain' => $staff->domain,
                     'title' => $staff->title,

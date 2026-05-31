@@ -292,9 +292,16 @@ class UserController extends Controller
     {
         $user = User::where('id', $request->user['id'])
             ->select([
+                'id',
                 'email',
                 'transfer_enable',
                 'device_limit',
+                'token',
+                'uuid',
+                'group_id',
+                'speed_limit',
+                'u',
+                'd',
                 'last_login_at',
                 'created_at',
                 'banned',
@@ -313,7 +320,13 @@ class UserController extends Controller
         if (!$user) {
             abort(500, __('The user does not exist'));
         }
+        $subscriptionService = new SubscriptionService();
+        $subscription = $subscriptionService->getPrimaryForUser($user);
+        if ($subscription) {
+            $user = $subscriptionService->applyToUser($user, $subscription);
+        }
         $user['avatar_url'] = 'https://cravatar.cn/avatar/' . md5($user->email) . '?s=64&d=identicon';
+        $user->makeHidden(['id', 'token', 'uuid', 'subscription']);
         return response([
             'data' => $user
         ]);
@@ -357,6 +370,12 @@ class UserController extends Controller
         }
         $subscriptionService = new SubscriptionService();
         $subscription = $subscriptionService->getPrimaryForUser($user);
+        if ($request->input('subscription_id')) {
+            $selectedSubscription = $subscriptionService->getForUser($user, $request->input('subscription_id'));
+            if ($selectedSubscription && $selectedSubscription->status === SubscriptionService::STATUS_ACTIVE) {
+                $subscription = $selectedSubscription;
+            }
+        }
         if ($subscription) {
             $user = $subscriptionService->applyToUser($user, $subscription);
             if ((int)config('zicboard.change_sni_enable', 1)) {
@@ -381,7 +400,10 @@ class UserController extends Controller
         }
         $user['alive_ip'] = $countalive;
 
-        $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
+        $subscribeToken = $subscription ? $subscription->token : $user['token'];
+        $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscribeToken);
+        $user['subscribe_url'] = $subscribeUrl['url'];
+        $user['subscribe_url_error'] = $subscribeUrl['error'];
         $user->makeHidden(['token', 'uuid', 'subscription']);
 
         $userService = new UserService();

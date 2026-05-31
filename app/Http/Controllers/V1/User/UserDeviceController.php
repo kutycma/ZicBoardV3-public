@@ -11,7 +11,7 @@ class UserDeviceController extends Controller
 {
     public function fetch(Request $request)
     {
-        if (!(int)config('zicboard.device_hwid_enable', 1)) {
+        if (!(int)config('zicboard.device_hwid_enable', 0)) {
             return response([
                 'data' => []
             ]);
@@ -81,7 +81,7 @@ class UserDeviceController extends Controller
 
     private function ensureFeatureEnabled()
     {
-        if (!(int)config('zicboard.device_hwid_enable', 1)) {
+        if (!(int)config('zicboard.device_hwid_enable', 0)) {
             abort(404);
         }
     }

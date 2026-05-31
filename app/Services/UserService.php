@@ -168,7 +168,7 @@ class UserService
 
     public function getDeviceLimitedUsers()
     {
-        if ((int)config('zicboard.device_hwid_enable', 1) !== 1) {
+        if ((int)config('zicboard.device_hwid_enable', 0) !== 1) {
             return collect();
         }
 

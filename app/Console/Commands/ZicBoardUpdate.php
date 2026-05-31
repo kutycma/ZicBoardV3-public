@@ -54,6 +54,7 @@ class ZicBoardUpdate extends Command
 
         if ($this->shouldSkipSqlUpdates($sqlChecksum)) {
             $this->info('database/update.sql has not changed; skipping database update SQL.');
+            $this->repairSubscriptionMigration();
             \Artisan::call('horizon:terminate');
             $this->info('Update completed. Queue workers were restarted, no further action is required.');
             return;
@@ -189,6 +190,8 @@ class ZicBoardUpdate extends Command
         $this->info('Repairing subscription migration schema/data...');
         $this->line('[repair] staff/webcon schema');
         $this->repairWebconSchema();
+        $this->line('[repair] Happ subscribe cache schema');
+        $this->repairHappSubscribeCacheSchema();
         if (!Schema::hasTable('v2_user_subscription')) {
             $this->warn('[repair] v2_user_subscription table not found, skipping subscription repairs.');
             return;
@@ -261,6 +264,38 @@ class ZicBoardUpdate extends Command
     private function repairSubscriptionUserNoteSchema()
     {
         $this->ensureColumn('v2_user_subscription', 'user_note', "ADD `user_note` varchar(255) DEFAULT NULL AFTER `remarks`");
+    }
+
+    private function repairHappSubscribeCacheSchema()
+    {
+        if (!Schema::hasTable('v2_happ_subscribe_cache')) {
+            $this->runRepairStatement("
+                CREATE TABLE `v2_happ_subscribe_cache` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `cache_key` varchar(96) NOT NULL,
+                    `encrypted_url` text NOT NULL,
+                    `expires_at` int(11) NOT NULL,
+                    `stale_until` int(11) NOT NULL,
+                    `created_at` int(11) NOT NULL,
+                    `updated_at` int(11) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `v2_happ_subscribe_cache_key_unique` (`cache_key`),
+                    KEY `v2_happ_subscribe_cache_expires_at_index` (`expires_at`),
+                    KEY `v2_happ_subscribe_cache_stale_until_index` (`stale_until`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+            return;
+        }
+
+        $this->ensureColumn('v2_happ_subscribe_cache', 'cache_key', "ADD `cache_key` varchar(96) NOT NULL AFTER `id`");
+        $this->ensureColumn('v2_happ_subscribe_cache', 'encrypted_url', "ADD `encrypted_url` text NOT NULL AFTER `cache_key`");
+        $this->ensureColumn('v2_happ_subscribe_cache', 'expires_at', "ADD `expires_at` int(11) NOT NULL AFTER `encrypted_url`");
+        $this->ensureColumn('v2_happ_subscribe_cache', 'stale_until', "ADD `stale_until` int(11) NOT NULL AFTER `expires_at`");
+        $this->ensureColumn('v2_happ_subscribe_cache', 'created_at', "ADD `created_at` int(11) NOT NULL AFTER `stale_until`");
+        $this->ensureColumn('v2_happ_subscribe_cache', 'updated_at', "ADD `updated_at` int(11) NOT NULL AFTER `created_at`");
+        $this->ensureIndex('v2_happ_subscribe_cache', 'v2_happ_subscribe_cache_key_unique', 'ADD UNIQUE KEY `v2_happ_subscribe_cache_key_unique` (`cache_key`)');
+        $this->ensureIndex('v2_happ_subscribe_cache', 'v2_happ_subscribe_cache_expires_at_index', 'ADD KEY `v2_happ_subscribe_cache_expires_at_index` (`expires_at`)');
+        $this->ensureIndex('v2_happ_subscribe_cache', 'v2_happ_subscribe_cache_stale_until_index', 'ADD KEY `v2_happ_subscribe_cache_stale_until_index` (`stale_until`)');
     }
 
     private function insertMissingSubscriptions()

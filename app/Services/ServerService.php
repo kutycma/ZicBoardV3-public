@@ -245,7 +245,7 @@ class ServerService
             ])
             ->get();
 
-        if ((int)config('zicboard.device_hwid_enable', 1) !== 1) {
+        if ((int)config('zicboard.device_hwid_enable', 0) !== 1) {
             return $users->map(function ($user) {
                 $user->device_limit = null;
                 return $user;

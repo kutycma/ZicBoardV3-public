@@ -103,10 +103,36 @@ class Helper
 
     public static function getSubscribeUrl($token)
     {
-        $url = self::rawSubscribeUrl($token);
-        if ($url === null) {
-            return null;
+        $result = self::getSubscribeUrlDetail($token);
+        return $result['url'];
+    }
+
+    public static function getSubscribeUrlDetail($token)
+    {
+        $token = (string)$token;
+        if ($token === '') {
+            return [
+                'url' => null,
+                'error' => 'missing_subscription'
+            ];
         }
+
+        $subscription = (new \App\Services\SubscriptionService())->findByToken($token);
+        if (!$subscription) {
+            return [
+                'url' => null,
+                'error' => 'missing_subscription'
+            ];
+        }
+
+        $url = self::rawSubscribeUrl($subscription->token);
+        if ($url === null) {
+            return [
+                'url' => null,
+                'error' => 'missing_subscription'
+            ];
+        }
+
         return self::happProtectedSubscribeUrl($url);
     }
 
@@ -164,17 +190,34 @@ class Helper
 
     private static function happProtectedSubscribeUrl(string $url)
     {
-        if ((int)config('zicboard.device_hwid_enable', 1) !== 1) {
-            return $url;
+        if ((int)config('zicboard.device_hwid_enable', 0) !== 1) {
+            return [
+                'url' => $url,
+                'error' => null
+            ];
         }
 
         try {
-            return (new HappSubscribeCacheService())->get($url);
+            $protectedUrl = (new HappSubscribeCacheService())->get($url);
+            if ($protectedUrl === null) {
+                return [
+                    'url' => null,
+                    'error' => 'happ_unavailable'
+                ];
+            }
+
+            return [
+                'url' => $protectedUrl,
+                'error' => null
+            ];
         } catch (\Throwable $exception) {
             Log::warning('Failed to get cached Happ subscribe URL.', [
                 'error' => $exception->getMessage(),
             ]);
-            return null;
+            return [
+                'url' => null,
+                'error' => 'happ_unavailable'
+            ];
         }
     }
 

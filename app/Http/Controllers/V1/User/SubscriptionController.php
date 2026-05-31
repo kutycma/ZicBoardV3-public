@@ -39,7 +39,9 @@ class SubscriptionController extends Controller
             $usedTraffic = (int)$subscription->u + (int)$subscription->d;
 
             $subscription->makeHidden(['remarks', 'origin_order_id', 'last_order_id', 'token', 'uuid']);
-            $subscription->subscribe_url = Helper::getSubscribeUrl($subscription->token);
+            $subscribeUrl = Helper::getSubscribeUrlDetail($subscription->token);
+            $subscription->subscribe_url = $subscribeUrl['url'];
+            $subscription->subscribe_url_error = $subscribeUrl['error'];
             $subscription->alive_ip = is_array($aliveIps) ? count($aliveIps) : 0;
             $subscription->reset_day = $userService->getResetDay($serviceUser);
             $subscription->used_traffic = $usedTraffic;

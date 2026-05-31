@@ -108,7 +108,7 @@ class ConfigController extends Controller
             'subscribe' => [
                 'multiple_subscription_enable' => (int)config('zicboard.multiple_subscription_enable', 1),
                 'plan_change_enable' => (int)config('zicboard.plan_change_enable', 1),
-                'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 1),
+                'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 0),
                 'change_sni_enable' => (int)config('zicboard.change_sni_enable', 1),
                 'reset_traffic_method' => (int)config('zicboard.reset_traffic_method', 0),
                 'surplus_enable' => (int)config('zicboard.surplus_enable', 1),
