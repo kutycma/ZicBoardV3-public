@@ -369,21 +369,18 @@ class MigrateV2bZicToZicBoard extends Command
         $selectSql = implode(",\n                ", $selectColumns);
 
         DB::statement("
-            INSERT INTO `v2_user_subscription` ({$targetSql})
+            INSERT IGNORE INTO `v2_user_subscription` ({$targetSql})
             SELECT
                 {$selectSql}
             FROM `v2_user` AS users
+            LEFT JOIN `v2_user_subscription` AS existing_subscriptions
+                ON existing_subscriptions.user_id = users.id
             WHERE (
                 users.`plan_id` IS NOT NULL
                 OR COALESCE(users.`transfer_enable`, 0) > 0
                 {$deviceExistsClause}
             )
-                AND NOT EXISTS (
-                    SELECT 1 FROM `v2_user_subscription` AS subscriptions
-                    WHERE subscriptions.user_id = users.id
-                        OR subscriptions.token = users.token
-                        OR subscriptions.uuid = users.uuid
-                )
+                AND existing_subscriptions.id IS NULL
         ");
     }
 
@@ -400,7 +397,6 @@ class MigrateV2bZicToZicBoard extends Command
             UPDATE `v2_user_subscription` AS subscriptions
             INNER JOIN `v2_user` AS users
                 ON users.id = subscriptions.user_id
-                AND users.token = subscriptions.token
             SET subscriptions.name_sni = COALESCE(subscriptions.name_sni, users.name_sni),
                 subscriptions.network_settings = COALESCE(subscriptions.network_settings, users.network_settings)
             WHERE users.name_sni IS NOT NULL
@@ -427,7 +423,11 @@ class MigrateV2bZicToZicBoard extends Command
 
         DB::statement("
             UPDATE `v2_order` AS orders
-            INNER JOIN `v2_user_subscription` AS subscriptions ON subscriptions.user_id = orders.user_id
+            INNER JOIN (
+                SELECT user_id, MIN(id) AS id
+                FROM `v2_user_subscription`
+                GROUP BY user_id
+            ) AS subscriptions ON subscriptions.user_id = orders.user_id
             SET orders.subscription_id = subscriptions.id
             WHERE " . implode(' AND ', $conditions) . "
         ");

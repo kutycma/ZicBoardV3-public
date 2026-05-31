@@ -930,39 +930,44 @@ CREATE TABLE IF NOT EXISTS `v2_user_subscription` (
                                         CONSTRAINT `v2_user_subscription_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `v2_user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE `v2_user_subscription`
+ADD KEY `v2_user_subscription_user_id_index` (`user_id`);
+
+ALTER TABLE `v2_user_device`
+ADD KEY `v2_user_device_user_id_index` (`user_id`);
+
 INSERT IGNORE INTO `v2_user_subscription` (
     `user_id`, `plan_id`, `group_id`, `speed_limit`, `device_limit`, `t`, `u`, `d`,
     `transfer_enable`, `expired_at`, `auto_renewal`, `remind_expire`, `remind_traffic`,
     `token`, `uuid`, `status`, `remarks`, `created_at`, `updated_at`
 )
 SELECT
-    `id`, `plan_id`, `group_id`, `speed_limit`, `device_limit`, `t`, `u`, `d`,
-    `transfer_enable`, `expired_at`, COALESCE(`auto_renewal`, 0), COALESCE(`remind_expire`, 1), COALESCE(`remind_traffic`, 1),
-    `token`, `uuid`, 'active', 'Migrated from legacy user subscription fields',
-    `created_at`, `updated_at`
-FROM `v2_user`
+    users.`id`, users.`plan_id`, users.`group_id`, users.`speed_limit`, users.`device_limit`, users.`t`, users.`u`, users.`d`,
+    users.`transfer_enable`, users.`expired_at`, COALESCE(users.`auto_renewal`, 0), COALESCE(users.`remind_expire`, 1), COALESCE(users.`remind_traffic`, 1),
+    users.`token`, users.`uuid`, 'active', 'Migrated from legacy user subscription fields',
+    users.`created_at`, users.`updated_at`
+FROM `v2_user` AS users
+LEFT JOIN `v2_user_subscription` AS existing_subscriptions
+    ON existing_subscriptions.user_id = users.`id`
 WHERE (
-    `plan_id` IS NOT NULL
-    OR `transfer_enable` > 0
+    users.`plan_id` IS NOT NULL
+    OR users.`transfer_enable` > 0
     OR EXISTS (
-        SELECT 1 FROM `v2_user_device` AS devices WHERE devices.user_id = `v2_user`.`id`
+        SELECT 1 FROM `v2_user_device` AS devices WHERE devices.user_id = users.`id`
     )
 )
-    AND NOT EXISTS (
-        SELECT 1 FROM `v2_user_subscription` AS subscriptions
-        WHERE subscriptions.user_id = `v2_user`.`id`
-            OR subscriptions.token = `v2_user`.`token`
-            OR subscriptions.uuid = `v2_user`.`uuid`
-    );
+    AND existing_subscriptions.id IS NULL;
 
 ALTER TABLE `v2_order`
 ADD `subscription_id` int(11) NULL AFTER `user_id`,
 ADD INDEX `idx_subscription` (`subscription_id`);
 
 UPDATE `v2_order` AS orders
-LEFT JOIN `v2_user_subscription` AS subscriptions
-    ON subscriptions.user_id = orders.user_id
-    AND subscriptions.token = (SELECT users.token FROM `v2_user` AS users WHERE users.id = orders.user_id)
+LEFT JOIN (
+    SELECT user_id, MIN(id) AS id
+    FROM `v2_user_subscription`
+    GROUP BY user_id
+) AS subscriptions ON subscriptions.user_id = orders.user_id
 SET orders.subscription_id = subscriptions.id
 WHERE orders.plan_id > 0;
 

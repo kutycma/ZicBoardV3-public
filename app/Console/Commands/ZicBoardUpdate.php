@@ -44,6 +44,7 @@ class ZicBoardUpdate extends Command
         \Artisan::call('view:clear');
         \Artisan::call('config:cache');
         DB::connection()->getPdo();
+        $this->configureDatabaseSession();
         $file = \File::get(base_path() . '/database/update.sql');
         if (!$file) {
             abort(500, 'File cập nhật database không tồn tại');
@@ -58,22 +59,40 @@ class ZicBoardUpdate extends Command
         if (!is_array($sql)) {
             abort(500, 'File cập nhật database không đúng định dạng');
         }
-        $this->info('Importing database updates, please wait...');
-        foreach ($sql as $item) {
-            $item = trim($item);
-            if (!$item) continue;
+        $statements = array_values(array_filter(array_map('trim', $sql), function ($item) {
+            return $item !== '';
+        }));
+        $totalStatements = count($statements);
+
+        $this->info("Importing database updates ({$totalStatements} statements), please wait...");
+        foreach ($statements as $index => $item) {
+            $this->line(sprintf('[database %d/%d] %s', $index + 1, $totalStatements, $this->summarizeSql($item)));
             try {
                 DB::statement($item);
             } catch (\Exception $e) {
                 if ($this->isIgnorableSqlError($e)) {
                     continue;
                 }
-                $this->error('SQL execution error: ' . $e->getMessage());
+                $this->error(sprintf('SQL execution error at statement %d/%d: %s', $index + 1, $totalStatements, $e->getMessage()));
             }
         }
         $this->repairSubscriptionMigration();
         \Artisan::call('horizon:terminate');
         $this->info('Update completed. Queue workers were restarted, no further action is required.');
+    }
+
+    private function configureDatabaseSession()
+    {
+        foreach ([
+            'SET SESSION lock_wait_timeout = 30',
+            'SET SESSION innodb_lock_wait_timeout = 30',
+        ] as $statement) {
+            try {
+                DB::statement($statement);
+            } catch (\Exception $e) {
+                $this->warn('Could not set database timeout: ' . $e->getMessage());
+            }
+        }
     }
 
     private function isIgnorableSqlError(\Exception $e)
@@ -109,17 +128,32 @@ class ZicBoardUpdate extends Command
 
     private function repairSubscriptionMigration()
     {
+        $this->info('Repairing subscription migration schema/data...');
+        $this->line('[repair] staff/webcon schema');
         $this->repairWebconSchema();
         if (!Schema::hasTable('v2_user_subscription')) {
+            $this->warn('[repair] v2_user_subscription table not found, skipping subscription repairs.');
             return;
         }
 
+        $this->line('[repair] subscription SNI schema');
         $this->repairSubscriptionSniSchema();
+        $this->line('[repair] subscription user note schema');
         $this->repairSubscriptionUserNoteSchema();
+        $this->line('[repair] subscription lookup indexes');
+        $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_user_id_index', 'ADD KEY `v2_user_subscription_user_id_index` (`user_id`)');
+        $this->ensureIndex('v2_user_device', 'v2_user_device_user_id_index', 'ADD KEY `v2_user_device_user_id_index` (`user_id`)');
+        $this->line('[repair] subscription text column collations');
+        $this->alignSubscriptionUserColumnCollations();
+        $this->line('[repair] missing subscriptions');
         $this->insertMissingSubscriptions();
+        $this->line('[repair] legacy SNI data');
         $this->migrateLegacySniToSubscriptions();
+        $this->line('[repair] order subscription links');
         $this->repairOrdersSubscriptionSchema();
+        $this->line('[repair] device subscription links');
         $this->repairDevicesSubscriptionSchema();
+        $this->line('[repair] stat user subscription links');
         $this->repairStatsSubscriptionSchema();
     }
 
@@ -180,24 +214,21 @@ class ZicBoardUpdate extends Command
                 `token`, `uuid`, `status`, `remarks`, `created_at`, `updated_at`
             )
             SELECT
-                `id`, `plan_id`, `group_id`, `speed_limit`, `device_limit`, `t`, `u`, `d`,
-                `transfer_enable`, `expired_at`, COALESCE(`auto_renewal`, 0), COALESCE(`remind_expire`, 1), COALESCE(`remind_traffic`, 1),
-                `token`, `uuid`, 'active', 'Migrated from legacy user subscription fields',
-                `created_at`, `updated_at`
-            FROM `v2_user`
+                users.`id`, users.`plan_id`, users.`group_id`, users.`speed_limit`, users.`device_limit`, users.`t`, users.`u`, users.`d`,
+                users.`transfer_enable`, users.`expired_at`, COALESCE(users.`auto_renewal`, 0), COALESCE(users.`remind_expire`, 1), COALESCE(users.`remind_traffic`, 1),
+                users.`token`, users.`uuid`, 'active', 'Migrated from legacy user subscription fields',
+                users.`created_at`, users.`updated_at`
+            FROM `v2_user` AS users
+            LEFT JOIN `v2_user_subscription` AS existing_subscriptions
+                ON existing_subscriptions.user_id = users.`id`
             WHERE (
-                `plan_id` IS NOT NULL
-                OR `transfer_enable` > 0
+                users.`plan_id` IS NOT NULL
+                OR users.`transfer_enable` > 0
                 OR EXISTS (
-                    SELECT 1 FROM `v2_user_device` AS devices WHERE devices.user_id = `v2_user`.`id`
+                    SELECT 1 FROM `v2_user_device` AS devices WHERE devices.user_id = users.`id`
                 )
             )
-                AND NOT EXISTS (
-                    SELECT 1 FROM `v2_user_subscription` AS subscriptions
-                    WHERE subscriptions.user_id = `v2_user`.`id`
-                        OR subscriptions.token = `v2_user`.`token`
-                        OR subscriptions.uuid = `v2_user`.`uuid`
-                )
+                AND existing_subscriptions.id IS NULL
         ");
     }
 
@@ -215,7 +246,6 @@ class ZicBoardUpdate extends Command
             UPDATE `v2_user_subscription` AS subscriptions
             INNER JOIN `v2_user` AS users
                 ON users.id = subscriptions.user_id
-                AND users.token = subscriptions.token
             SET subscriptions.name_sni = COALESCE(subscriptions.name_sni, users.name_sni),
                 subscriptions.network_settings = COALESCE(subscriptions.network_settings, users.network_settings)
             WHERE users.name_sni IS NOT NULL
@@ -234,9 +264,11 @@ class ZicBoardUpdate extends Command
 
         $this->runRepairStatement("
             UPDATE `v2_order` AS orders
-            LEFT JOIN `v2_user_subscription` AS subscriptions
-                ON subscriptions.user_id = orders.user_id
-                AND subscriptions.token = (SELECT users.token FROM `v2_user` AS users WHERE users.id = orders.user_id)
+            LEFT JOIN (
+                SELECT user_id, MIN(id) AS id
+                FROM `v2_user_subscription`
+                GROUP BY user_id
+            ) AS subscriptions ON subscriptions.user_id = orders.user_id
             SET orders.subscription_id = subscriptions.id
             WHERE orders.plan_id > 0
                 AND orders.subscription_id IS NULL
@@ -321,6 +353,71 @@ class ZicBoardUpdate extends Command
         $this->runRepairStatement("ALTER TABLE `{$table}` {$definition}");
     }
 
+    private function alignSubscriptionUserColumnCollations()
+    {
+        foreach (['token', 'uuid', 'name_sni', 'network_settings', 'remarks'] as $column) {
+            $this->alignStringColumnCollation('v2_user_subscription', $column, 'v2_user', $column);
+        }
+    }
+
+    private function alignStringColumnCollation($targetTable, $targetColumn, $sourceTable, $sourceColumn)
+    {
+        $source = $this->columnMetadata($sourceTable, $sourceColumn);
+        $target = $this->columnMetadata($targetTable, $targetColumn);
+
+        if (!$source || !$target ||
+            !$source->character_set_name || !$source->collation_name ||
+            !$target->character_set_name || !$target->collation_name) {
+            return;
+        }
+
+        if ($source->character_set_name === $target->character_set_name &&
+            $source->collation_name === $target->collation_name) {
+            return;
+        }
+
+        $charset = $this->safeSqlName($source->character_set_name);
+        $collation = $this->safeSqlName($source->collation_name);
+        $nullable = $target->is_nullable === 'YES' ? 'NULL' : 'NOT NULL';
+        $default = $target->column_default === null
+            ? ''
+            : ' DEFAULT ' . DB::connection()->getPdo()->quote((string)$target->column_default);
+
+        $this->runRepairStatement("
+            ALTER TABLE `{$targetTable}`
+            MODIFY `{$targetColumn}` {$target->column_type}
+                CHARACTER SET {$charset}
+                COLLATE {$collation}
+                {$nullable}{$default}
+        ");
+    }
+
+    private function columnMetadata($table, $column)
+    {
+        return DB::selectOne("
+            SELECT
+                COLUMN_TYPE AS column_type,
+                CHARACTER_SET_NAME AS character_set_name,
+                COLLATION_NAME AS collation_name,
+                IS_NULLABLE AS is_nullable,
+                COLUMN_DEFAULT AS column_default
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = ?
+                AND TABLE_NAME = ?
+                AND COLUMN_NAME = ?
+            LIMIT 1
+        ", [DB::getDatabaseName(), $table, $column]);
+    }
+
+    private function safeSqlName($name)
+    {
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $name)) {
+            throw new \RuntimeException("Invalid charset/collation name: {$name}");
+        }
+
+        return $name;
+    }
+
     private function indexExists($table, $index)
     {
         return DB::table('information_schema.statistics')
@@ -352,6 +449,7 @@ class ZicBoardUpdate extends Command
 
     private function runRepairStatement($sql)
     {
+        $this->line('[repair SQL] ' . $this->summarizeSql($sql));
         try {
             DB::statement($sql);
         } catch (\Exception $e) {
@@ -359,5 +457,15 @@ class ZicBoardUpdate extends Command
                 $this->warn('Could not complete schema repair step: ' . $e->getMessage());
             }
         }
+    }
+
+    private function summarizeSql($sql)
+    {
+        $summary = preg_replace('/\s+/', ' ', trim($sql));
+        if (strlen($summary) > 160) {
+            return substr($summary, 0, 157) . '...';
+        }
+
+        return $summary;
     }
 }

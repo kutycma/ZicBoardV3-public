@@ -14,8 +14,21 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Đang cập nhật ZicBoard bằng git pull --ff-only..."
-git pull --ff-only
+REMOTE="${ZICBOARD_UPDATE_REMOTE:-origin}"
+BRANCH="${ZICBOARD_UPDATE_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+if [ "$BRANCH" = "HEAD" ] || [ -z "$BRANCH" ]; then
+  BRANCH="master"
+fi
+TARGET="${REMOTE}/${BRANCH}"
+
+echo "Dang cap nhat ZicBoard tu ${TARGET} va xoa moi thay doi local khong nam trong .gitignore..."
+git fetch "$REMOTE" --prune
+if ! git rev-parse --verify "$TARGET" >/dev/null 2>&1; then
+  echo "Khong tim thay nhanh remote: ${TARGET}"
+  exit 1
+fi
+git reset --hard "$TARGET"
+git clean -fd
 
 if command -v composer >/dev/null 2>&1; then
   COMPOSER_CMD="composer"
