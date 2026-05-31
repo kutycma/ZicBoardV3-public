@@ -1,71 +1,42 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="vi-VN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <link rel="icon" href="./images/logo.png">
   <title>EZ</title>
-  <!-- 动态设置网站标题 -->
+  
   <script>
-    (function() {
-      try {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'config.json?t=' + Date.now(), false);
-        xhr.send(null);
-        if (xhr.status >= 200 && xhr.status < 300) {
-          var themeConfig = JSON.parse(xhr.responseText);
-          window.EZ_CONFIG = themeConfig.config || themeConfig.EZ_CONFIG || themeConfig.ez_config || {};
-        }
-      } catch (error) {
-        window.EZ_CONFIG = window.EZ_CONFIG || {};
-      }
-    })();
+    document.write('<script src="config.js?t=' + Math.random() + '"><\/script>');
     document.addEventListener('DOMContentLoaded', function() {
       if (window.EZ_CONFIG && window.EZ_CONFIG.SITE_CONFIG && window.EZ_CONFIG.SITE_CONFIG.siteName) {
         document.title = window.EZ_CONFIG.SITE_CONFIG.siteName;
       }
-    });
-
-    // 页面加载时先检查父窗口的主题状态
-    function checkParentTheme() {
-      // 检查是否在iframe中
-      if (window.parent !== window) {
-        // 向父窗口发送消息，请求当前主题
-        window.parent.postMessage({
+    });    function checkParentTheme() {      if (window.parent !== window) {        window.parent.postMessage({
           type: 'getTheme'
         }, '*');
       }
-    }
-
-    // 在页面加载时检查父窗口的主题
-    window.addEventListener('load', checkParentTheme);
-    
-    // 监听父窗口的主题消息
-    window.addEventListener('message', function(event) {
+    }    window.addEventListener('load', checkParentTheme);    window.addEventListener('message', function(event) {
       if (event.data && event.data.type === 'setTheme') {
-        const newTheme = event.data.theme;
-        // 同步主题状态，但不再次向父窗口发送消息
-        setTheme(newTheme, false);
-        // 存储主题到 localStorage
-        localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+        const newTheme = event.data.theme;        setTheme(newTheme, false);        localStorage.setItem(THEME_STORAGE_KEY, newTheme);
       }
     });
   </script>
-  <!-- 字体 -->
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <style>
-    /* 主题切换过渡效果 */
+    
     * {
       transition-property: background-color, color, border-color, box-shadow, fill, stroke;
       transition-duration: 0.3s;
       transition-timing-function: ease;
     }
     
-    /* 控制主题过渡期间的样式 */
+    
     .theme-transition * {
       transition: background-color 0.5s ease, 
         color 0.5s ease, 
@@ -75,7 +46,7 @@
         opacity 0.5s ease !important;
     }
 
-    /* 添加基础动画 */
+    
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -125,7 +96,7 @@
       }
     }
 
-    /* 应用动画到具体元素 */
+    
     .logo {
       animation: fadeIn 0.8s ease;
     }
@@ -152,23 +123,23 @@
 
     .feature-card {
       animation: slideUp 0.8s ease both;
-      animation-play-state: paused; /* 暂停动画，直到元素进入视口 */
+      animation-play-state: paused; 
     }
 
     .client-card {
       animation: slideUp 0.8s ease both;
-      animation-play-state: paused; /* 暂停动画，直到元素进入视口 */
+      animation-play-state: paused; 
     }
 
     .cta-container {
       animation: scaleIn 0.8s ease both;
-      animation-play-state: paused; /* 暂停动画，直到元素进入视口 */
+      animation-play-state: paused; 
     }
 
     :root {
       --primary-color: #355cc2;
       --primary-color-light: #5c93ff;
-      --primary-rgb: 53, 92, 194; /* RGB值用于透明度计算 */
+      --primary-rgb: 53, 92, 194; 
       --text-color: #333;
       --text-light: #666;
       --background-color: #fff;
@@ -217,7 +188,7 @@
       overflow-x: hidden;
     }
 
-    /* 隐藏滚动条 */
+    
     @media (min-width: 769px) {
       html, body, div, main, section, article, aside, nav {
         scrollbar-width: none !important;
@@ -604,7 +575,7 @@
       font-size: 14px;
     }
 
-    /* 响应式设计 */
+    
     @media (max-width: 1024px) {
       .hero h2 {
         font-size: 48px;
@@ -615,29 +586,29 @@
     }
 
     @media (max-width: 768px) {
-      /* 强制隐藏移动端水平滚动条 */
+      
       body {
         overflow-x: hidden;
       }
       
       .nav-links {
-        display: none; /* 在移动端隐藏导航链接 */
+        display: none; 
       }
       
       .nav-buttons {
-        display: none; /* 在移动端隐藏导航按钮 */
+        display: none; 
       }
       
       .mobile-menu-button {
-        display: block; /* 在移动端显示菜单按钮 */
+        display: block; 
       }
       
       .mobile-nav {
-        display: flex; /* 在移动端才显示 */
+        display: flex; 
       }
       
       .mobile-nav-overlay {
-        display: block; /* 只在移动设备宽度下显示 */
+        display: block; 
       }
       
       .hero {
@@ -677,7 +648,7 @@
     }
 
     .mobile-nav {
-      display: none; /* 默认隐藏，只在移动端显示 */
+      display: none; 
       position: fixed;
       top: 0;
       left: 0;
@@ -702,7 +673,7 @@
       opacity: 0;
       visibility: hidden;
       transition: opacity 0.3s ease, visibility 0.3s ease;
-      display: none; /* 默认隐藏 */
+      display: none; 
     }
     
     .mobile-nav-overlay.active {
@@ -711,7 +682,7 @@
     }
 
     @media (max-width: 768px) {
-      /* 强制隐藏移动端水平滚动条 */
+      
       body {
         overflow-x: hidden;
       }
@@ -723,10 +694,10 @@
         display: none;
       }
       .mobile-nav {
-        display: flex; /* 在移动端才显示 */
+        display: flex; 
       }
       .mobile-nav-overlay {
-        display: block; /* 只在移动设备宽度下显示 */
+        display: block; 
       }
       .mobile-nav.active {
         transform: translateX(0);
@@ -774,7 +745,7 @@
       }
     }
 
-    /* 添加加载动画样式 */
+    
     .preloader {
       position: fixed;
       top: 0;
@@ -839,15 +810,9 @@
   </style>
 </head>
 <body>
-  <!-- 加载动画 -->
-  <!-- <div class="preloader" id="preloader">
-    <div class="loader"></div>
-  </div> -->
-
-  <!-- 放置在body开始处，初始应用正确主题以避免闪烁 -->
-  <script>
-    // 在DOM加载前预先应用主题，避免白屏闪烁
-    (function() {
+  
+  
+  <script>    (function() {
       const THEME_STORAGE_KEY = 'ez-theme-preference';
       const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -865,10 +830,10 @@
       <h1 id="siteName">EZ</h1>
     </div>
     <nav class="nav-links">
-      <a href="#features">特性</a>
-      <a href="#download">客户端</a>
-      <a href="javascript:void(0)" onclick="navigateTo('shop')">价格</a>
-      <a href="javascript:void(0)" onclick="navigateTo('tickets')">支持</a>
+      <a href="#features">Tinh nang</a>
+      <a href="#download">Ung dung</a>
+      <a href="javascript:void(0)" onclick="navigateTo('shop')">Bang gia</a>
+      <a href="javascript:void(0)" onclick="navigateTo('tickets')">Ho tro</a>
     </nav>
     <div class="nav-buttons">
       <div class="theme-toggle" id="themeToggle">
@@ -884,8 +849,8 @@
           <path d="M5.5 18.5l1.5 -1.5"></path>
         </svg>
       </div>
-      <a href="javascript:void(0)" onclick="navigateTo('login')" class="button secondary-button">登录</a>
-      <a href="javascript:void(0)" onclick="navigateTo('register')" class="button primary-button">注册</a>
+      <a href="javascript:void(0)" onclick="navigateTo('login')" class="button secondary-button">Dang nhap</a>
+      <a href="javascript:void(0)" onclick="navigateTo('register')" class="button primary-button">Dang ky</a>
     </div>
     <button class="mobile-menu-button" id="mobileMenuButton">☰</button>
   </header>
@@ -905,30 +870,30 @@
         <path d="M5.5 5.5l1.5 1.5"></path>
         <path d="M5.5 18.5l1.5 -1.5"></path>
       </svg>
-      <span>切换主题</span>
+      <span>Doi giao dien</span>
     </div>
     <div class="mobile-nav-links">
-      <a href="#features">特性</a>
-      <a href="#download">客户端</a>
-      <a href="javascript:void(0)" onclick="navigateTo('shop'); closeMobileMenu();">价格</a>
-      <a href="javascript:void(0)" onclick="navigateTo('tickets'); closeMobileMenu();">支持</a>
+      <a href="#features">Tinh nang</a>
+      <a href="#download">Ung dung</a>
+      <a href="javascript:void(0)" onclick="navigateTo('shop'); closeMobileMenu();">Bang gia</a>
+      <a href="javascript:void(0)" onclick="navigateTo('tickets'); closeMobileMenu();">Ho tro</a>
     </div>
   </div>
 
   <section class="hero">
-    <h2 id="heroTitle">探索全球网络的无限可能</h2>
-    <p id="heroSubtitle">高速稳定、安全私密，随时随地畅享网络世界</p>
+    <h2 id="heroTitle">Kham pha kha nang vo han cua mang toan cau</h2>
+    <p id="heroSubtitle">Toc do on dinh, An toan rieng tu,</p>
     <div class="hero-buttons">
-      <a href="javascript:void(0)" onclick="navigateTo('register')" class="button primary-button">立即开始</a>
-      <a href="#download" class="button secondary-button">下载客户端</a>
+      <a href="javascript:void(0)" onclick="navigateTo('register')" class="button primary-button">Bat dau ngay</a>
+      <a href="#download" class="button secondary-button">Tai xuongUng dung</a>
     </div>
     <img src="https://placehold.co/1200x675" alt="Dashboard Preview" class="hero-image">
   </section>
 
   <section class="features" id="features">
     <div class="section-title">
-      <h3>专为极致体验设计</h3>
-      <p>我们为您提供最优质的服务和极致的用户体验</p>
+      <h3>Thiet ke cho trai nghiem toi uu</h3>
+      <p></p>
     </div>
     <div class="feature-grid">
       <div class="feature-card">
@@ -939,8 +904,8 @@
             <path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
           </svg>
         </div>
-        <h4>高速稳定</h4>
-        <p>高速节点全球覆盖，智能路由技术，保障您的网络连接稳定流畅</p>
+        <h4>Toc do on dinh</h4>
+        <p>Bat dau nhanh voi tai khoan cua ban.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -950,8 +915,8 @@
             <path d="M8 11v-4a4 4 0 1 1 8 0v4"></path>
           </svg>
         </div>
-        <h4>安全私密</h4>
-        <p>采用军事级加密技术，保护您的网络隐私和数据安全</p>
+        <h4>An toan rieng tu</h4>
+        <p>Ket noi on dinh, bao mat va de quan ly.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -963,8 +928,8 @@
             <path d="M12.5 3a17 17 0 0 1 0 18"></path>
           </svg>
         </div>
-        <h4>全球连接</h4>
-        <p>多区域节点覆盖，助您畅享全球网络资源</p>
+        <h4>Ket noi toan cau</h4>
+        <p>Ket noi on dinh, bao mat va de quan ly.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -974,8 +939,8 @@
             <path d="M16 9h2"></path>
           </svg>
         </div>
-        <h4>多平台支持</h4>
-        <p>支持 iOS、Android、Windows、macOS 等各大主流平台</p>
+        <h4>Ho tro da nen tang</h4>
+        <p>Ho tro iOS, Android, Windows va macOS.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -983,8 +948,8 @@
             <path d="M13 3l0 7l6 0l-8 11l0 -7l-6 0l8 -11"></path>
           </svg>
         </div>
-        <h4>简单易用</h4>
-        <p>一键连接，简洁直观的界面设计，无需复杂设置</p>
+        <h4>De su dung</h4>
+        <p>Bat dau nhanh voi tai khoan cua ban.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -992,23 +957,23 @@
             <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1"></path>
           </svg>
         </div>
-        <h4>专业客服</h4>
-        <p>24/7专业客服团队，随时为您解决问题</p>
+        <h4>Ho tro chuyen nghiep</h4>
+        <p>Ho tro 24/7 cho khach hang.</p>
       </div>
     </div>
   </section>
 
   <section class="download" id="download">
     <div class="section-title">
-      <h3>跨平台客户端</h3>
-      <p>支持各大主流平台，随时随地畅享极速体验</p>
+      <h3>Tai ung dung</h3>
+      <p>Ho tro cac ung dung pho bien.</p>
     </div>
     <div class="client-grid">
       <div class="client-card" id="iosClient">
         <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-brand-apple"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8.286 7.008c-3.216 0 -4.286 3.23 -4.286 5.92c0 3.229 2.143 8.072 4.286 8.072c1.165 -.05 1.799 -.538 3.214 -.538c1.406 0 1.607 .538 3.214 .538s4.286 -3.229 4.286 -5.381c-.03 -.011 -2.649 -.434 -2.679 -3.23c-.02 -2.335 2.589 -3.179 2.679 -3.228c-1.096 -1.606 -3.162 -2.113 -3.75 -2.153c-1.535 -.12 -3.032 1.077 -3.75 1.077c-.729 0 -2.036 -1.077 -3.214 -1.077z" /><path d="M12 4a2 2 0 0 0 2 -2a2 2 0 0 0 -2 2" /></svg>
         <h4>iOS</h4>
-        <p>适用于 iPhone 和 iPad 的客户端</p>
-        <a href="https://apps.apple.com/app/id1" class="button primary-button" target="_blank" rel="noopener noreferrer">下载</a>
+        <p>Ung dung cho iPhone va iPad.</p>
+        <a href="https://apps.apple.com/app/id1" class="button primary-button" target="_blank" rel="noopener noreferrer">Tai xuong</a>
       </div>
       <div class="client-card" id="androidClient">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-brand-android">
@@ -1021,8 +986,8 @@
           <path d="M15 18l0 3"></path>
         </svg>
         <h4>Android</h4>
-        <p>适用于安卓手机和平板的客户端</p>
-        <a href="https://play.google.com/store/apps" class="button primary-button" target="_blank" rel="noopener noreferrer">下载</a>
+        <p>Ung dung</p>
+        <a href="https://play.google.com/store/apps" class="button primary-button" target="_blank" rel="noopener noreferrer">Tai xuong</a>
       </div>
       <div class="client-card" id="windowsClient">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-brand-windows">
@@ -1031,8 +996,8 @@
           <path d="M4 12l16 0"></path>
         </svg>
         <h4>Windows</h4>
-        <p>适用于 Windows 系统的客户端</p>
-        <a href="https://github.com/releases/latest" class="button primary-button" target="_blank" rel="noopener noreferrer">下载</a>
+        <p>Ung dung cho Windows.</p>
+        <a href="https://github.com/releases/latest" class="button primary-button" target="_blank" rel="noopener noreferrer">Tai xuong</a>
       </div>
       <div class="client-card" id="macosClient">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-device-laptop">
@@ -1040,17 +1005,17 @@
           <path d="M5 6m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z"></path>
         </svg>
         <h4>MacOS</h4>
-        <p>适用于 Mac 电脑的客户端</p>
-        <a href="https://github.com/releases/latest" class="button primary-button" target="_blank" rel="noopener noreferrer">下载</a>
+        <p>Ung dung cho macOS.</p>
+        <a href="https://github.com/releases/latest" class="button primary-button" target="_blank" rel="noopener noreferrer">Tai xuong</a>
       </div>
     </div>
   </section>
 
   <section class="cta">
     <div class="cta-container">
-      <h3>准备好开始您的探索了吗？</h3>
-      <p>加入我们，即刻体验无限可能</p>
-      <a href="javascript:void(0)" onclick="navigateTo('register')" class="button cta-button">立即注册</a>
+      <h3>San sang bat dau?</h3>
+      <p>Ket noi on dinh, bao mat va de quan ly.</p>
+      <a href="javascript:void(0)" onclick="navigateTo('register')" class="button cta-button">Dang ky</a>
     </div>
   </section>
 
@@ -1059,108 +1024,60 @@
       <img src="./images/logo.png" alt="Logo">
     </div>
     <div class="footer-links">
-      <a href="#">关于我们</a>
-      <a href="#">隐私政策</a>
-      <a href="#">服务条款</a>
-      <a href="#">常见问题</a>
-      <a href="#">联系我们</a>
+      <a href="#">Ve chung toi</a>
+      <a href="#">Chinh sach rieng tu</a>
+      <a href="#">Dieu khoan dich vu</a>
+      <a href="#">Cau hoi thuong gap</a>
+      <a href="#">Lien he</a>
     </div>
-    <p class="copyright" id="copyrightText">© 2025 EZ THEME. All Rights Reserved.</p>
+    <p class="copyright" id="copyrightText">(c) 2025 EZ THEME. All Rights Reserved.</p>
   </footer>
 
-  <script>
-    // 页面加载完成后淡出加载动画
-    window.addEventListener('load', function() {
+  <script>    window.addEventListener('load', function() {
       setTimeout(function() {
-        document.getElementById('preloader').classList.add('fade-out');
-        // 完全移除，避免遮挡页面交互
-        setTimeout(function() {
+        document.getElementById('preloader').classList.add('fade-out');        setTimeout(function() {
           document.getElementById('preloader').style.display = 'none';
         }, 800);
-      }, 500);
-      
-      // 设置滚动触发动画
-      setupScrollAnimations();
-    });
-
-    // 设置滚动动画
-    function setupScrollAnimations() {
-      // 使用 Intersection Observer API 监测元素是否进入视口
-      const observerOptions = {
-        root: null, // 使用视口作为参考
+      }, 500);      setupScrollAnimations();
+    });    function setupScrollAnimations() {      const observerOptions = {
+        root: null,
         rootMargin: '0px',
-        threshold: 0.1 // 元素有10%进入视口时触发
+        threshold: 0.1
       };
       
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            // 元素进入视口，播放动画
-            if (entry.target.classList.contains('feature-card') || 
+          if (entry.isIntersecting) {            if (entry.target.classList.contains('feature-card') || 
                 entry.target.classList.contains('client-card') || 
                 entry.target.classList.contains('cta-container')) {
               entry.target.style.animationPlayState = 'running';
-            }
-            // 一旦动画触发，不再观察此元素
-            observer.unobserve(entry.target);
+            }            observer.unobserve(entry.target);
           }
         });
-      }, observerOptions);
-      
-      // 观察所有需要滚动动画的元素
-      document.querySelectorAll('.feature-card, .client-card, .cta-container').forEach(elem => {
+      }, observerOptions);      document.querySelectorAll('.feature-card, .client-card, .cta-container').forEach(elem => {
         observer.observe(elem);
-      });
-      
-      // 设置交错动画延迟
-      document.querySelectorAll('.feature-card').forEach((card, index) => {
+      });      document.querySelectorAll('.feature-card').forEach((card, index) => {
         card.style.animationDelay = `${0.1 * index}s`;
       });
       
       document.querySelectorAll('.client-card').forEach((card, index) => {
         card.style.animationDelay = `${0.1 * index}s`;
       });
-    }
-
-    // 导航函数 - 通过postMessage与父窗口通信
-    function navigateTo(route) {
-      // 检查是否在iframe中
-      if (window.parent !== window) {
-        // 向父窗口发送消息
-        window.parent.postMessage({
+    }    function navigateTo(route) {      if (window.parent !== window) {        window.parent.postMessage({
           type: 'navigation',
           route: route
         }, '*');
-      } else {
-        // 如果不在iframe中，直接跳转
-        window.location.href = '/#/' + route;
+      } else {        window.location.href = '/#/' + route;
       }
-    }
-    
-    // 主题设置
-    const themeToggle = document.getElementById('themeToggle');
+    }    const themeToggle = document.getElementById('themeToggle');
     const mobileThemeToggle = document.getElementById('mobileThemeToggle');
     const root = document.documentElement;
-    const THEME_STORAGE_KEY = 'ez-theme-preference';
-    
-    // 检查本地存储中的主题偏好
-    function getThemePreference() {
+    const THEME_STORAGE_KEY = 'ez-theme-preference';    function getThemePreference() {
       const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
       if (savedTheme) {
         return savedTheme;
-      }
-      
-      // 如果没有保存的偏好，则检测系统偏好
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    
-    // 设置主题
-    function setTheme(theme, notifyParent = true) {
-      // 添加过渡类
-      document.body.classList.add('theme-transition');
-      
-      // 延迟设置主题，让过渡有时间生效
-      setTimeout(() => {
+      }      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }    function setTheme(theme, notifyParent = true) {      document.body.classList.add('theme-transition');      setTimeout(() => {
         if (theme === 'dark') {
           root.classList.add('dark-theme');
           updateThemeIcon('dark');
@@ -1169,25 +1086,16 @@
           updateThemeIcon('light');
         }
         
-        localStorage.setItem(THEME_STORAGE_KEY, theme);
-        
-        // 通知父窗口主题变化
-        if (notifyParent && window.parent !== window) {
+        localStorage.setItem(THEME_STORAGE_KEY, theme);        if (notifyParent && window.parent !== window) {
           window.parent.postMessage({
             type: 'themeChanged',
             theme: theme
           }, '*');
-        }
-        
-        // 延迟移除过渡类，防止页面滚动时触发过渡
-        setTimeout(() => {
+        }        setTimeout(() => {
           document.body.classList.remove('theme-transition');
         }, 300);
       }, 10);
-    }
-    
-    // 更新主题图标
-    function updateThemeIcon(theme) {
+    }    function updateThemeIcon(theme) {
       if (theme === 'dark') {
         themeToggle.innerHTML = `
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon-dark">
@@ -1198,7 +1106,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon-dark">
             <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z"></path>
           </svg>
-          <span>切换到亮色模式</span>
+          <span>Doi giao dien</span>
         `;
       } else {
         themeToggle.innerHTML = `
@@ -1226,82 +1134,45 @@
             <path d="M5.5 5.5l1.5 1.5"></path>
             <path d="M5.5 18.5l1.5 -1.5"></path>
           </svg>
-          <span>切换到暗色模式</span>
+          <span>Doi giao dien</span>
         `;
       }
     }
     
-    // 切换主题
+    // Doi giao dien
     function toggleTheme() {
       const currentTheme = root.classList.contains('dark-theme') ? 'dark' : 'light';
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       setTheme(newTheme, true);
-    }
-    
-    // 监听系统主题变化
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    }    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
       if (!localStorage.getItem(THEME_STORAGE_KEY)) {
         setTheme(e.matches ? 'dark' : 'light', true);
       }
-    });
-    
-    // 初始化主题
-    setTheme(getThemePreference(), false);
-    
-    // 添加主题切换事件
-    themeToggle.addEventListener('click', toggleTheme);
-    mobileThemeToggle.addEventListener('click', toggleTheme);
-    
-    // 动态设置网站名称和版权信息
-    document.addEventListener('DOMContentLoaded', function() {
+    });    setTheme(getThemePreference(), false);    themeToggle.addEventListener('click', toggleTheme);
+    mobileThemeToggle.addEventListener('click', toggleTheme);    document.addEventListener('DOMContentLoaded', function() {
       if (window.EZ_CONFIG && window.EZ_CONFIG.SITE_CONFIG) {
-        const config = window.EZ_CONFIG;
-        
-        // 设置网站名称
-        if (config.SITE_CONFIG.siteName) {
+        const config = window.EZ_CONFIG;        if (config.SITE_CONFIG.siteName) {
           document.getElementById('siteName').textContent = config.SITE_CONFIG.siteName;
           document.title = config.SITE_CONFIG.siteName;
-        }
-        
-        // 设置版权信息
-        if (config.SITE_CONFIG.copyright) {
+        }        if (config.SITE_CONFIG.copyright) {
           document.getElementById('copyrightText').textContent = config.SITE_CONFIG.copyright;
-        }
-        
-        // 设置 Hero 标题（多语言支持）
-        if (config.SITE_CONFIG.landingText) {
-          // 获取浏览器语言
-          const browserLang = navigator.language || navigator.userLanguage;
-          // 获取与浏览器语言匹配的文本，或默认使用中文
-          const heroText = config.SITE_CONFIG.landingText[browserLang] || 
-                          config.SITE_CONFIG.landingText['zh-CN'];
+        }        if (config.SITE_CONFIG.landingText) {          const browserLang = navigator.language || navigator.userLanguage;          const heroText = config.SITE_CONFIG.landingText[browserLang] || 
+                          config.SITE_CONFIG.landingText['vi-VN'];
           
           document.getElementById('heroTitle').textContent = heroText;
-        }
-        
-        // 设置客户端下载链接
-        if (config.CLIENT_CONFIG && config.CLIENT_CONFIG.clientLinks) {
+        }        if (config.CLIENT_CONFIG && config.CLIENT_CONFIG.clientLinks) {
           try {
-            const clientLinks = config.CLIENT_CONFIG.clientLinks;
-            
-            // 显示/隐藏客户端下载卡片
-            if (!config.CLIENT_CONFIG.showIOS) document.getElementById('iosClient').style.display = 'none';
+            const clientLinks = config.CLIENT_CONFIG.clientLinks;            if (!config.CLIENT_CONFIG.showIOS) document.getElementById('iosClient').style.display = 'none';
             if (!config.CLIENT_CONFIG.showAndroid) document.getElementById('androidClient').style.display = 'none';
             if (!config.CLIENT_CONFIG.showWindows) document.getElementById('windowsClient').style.display = 'none';
-            if (!config.CLIENT_CONFIG.showMacOS) document.getElementById('macosClient').style.display = 'none';
-            
-            // 设置下载链接
-            const setDownloadLink = (elementId, linkUrl) => {
+            if (!config.CLIENT_CONFIG.showMacOS) document.getElementById('macosClient').style.display = 'none';            const setDownloadLink = (elementId, linkUrl) => {
               if (!linkUrl) return;
               
               document.querySelectorAll(`#${elementId} .button`).forEach(btn => {
                 if (linkUrl && linkUrl !== '#' && linkUrl !== '') {
                   btn.href = linkUrl;
                   btn.target = '_blank';
-                  btn.rel = 'noopener noreferrer';
-                  
-                  // 添加点击事件监听器，确保链接正常打开
-                  btn.onclick = function(e) {
+                  btn.rel = 'noopener noreferrer';                  btn.onclick = function(e) {
                     e.preventDefault();
                     window.open(linkUrl, '_blank', 'noopener,noreferrer');
                   };
@@ -1312,98 +1183,47 @@
             setDownloadLink('iosClient', clientLinks.ios);
             setDownloadLink('androidClient', clientLinks.android);
             setDownloadLink('windowsClient', clientLinks.windows);
-            setDownloadLink('macosClient', clientLinks.macos);
-            
-            // console.log('客户端下载链接已设置:', clientLinks);
-          } catch (error) {
-            // console.error('设置下载链接时出错:', error);
-          }
-        } else {
-          // console.warn('未找到客户端配置信息 (window.EZ_CONFIG.CLIENT_CONFIG)');
-        }
-        
-        // 设置主题色
-        if (config.DEFAULT_CONFIG && config.DEFAULT_CONFIG.primaryColor) {
+            setDownloadLink('macosClient', clientLinks.macos);          } catch (error) {          }
+        } else {        }        if (config.DEFAULT_CONFIG && config.DEFAULT_CONFIG.primaryColor) {
           const primaryColor = config.DEFAULT_CONFIG.primaryColor;
-          document.documentElement.style.setProperty('--primary-color', primaryColor);
-          
-          // 生成RGB值
-          const r = parseInt(primaryColor.substring(1, 3), 16);
+          document.documentElement.style.setProperty('--primary-color', primaryColor);          const r = parseInt(primaryColor.substring(1, 3), 16);
           const g = parseInt(primaryColor.substring(3, 5), 16);
           const b = parseInt(primaryColor.substring(5, 7), 16);
-          document.documentElement.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`);
-          
-          // 生成浅色变体
-          const primaryColorLight = adjustColorBrightness(primaryColor, 30);
-          document.documentElement.style.setProperty('--primary-color-light', primaryColorLight);
-          
-          // 生成暗色变体作为悬停颜色
-          document.documentElement.style.setProperty('--button-hover', adjustColorBrightness(primaryColor, -15));
-          
-          // 更新CTA卡片阴影颜色
-          const rgbColor = hexToRGBA(primaryColor, 0.3);
+          document.documentElement.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`);          const primaryColorLight = adjustColorBrightness(primaryColor, 30);
+          document.documentElement.style.setProperty('--primary-color-light', primaryColorLight);          document.documentElement.style.setProperty('--button-hover', adjustColorBrightness(primaryColor, -15));          const rgbColor = hexToRGBA(primaryColor, 0.3);
           document.documentElement.style.setProperty('--primary-shadow', rgbColor);
         }
       }
-    });
-    
-    // 移动端菜单
-    document.getElementById('mobileMenuButton').addEventListener('click', function() {
+    });    document.getElementById('mobileMenuButton').addEventListener('click', function() {
       const mobileNav = document.getElementById('mobileNav');
-      const mobileNavOverlay = document.getElementById('mobileNavOverlay');
-      
-      // 检查当前状态并切换
-      if (mobileNav.classList.contains('active')) {
+      const mobileNavOverlay = document.getElementById('mobileNavOverlay');      if (mobileNav.classList.contains('active')) {
         closeMobileMenu();
       } else {
         mobileNav.classList.add('active');
         mobileNavOverlay.classList.add('active');
-        document.body.style.overflow = 'hidden'; // 防止背景滚动
+        document.body.style.overflow = 'hidden';
       }
     });
     
     document.getElementById('closeMenu').addEventListener('click', function() {
       closeMobileMenu();
-    });
-
-    // 点击遮罩层关闭菜单
-    document.getElementById('mobileNavOverlay').addEventListener('click', function() {
+    });    document.getElementById('mobileNavOverlay').addEventListener('click', function() {
       closeMobileMenu();
-    });
-
-    // 关闭移动端菜单的函数
-    function closeMobileMenu() {
+    });    function closeMobileMenu() {
       document.getElementById('mobileNav').classList.remove('active');
       document.getElementById('mobileNavOverlay').classList.remove('active');
-      document.body.style.overflow = ''; // 恢复背景滚动
-    }
-    
-    // 辅助函数：调整颜色亮度
-    function adjustColorBrightness(hex, percent) {
-      // 将hex转为rgb
-      let r = parseInt(hex.substring(1, 3), 16);
+      document.body.style.overflow = '';
+    }    function adjustColorBrightness(hex, percent) {      let r = parseInt(hex.substring(1, 3), 16);
       let g = parseInt(hex.substring(3, 5), 16);
-      let b = parseInt(hex.substring(5, 7), 16);
-      
-      // 调整亮度
-      r = Math.max(0, Math.min(255, r + percent));
+      let b = parseInt(hex.substring(5, 7), 16);      r = Math.max(0, Math.min(255, r + percent));
       g = Math.max(0, Math.min(255, g + percent));
-      b = Math.max(0, Math.min(255, b + percent));
-      
-      // 转回hex
-      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-    }
-    
-    // 辅助函数：将十六进制颜色转换为RGBA格式
-    function hexToRGBA(hex, alpha) {
+      b = Math.max(0, Math.min(255, b + percent));      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }    function hexToRGBA(hex, alpha) {
       const r = parseInt(hex.substring(1, 3), 16);
       const g = parseInt(hex.substring(3, 5), 16);
       const b = parseInt(hex.substring(5, 7), 16);
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-    
-    // 平滑滚动
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    }    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();
         
@@ -1415,10 +1235,7 @@
           window.scrollTo({
             top: targetElement.offsetTop - 80,
             behavior: 'smooth'
-          });
-          
-          // 关闭移动端菜单
-          closeMobileMenu();
+          });          closeMobileMenu();
         }
       });
     });
