@@ -911,8 +911,8 @@ CREATE TABLE IF NOT EXISTS `v2_user_subscription` (
                                         `auto_renewal` tinyint(4) NOT NULL DEFAULT '0',
                                         `remind_expire` tinyint(4) NOT NULL DEFAULT '1',
                                         `remind_traffic` tinyint(4) NOT NULL DEFAULT '1',
-                                        `token` char(32) NOT NULL,
-                                        `uuid` varchar(36) NOT NULL,
+                                        `token` char(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
+                                        `uuid` varchar(36) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
                                         `status` varchar(16) NOT NULL DEFAULT 'active',
                                         `origin_order_id` int(11) DEFAULT NULL,
                                         `last_order_id` int(11) DEFAULT NULL,
@@ -976,7 +976,11 @@ ADD `subscription_id` int(11) NULL AFTER `user_id`,
 ADD KEY `v2_user_device_subscription_id_index` (`subscription_id`);
 
 UPDATE `v2_user_device` AS devices
-INNER JOIN `v2_user_subscription` AS subscriptions ON subscriptions.user_id = devices.user_id
+INNER JOIN (
+    SELECT user_id, MIN(id) AS id
+    FROM `v2_user_subscription`
+    GROUP BY user_id
+) AS subscriptions ON subscriptions.user_id = devices.user_id
 SET devices.subscription_id = subscriptions.id
 WHERE devices.subscription_id IS NULL;
 

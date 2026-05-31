@@ -286,7 +286,11 @@ class ZicBoardUpdate extends Command
 
         $this->runRepairStatement("
             UPDATE `v2_user_device` AS devices
-            INNER JOIN `v2_user_subscription` AS subscriptions ON subscriptions.user_id = devices.user_id
+            INNER JOIN (
+                SELECT user_id, MIN(id) AS id
+                FROM `v2_user_subscription`
+                GROUP BY user_id
+            ) AS subscriptions ON subscriptions.user_id = devices.user_id
             SET devices.subscription_id = subscriptions.id
             WHERE devices.subscription_id IS NULL
         ");
@@ -313,7 +317,11 @@ class ZicBoardUpdate extends Command
 
         $this->runRepairStatement("
             UPDATE `v2_stat_user` AS stats
-            INNER JOIN `v2_user_subscription` AS subscriptions ON subscriptions.user_id = stats.user_id
+            INNER JOIN (
+                SELECT user_id, MIN(id) AS id
+                FROM `v2_user_subscription`
+                GROUP BY user_id
+            ) AS subscriptions ON subscriptions.user_id = stats.user_id
             SET stats.subscription_id = subscriptions.id
             WHERE stats.subscription_id IS NULL
         ");

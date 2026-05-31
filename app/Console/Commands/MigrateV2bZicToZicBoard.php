@@ -24,6 +24,7 @@ class MigrateV2bZicToZicBoard extends Command
 
         try {
             DB::connection()->getPdo();
+            $this->configureDatabaseSession();
         } catch (\Throwable $e) {
             $this->error('Khong ket noi duoc database hien tai.');
             $this->line('Cach fix: kiem tra DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD trong file .env.');
@@ -88,6 +89,20 @@ class MigrateV2bZicToZicBoard extends Command
         } catch (\Throwable $e) {
             $this->renderFailure($e);
             return 1;
+        }
+    }
+
+    private function configureDatabaseSession()
+    {
+        foreach ([
+            'SET SESSION lock_wait_timeout = 30',
+            'SET SESSION innodb_lock_wait_timeout = 30',
+        ] as $statement) {
+            try {
+                DB::statement($statement);
+            } catch (\Exception $e) {
+                $this->warn('Khong set duoc timeout database: ' . $e->getMessage());
+            }
         }
     }
 
@@ -236,8 +251,8 @@ class MigrateV2bZicToZicBoard extends Command
                     `auto_renewal` tinyint(4) NOT NULL DEFAULT '0',
                     `remind_expire` tinyint(4) NOT NULL DEFAULT '1',
                     `remind_traffic` tinyint(4) NOT NULL DEFAULT '1',
-                    `token` char(32) NOT NULL,
-                    `uuid` varchar(36) NOT NULL,
+                    `token` char(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
+                    `uuid` varchar(36) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
                     `status` varchar(16) NOT NULL DEFAULT 'active',
                     `origin_order_id` int(11) DEFAULT NULL,
                     `last_order_id` int(11) DEFAULT NULL,
@@ -507,7 +522,11 @@ class MigrateV2bZicToZicBoard extends Command
 
         DB::statement("
             UPDATE `v2_user_device` AS devices
-            INNER JOIN `v2_user_subscription` AS subscriptions ON subscriptions.user_id = devices.user_id
+            INNER JOIN (
+                SELECT user_id, MIN(id) AS id
+                FROM `v2_user_subscription`
+                GROUP BY user_id
+            ) AS subscriptions ON subscriptions.user_id = devices.user_id
             SET devices.subscription_id = subscriptions.id
             WHERE devices.subscription_id IS NULL
         ");
@@ -574,7 +593,11 @@ class MigrateV2bZicToZicBoard extends Command
 
         DB::statement("
             UPDATE `v2_stat_user` AS stats
-            INNER JOIN `v2_user_subscription` AS subscriptions ON subscriptions.user_id = stats.user_id
+            INNER JOIN (
+                SELECT user_id, MIN(id) AS id
+                FROM `v2_user_subscription`
+                GROUP BY user_id
+            ) AS subscriptions ON subscriptions.user_id = stats.user_id
             SET stats.subscription_id = subscriptions.id
             WHERE stats.subscription_id IS NULL
         ");

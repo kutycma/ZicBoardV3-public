@@ -20,18 +20,6 @@
             logo: @json($logo ?: "/theme/" . $theme . "/images/logo.png")
         };
         window.EZ_THEME_CONFIG = @json($theme_config ?? []);
-        window.getEzThemeAsset = function (path) {
-            var normalizedPath = String(path || '').charAt(0) === '/' ? String(path || '') : '/' + String(path || '');
-            var assetsPath = (window.settings && window.settings.assets_path) || '/theme/{{$theme}}';
-            return String(assetsPath).replace(/\/+$/, '') + normalizedPath;
-        };
-        window.getEzLogoUrl = function () {
-            var logo = window.settings && window.settings.logo;
-            if (logo && logo !== '/images/logo.png' && logo !== './images/logo.png') {
-                return logo;
-            }
-            return window.getEzThemeAsset('/images/logo.png');
-        };
         window.VUE_APP_DEBUGGING = "false";
         </script>
     <meta charset="UTF-8">
@@ -99,7 +87,11 @@
             z-index: 5;
         }
     </style>
-  <script type="module" crossorigin src="/theme/{{$theme}}/static/index-DAtn_kkx.js"></script>
+  <script type="module" crossorigin src="/theme/{{$theme}}/static/index.js"></script>
+  <link rel="modulepreload" crossorigin href="/theme/{{$theme}}/static/vendor.js">
+  <link rel="modulepreload" crossorigin href="/theme/{{$theme}}/static/components.js">
+  <link rel="stylesheet" crossorigin href="/theme/{{$theme}}/static/vendor.css">
+  <link rel="stylesheet" crossorigin href="/theme/{{$theme}}/static/components.css">
 </head>
 <body>
 <div id="app"></div>

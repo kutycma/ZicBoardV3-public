@@ -109,7 +109,7 @@ class ResetTraffic extends Command
                 }
             }
         }
-        DB::statement('UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.updated_at = subscriptions.updated_at');
+        DB::statement('UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id AND users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.updated_at = subscriptions.updated_at');
         Redis::del('traffic_reset_lock');
     }
 

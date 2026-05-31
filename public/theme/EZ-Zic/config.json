@@ -4,7 +4,7 @@
   "version": "0.4.0",
   "images": "",
   "config": {
-    "PANEL_TYPE": "Xiao-V2board",
+    "PANEL_TYPE": "ZicBoard",
     "API_CONFIG": {
       "urlMode": "auto",
       "showCheckBackend": false,
@@ -20,24 +20,21 @@
     "API_MIDDLEWARE_KEY": "",
     "API_MIDDLEWARE_PATH": "/ez/ez",
     "SITE_CONFIG": {
-      "siteName": "EZ THEME",
-      "siteDescription": "EZ UI",
-      "copyright": "(c) 2026 EZ THEME. All Rights Reserved.",
+      "siteName": "ZicBoard EZ Theme",
+      "siteDescription": "Premium High-Performance User Panel",
+      "copyright": "© 2026 ZicBoard. All Rights Reserved.",
       "showLogo": true,
       "landingText": {
-        "vi-VN": "Kham pha kha nang khong gioi han cua mang toan cau",
-        "en-US": "Explore unlimited possibilities of the global network",
-        "ja-JP": "Explore unlimited possibilities of the global network",
-        "ko-KR": "Explore unlimited possibilities of the global network",
-        "ru-RU": "Explore unlimited possibilities of the global network",
-        "fa-IR": "Explore unlimited possibilities of the global network"
+        "vi-VN": "Khám phá khả năng vô hạn của mạng toàn cầu",
+        "en-US": "Explore Unlimited Possibilities of Global Network",
+        "zh-CN": "探索全球网络无限可能"
       },
       "customLandingPage": ""
     },
     "DEFAULT_CONFIG": {
       "defaultLanguage": "vi-VN",
-      "defaultTheme": "light",
-      "primaryColor": "#355cc2",
+      "defaultTheme": "dark",
+      "primaryColor": "#00947c",
       "enableLandingPage": true
     },
     "AUTH_CONFIG": {
@@ -48,8 +45,8 @@
       },
       "popup": {
         "enabled": false,
-        "title": "Thong bao",
-        "content": "",
+        "title": "Thông báo từ quản trị viên",
+        "content": "<p>Chào mừng bạn đến với dịch vụ của chúng tôi!</p>",
         "cooldownHours": 0,
         "closeWaitSeconds": 3
       }
@@ -57,21 +54,17 @@
     "AUTH_LAYOUT_CONFIG": {
       "layoutType": "center",
       "splitLayout": {
-        "leftContent": {
-          "backgroundImage": "",
-          "siteName": {
-            "show": true,
-            "color": "white"
-          },
-          "greeting": {
-            "show": true,
-            "color": "white"
-          }
+        "logoPosition": "top-left",
+        "leftSide": {
+          "title": "Kết nối không giới hạn",
+          "subtitle": "Trải nghiệm đường truyền tốc độ cao cùng công nghệ bảo mật tiên tiến nhất.",
+          "bannerImage": "",
+          "showSocialLinks": true
         }
       }
     },
     "SHOP_CONFIG": {
-      "showHotSaleBadge": false,
+      "showHotSaleBadge": true,
       "showPlanFeatureCards": true,
       "autoSelectMaxPeriod": false,
       "hidePeriodTabs": false,
@@ -87,20 +80,20 @@
         "onetime_price"
       ],
       "popup": {
-        "enabled": true,
-        "title": "Thong bao",
-        "content": "",
+        "enabled": false,
+        "title": "Lưu ý mua hàng",
+        "content": "<p>Vui lòng đọc kỹ thông số gói cước trước khi thanh toán. Hệ thống không hoàn tiền sau khi kích hoạt thành công.</p>",
         "cooldownHours": 0,
         "closeWaitSeconds": 0
       }
     },
     "ORDER_CONFIG": {
       "confirmOrder": true,
-      "confirmOrderContent": "<p>Vui long kiem tra ky don hang truoc khi thanh toan.</p>"
+      "confirmOrderContent": "<p>Bạn có chắc chắn muốn tiến hành đặt mua gói cước này không?</p>"
     },
     "DASHBOARD_CONFIG": {
-      "showUserEmail": false,
-      "importButtonHighlightBtnbgcolor": false,
+      "showUserEmail": true,
+      "importButtonHighlightBtnbgcolor": true,
       "enableResetTraffic": true,
       "resetTrafficDisplayMode": "low",
       "lowTrafficThreshold": 10,
@@ -116,15 +109,15 @@
       "showAndroid": true,
       "showMacOS": true,
       "showWindows": true,
-      "showLinux": true,
-      "showOpenWrt": true,
+      "showLinux": false,
+      "showOpenWrt": false,
       "clientLinks": {
-        "ios": "",
-        "android": "",
-        "macos": "",
-        "windows": "",
-        "linux": "",
-        "openwrt": ""
+        "ios": "https://apps.apple.com/app/shadowrocket/id932747118",
+        "android": "https://github.com/v2rayNG/releases",
+        "macos": "https://github.com/ClashVerge/releases",
+        "windows": "https://github.com/ClashVerge/releases",
+        "linux": "https://github.com/ClashVerge/releases",
+        "openwrt": "https://github.com/openwrt"
       },
       "showShadowrocket": true,
       "showSurge": true,
@@ -161,10 +154,6 @@
       "showGiftCardRedeem": false,
       "showRecentDevices": true
     },
-    "SECURITY_CONFIG": {
-      "enableFrontendDomainCheck": false
-    },
-    "AUTHORIZED_DOMAINS": [],
     "CAPTCHA_CONFIG": {
       "captchaType": "google",
       "google": {
@@ -174,45 +163,28 @@
         "verifyUrl": "https://challenges.cloudflare.com/turnstile/v0/siteverify"
       }
     },
-    "CUSTOM_HEADERS": {
-      "enabled": false,
-      "headers": {}
-    },
-    "PAYMENT_CONFIG": {
-      "openPaymentInNewTab": true,
-      "qrcodeSize": 200,
-      "qrcodeColor": "#000000",
-      "qrcodeBackground": "#ffffff",
-      "autoCheckPayment": true,
-      "autoCheckInterval": 5000,
-      "autoCheckMaxTimes": 60,
-      "useSafariPaymentModal": true,
-      "autoSelectFirstMethod": true
-    },
     "WALLET_CONFIG": {
       "presetAmounts": [
-        6,
-        30,
-        68,
-        128,
-        256,
-        328,
-        648,
-        1280
+        10,
+        20,
+        50,
+        100,
+        200,
+        500
       ],
       "defaultSelectedAmount": null,
-      "minimumDepositAmount": 1
+      "minimumDepositAmount": 10
     },
     "INVITE_CONFIG": {
-      "showCommissionBadge": false,
+      "showCommissionBadge": true,
       "recordsPerPage": 10,
       "inviteLinkConfig": {
         "linkMode": "auto",
-        "customDomain": ""
+        "customDomain": "https://example.com"
       }
     },
     "BROWSER_RESTRICT_CONFIG": {
-      "enabled": true,
+      "enabled": false,
       "restrictBrowsers": {
         "360": true,
         "QQ": true,
@@ -231,13 +203,11 @@
       "includeUserInfoInTicket": true,
       "popup": {
         "enabled": true,
-        "title": "Thong bao",
-        "content": "<p>Vui long mo ta ro van de va dinh kem anh neu can.</p>",
+        "title": "Lưu ý gửi hỗ trợ",
+        "content": "<p>Vui lòng ghi rõ lỗi gặp phải, mô tả chi tiết kèm ảnh chụp màn hình nếu có để chúng tôi xử lý nhanh nhất.</p>",
         "cooldownHours": 24,
         "closeWaitSeconds": 0
-      },
-      "isImageHosting": false,
-      "imgbbApiKey": ""
+      }
     },
     "TRAFFICLOG_CONFIG": {
       "enableTrafficLog": true,
@@ -272,22 +242,14 @@
       "fourthNavItem": "docs"
     },
     "MORE_PAGE_CONFIG": {
-      "enableCustomCards": false,
+      "enableCustomCards": true,
       "customCards": [
         {
-          "id": "github",
-          "title": "GitHub",
-          "description": "Mo GitHub",
-          "svgIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"icon icon-tabler icon-tabler-brand-github\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path stroke=\"none\" d=\"M0 0h24v24H0z\" fill=\"none\"/><path d=\"M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5\" /></svg>",
-          "url": "https://github.com",
-          "openInNewTab": true
-        },
-        {
-          "id": "telegram",
-          "title": "Telegram",
-          "description": "Mo nhom Telegram",
+          "id": "telegram_group",
+          "title": "Nhóm hỗ trợ Telegram",
+          "description": "Tham gia trao đổi & nhận hỗ trợ nhanh nhất từ cộng đồng",
           "svgIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"icon icon-tabler icon-tabler-brand-telegram\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path stroke=\"none\" d=\"M0 0h24v24H0z\" fill=\"none\"/><path d=\"M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4\" /></svg>",
-          "url": "",
+          "url": "https://t.me/your_telegram_group_link",
           "openInNewTab": true
         }
       ]
@@ -307,7 +269,7 @@
       "placeholder": "Value for PANEL_TYPE",
       "field_name": "PANEL_TYPE",
       "field_type": "input",
-      "default_value": "Xiao-V2board",
+      "default_value": "ZicBoard",
       "description": "Loại backend/panel để theme chọn logic tương thích. Với ZicBoard nên giữ giá trị ZicBoard."
     },
     {
@@ -411,7 +373,7 @@
       "placeholder": "Value for SITE_CONFIG.siteName",
       "field_name": "SITE_CONFIG.siteName",
       "field_type": "input",
-      "default_value": "EZ THEME",
+      "default_value": "ZicBoard EZ Theme",
       "description": "Tên website hiển thị trong giao diện người dùng, title và các vị trí nhận diện thương hiệu."
     },
     {
@@ -419,7 +381,7 @@
       "placeholder": "Value for SITE_CONFIG.siteDescription",
       "field_name": "SITE_CONFIG.siteDescription",
       "field_type": "input",
-      "default_value": "EZ UI",
+      "default_value": "Premium High-Performance User Panel",
       "description": "Mô tả ngắn của website, dùng trên các trang giới thiệu hoặc thông tin hệ thống."
     },
     {
@@ -427,7 +389,7 @@
       "placeholder": "Value for SITE_CONFIG.copyright",
       "field_name": "SITE_CONFIG.copyright",
       "field_type": "input",
-      "default_value": "(c) 2026 EZ THEME. All Rights Reserved.",
+      "default_value": "© 2026 ZicBoard. All Rights Reserved.",
       "description": "Dòng bản quyền hiển thị ở chân trang. Có thể dùng biểu thức năm hiện tại nếu theme hỗ trợ."
     },
     {
@@ -447,7 +409,7 @@
       "placeholder": "Value for SITE_CONFIG.landingText.vi-VN",
       "field_name": "SITE_CONFIG.landingText.vi-VN",
       "field_type": "input",
-      "default_value": "Kham pha kha nang khong gioi han cua mang toan cau",
+      "default_value": "Khám phá khả năng vô hạn của mạng toàn cầu",
       "description": "Slogan tiếng Việt hiển thị trên Landing Page."
     },
     {
@@ -455,36 +417,16 @@
       "placeholder": "Value for SITE_CONFIG.landingText.en-US",
       "field_name": "SITE_CONFIG.landingText.en-US",
       "field_type": "input",
-      "default_value": "Explore unlimited possibilities of the global network",
+      "default_value": "Explore Unlimited Possibilities of Global Network",
       "description": "Slogan tiếng Anh hiển thị trên Landing Page."
     },
     {
-      "label": "SITE_CONFIG.landingText.ja-JP",
-      "placeholder": "Value for SITE_CONFIG.landingText.ja-JP",
-      "field_name": "SITE_CONFIG.landingText.ja-JP",
+      "label": "SITE_CONFIG.landingText.zh-CN",
+      "placeholder": "Value for SITE_CONFIG.landingText.zh-CN",
+      "field_name": "SITE_CONFIG.landingText.zh-CN",
       "field_type": "input",
-      "default_value": "Explore unlimited possibilities of the global network"
-    },
-    {
-      "label": "SITE_CONFIG.landingText.ko-KR",
-      "placeholder": "Value for SITE_CONFIG.landingText.ko-KR",
-      "field_name": "SITE_CONFIG.landingText.ko-KR",
-      "field_type": "input",
-      "default_value": "Explore unlimited possibilities of the global network"
-    },
-    {
-      "label": "SITE_CONFIG.landingText.ru-RU",
-      "placeholder": "Value for SITE_CONFIG.landingText.ru-RU",
-      "field_name": "SITE_CONFIG.landingText.ru-RU",
-      "field_type": "input",
-      "default_value": "Explore unlimited possibilities of the global network"
-    },
-    {
-      "label": "SITE_CONFIG.landingText.fa-IR",
-      "placeholder": "Value for SITE_CONFIG.landingText.fa-IR",
-      "field_name": "SITE_CONFIG.landingText.fa-IR",
-      "field_type": "input",
-      "default_value": "Explore unlimited possibilities of the global network"
+      "default_value": "探索全球网络无限可能",
+      "description": "Slogan tiếng Trung giản thể hiển thị trên Landing Page."
     },
     {
       "label": "SITE_CONFIG.customLandingPage",
@@ -507,7 +449,7 @@
       "placeholder": "Value for DEFAULT_CONFIG.defaultTheme",
       "field_name": "DEFAULT_CONFIG.defaultTheme",
       "field_type": "input",
-      "default_value": "light",
+      "default_value": "dark",
       "description": "Theme sáng/tối mặc định khi người dùng chưa chọn giao diện."
     },
     {
@@ -515,7 +457,7 @@
       "placeholder": "Value for DEFAULT_CONFIG.primaryColor",
       "field_name": "DEFAULT_CONFIG.primaryColor",
       "field_type": "input",
-      "default_value": "#355cc2",
+      "default_value": "#00947c",
       "description": "Màu chủ đạo của hệ thống, nhập mã HEX như #00947c."
     },
     {
@@ -579,7 +521,7 @@
       "placeholder": "Value for AUTH_CONFIG.popup.title",
       "field_name": "AUTH_CONFIG.popup.title",
       "field_type": "input",
-      "default_value": "Thong bao",
+      "default_value": "Thông báo từ quản trị viên",
       "description": "Tiêu đề popup thông báo trên trang đăng nhập/đăng ký."
     },
     {
@@ -587,7 +529,7 @@
       "placeholder": "Value for AUTH_CONFIG.popup.content",
       "field_name": "AUTH_CONFIG.popup.content",
       "field_type": "textarea",
-      "default_value": "",
+      "default_value": "<p>Chào mừng bạn đến với dịch vụ của chúng tôi!</p>",
       "description": "Nội dung popup, hỗ trợ HTML."
     },
     {
@@ -615,54 +557,55 @@
       "description": "Kiểu bố cục trang đăng nhập: center là form giữa màn hình, split là bố cục chia đôi."
     },
     {
-      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage",
-      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage",
-      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage",
-      "field_type": "textarea",
-      "default_value": ""
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.logoPosition",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.logoPosition",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.logoPosition",
+      "field_type": "input",
+      "default_value": "top-left",
+      "description": "Vị trí logo khi dùng layout split: top-left hoặc above-form."
     },
     {
-      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.show",
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.title",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftSide.title",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.title",
+      "field_type": "input",
+      "default_value": "Kết nối không giới hạn",
+      "description": "Tiêu đề phần banner bên trái khi dùng layout split."
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.subtitle",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftSide.subtitle",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.subtitle",
+      "field_type": "input",
+      "default_value": "Trải nghiệm đường truyền tốc độ cao cùng công nghệ bảo mật tiên tiến nhất.",
+      "description": "Mô tả phụ phần banner bên trái khi dùng layout split."
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.bannerImage",
+      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftSide.bannerImage",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.bannerImage",
+      "field_type": "input",
+      "default_value": "",
+      "description": "URL ảnh banner tùy chỉnh cho phần bên trái. Để trống để dùng ảnh mặc định."
+    },
+    {
+      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.showSocialLinks",
       "placeholder": "true or false",
-      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.show",
+      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftSide.showSocialLinks",
       "field_type": "select",
       "default_value": "true",
       "select_options": {
         "true": "true",
         "false": "false"
-      }
-    },
-    {
-      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.color",
-      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.color",
-      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.siteName.color",
-      "field_type": "textarea",
-      "default_value": "white"
-    },
-    {
-      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.show",
-      "placeholder": "true or false",
-      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.show",
-      "field_type": "select",
-      "default_value": "true",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
-      "label": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.color",
-      "placeholder": "Value for AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.color",
-      "field_name": "AUTH_LAYOUT_CONFIG.splitLayout.leftContent.greeting.color",
-      "field_type": "textarea",
-      "default_value": "white"
+      },
+      "description": "Bật/tắt các nút mạng xã hội ở phần banner layout split."
     },
     {
       "label": "SHOP_CONFIG.showHotSaleBadge",
       "placeholder": "true or false",
       "field_name": "SHOP_CONFIG.showHotSaleBadge",
       "field_type": "select",
-      "default_value": "false",
+      "default_value": "true",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -738,7 +681,7 @@
       "placeholder": "true or false",
       "field_name": "SHOP_CONFIG.popup.enabled",
       "field_type": "select",
-      "default_value": "true",
+      "default_value": "false",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -750,7 +693,7 @@
       "placeholder": "Value for SHOP_CONFIG.popup.title",
       "field_name": "SHOP_CONFIG.popup.title",
       "field_type": "input",
-      "default_value": "Thong bao",
+      "default_value": "Lưu ý mua hàng",
       "description": "Tiêu đề popup trên trang cửa hàng."
     },
     {
@@ -758,7 +701,7 @@
       "placeholder": "Value for SHOP_CONFIG.popup.content",
       "field_name": "SHOP_CONFIG.popup.content",
       "field_type": "textarea",
-      "default_value": "",
+      "default_value": "<p>Vui lòng đọc kỹ thông số gói cước trước khi thanh toán. Hệ thống không hoàn tiền sau khi kích hoạt thành công.</p>",
       "description": "Nội dung popup cửa hàng, hỗ trợ HTML."
     },
     {
@@ -794,7 +737,7 @@
       "placeholder": "Value for ORDER_CONFIG.confirmOrderContent",
       "field_name": "ORDER_CONFIG.confirmOrderContent",
       "field_type": "textarea",
-      "default_value": "<p>Vui long kiem tra ky don hang truoc khi thanh toan.</p>",
+      "default_value": "<p>Bạn có chắc chắn muốn tiến hành đặt mua gói cước này không?</p>",
       "description": "Nội dung hộp xác nhận trước khi tạo đơn hàng, hỗ trợ HTML."
     },
     {
@@ -802,7 +745,7 @@
       "placeholder": "true or false",
       "field_name": "DASHBOARD_CONFIG.showUserEmail",
       "field_type": "select",
-      "default_value": "false",
+      "default_value": "true",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -814,7 +757,7 @@
       "placeholder": "true or false",
       "field_name": "DASHBOARD_CONFIG.importButtonHighlightBtnbgcolor",
       "field_type": "select",
-      "default_value": "false",
+      "default_value": "true",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -966,7 +909,7 @@
       "placeholder": "true or false",
       "field_name": "CLIENT_CONFIG.showLinux",
       "field_type": "select",
-      "default_value": "true",
+      "default_value": "false",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -978,7 +921,7 @@
       "placeholder": "true or false",
       "field_name": "CLIENT_CONFIG.showOpenWrt",
       "field_type": "select",
-      "default_value": "true",
+      "default_value": "false",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -990,7 +933,7 @@
       "placeholder": "Value for CLIENT_CONFIG.clientLinks.ios",
       "field_name": "CLIENT_CONFIG.clientLinks.ios",
       "field_type": "input",
-      "default_value": "",
+      "default_value": "https://apps.apple.com/app/shadowrocket/id932747118",
       "description": "Link tải client trực tiếp cho iOS."
     },
     {
@@ -998,7 +941,7 @@
       "placeholder": "Value for CLIENT_CONFIG.clientLinks.android",
       "field_name": "CLIENT_CONFIG.clientLinks.android",
       "field_type": "input",
-      "default_value": "",
+      "default_value": "https://github.com/v2rayNG/releases",
       "description": "Link tải client trực tiếp cho Android."
     },
     {
@@ -1006,7 +949,7 @@
       "placeholder": "Value for CLIENT_CONFIG.clientLinks.macos",
       "field_name": "CLIENT_CONFIG.clientLinks.macos",
       "field_type": "input",
-      "default_value": "",
+      "default_value": "https://github.com/ClashVerge/releases",
       "description": "Link tải client trực tiếp cho macOS."
     },
     {
@@ -1014,7 +957,7 @@
       "placeholder": "Value for CLIENT_CONFIG.clientLinks.windows",
       "field_name": "CLIENT_CONFIG.clientLinks.windows",
       "field_type": "input",
-      "default_value": "",
+      "default_value": "https://github.com/ClashVerge/releases",
       "description": "Link tải client trực tiếp cho Windows."
     },
     {
@@ -1022,7 +965,7 @@
       "placeholder": "Value for CLIENT_CONFIG.clientLinks.linux",
       "field_name": "CLIENT_CONFIG.clientLinks.linux",
       "field_type": "input",
-      "default_value": "",
+      "default_value": "https://github.com/ClashVerge/releases",
       "description": "Link tải client trực tiếp cho Linux."
     },
     {
@@ -1030,7 +973,7 @@
       "placeholder": "Value for CLIENT_CONFIG.clientLinks.openwrt",
       "field_name": "CLIENT_CONFIG.clientLinks.openwrt",
       "field_type": "input",
-      "default_value": "",
+      "default_value": "https://github.com/openwrt",
       "description": "Link tải client trực tiếp cho OpenWrt."
     },
     {
@@ -1418,24 +1361,6 @@
       "description": "Hiện lịch sử thiết bị đăng nhập gần đây trong trang hồ sơ."
     },
     {
-      "label": "SECURITY_CONFIG.enableFrontendDomainCheck",
-      "placeholder": "true or false",
-      "field_name": "SECURITY_CONFIG.enableFrontendDomainCheck",
-      "field_type": "select",
-      "default_value": "false",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
-      "label": "AUTHORIZED_DOMAINS",
-      "placeholder": "JSON array",
-      "field_name": "AUTHORIZED_DOMAINS",
-      "field_type": "textarea",
-      "default_value": "[]"
-    },
-    {
       "label": "CAPTCHA_CONFIG.captchaType",
       "placeholder": "Value for CAPTCHA_CONFIG.captchaType",
       "field_name": "CAPTCHA_CONFIG.captchaType",
@@ -1460,101 +1385,11 @@
       "description": "Endpoint xác minh Cloudflare Turnstile."
     },
     {
-      "label": "CUSTOM_HEADERS.enabled",
-      "placeholder": "true or false",
-      "field_name": "CUSTOM_HEADERS.enabled",
-      "field_type": "select",
-      "default_value": "false",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
-      "label": "PAYMENT_CONFIG.openPaymentInNewTab",
-      "placeholder": "true or false",
-      "field_name": "PAYMENT_CONFIG.openPaymentInNewTab",
-      "field_type": "select",
-      "default_value": "true",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
-      "label": "PAYMENT_CONFIG.qrcodeSize",
-      "placeholder": "Number value",
-      "field_name": "PAYMENT_CONFIG.qrcodeSize",
-      "field_type": "input",
-      "default_value": "200"
-    },
-    {
-      "label": "PAYMENT_CONFIG.qrcodeColor",
-      "placeholder": "Value for PAYMENT_CONFIG.qrcodeColor",
-      "field_name": "PAYMENT_CONFIG.qrcodeColor",
-      "field_type": "input",
-      "default_value": "#000000"
-    },
-    {
-      "label": "PAYMENT_CONFIG.qrcodeBackground",
-      "placeholder": "Value for PAYMENT_CONFIG.qrcodeBackground",
-      "field_name": "PAYMENT_CONFIG.qrcodeBackground",
-      "field_type": "input",
-      "default_value": "#ffffff"
-    },
-    {
-      "label": "PAYMENT_CONFIG.autoCheckPayment",
-      "placeholder": "true or false",
-      "field_name": "PAYMENT_CONFIG.autoCheckPayment",
-      "field_type": "select",
-      "default_value": "true",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
-      "label": "PAYMENT_CONFIG.autoCheckInterval",
-      "placeholder": "Number value",
-      "field_name": "PAYMENT_CONFIG.autoCheckInterval",
-      "field_type": "input",
-      "default_value": "5000"
-    },
-    {
-      "label": "PAYMENT_CONFIG.autoCheckMaxTimes",
-      "placeholder": "Number value",
-      "field_name": "PAYMENT_CONFIG.autoCheckMaxTimes",
-      "field_type": "input",
-      "default_value": "60"
-    },
-    {
-      "label": "PAYMENT_CONFIG.useSafariPaymentModal",
-      "placeholder": "true or false",
-      "field_name": "PAYMENT_CONFIG.useSafariPaymentModal",
-      "field_type": "select",
-      "default_value": "true",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
-      "label": "PAYMENT_CONFIG.autoSelectFirstMethod",
-      "placeholder": "true or false",
-      "field_name": "PAYMENT_CONFIG.autoSelectFirstMethod",
-      "field_type": "select",
-      "default_value": "true",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
       "label": "WALLET_CONFIG.presetAmounts",
       "placeholder": "JSON array",
       "field_name": "WALLET_CONFIG.presetAmounts",
       "field_type": "textarea",
-      "default_value": "[\n  6,\n  30,\n  68,\n  128,\n  256,\n  328,\n  648,\n  1280\n]",
+      "default_value": "[\n  10,\n  20,\n  50,\n  100,\n  200,\n  500\n]",
       "description": "Danh sách mức tiền nạp gợi ý, nhập dạng JSON array."
     },
     {
@@ -1570,7 +1405,7 @@
       "placeholder": "Number value",
       "field_name": "WALLET_CONFIG.minimumDepositAmount",
       "field_type": "input",
-      "default_value": "1",
+      "default_value": "10",
       "description": "Số tiền nạp tối thiểu mà người dùng được phép nạp."
     },
     {
@@ -1578,7 +1413,7 @@
       "placeholder": "true or false",
       "field_name": "INVITE_CONFIG.showCommissionBadge",
       "field_type": "select",
-      "default_value": "false",
+      "default_value": "true",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -1606,7 +1441,7 @@
       "placeholder": "Value for INVITE_CONFIG.inviteLinkConfig.customDomain",
       "field_name": "INVITE_CONFIG.inviteLinkConfig.customDomain",
       "field_type": "input",
-      "default_value": "",
+      "default_value": "https://example.com",
       "description": "Domain riêng dùng cho link mời khi linkMode là custom."
     },
     {
@@ -1614,7 +1449,7 @@
       "placeholder": "true or false",
       "field_name": "BROWSER_RESTRICT_CONFIG.enabled",
       "field_type": "select",
-      "default_value": "true",
+      "default_value": "false",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -1750,7 +1585,7 @@
       "placeholder": "Value for TICKET_CONFIG.popup.title",
       "field_name": "TICKET_CONFIG.popup.title",
       "field_type": "input",
-      "default_value": "Thong bao",
+      "default_value": "Lưu ý gửi hỗ trợ",
       "description": "Tiêu đề popup lưu ý gửi ticket."
     },
     {
@@ -1758,7 +1593,7 @@
       "placeholder": "Value for TICKET_CONFIG.popup.content",
       "field_name": "TICKET_CONFIG.popup.content",
       "field_type": "textarea",
-      "default_value": "<p>Vui long mo ta ro van de va dinh kem anh neu can.</p>",
+      "default_value": "<p>Vui lòng ghi rõ lỗi gặp phải, mô tả chi tiết kèm ảnh chụp màn hình nếu có để chúng tôi xử lý nhanh nhất.</p>",
       "description": "Nội dung popup lưu ý gửi ticket, hỗ trợ HTML."
     },
     {
@@ -1776,24 +1611,6 @@
       "field_type": "input",
       "default_value": "0",
       "description": "Số giây bắt buộc chờ trước khi được đóng popup ticket."
-    },
-    {
-      "label": "TICKET_CONFIG.isImageHosting",
-      "placeholder": "true or false",
-      "field_name": "TICKET_CONFIG.isImageHosting",
-      "field_type": "select",
-      "default_value": "false",
-      "select_options": {
-        "true": "true",
-        "false": "false"
-      }
-    },
-    {
-      "label": "TICKET_CONFIG.imgbbApiKey",
-      "placeholder": "Value for TICKET_CONFIG.imgbbApiKey",
-      "field_name": "TICKET_CONFIG.imgbbApiKey",
-      "field_type": "input",
-      "default_value": ""
     },
     {
       "label": "TRAFFICLOG_CONFIG.enableTrafficLog",
@@ -1976,7 +1793,7 @@
       "placeholder": "true or false",
       "field_name": "MORE_PAGE_CONFIG.enableCustomCards",
       "field_type": "select",
-      "default_value": "false",
+      "default_value": "true",
       "select_options": {
         "true": "true",
         "false": "false"
@@ -1988,7 +1805,7 @@
       "placeholder": "JSON array",
       "field_name": "MORE_PAGE_CONFIG.customCards",
       "field_type": "textarea",
-      "default_value": "[\n  {\n    \"id\": \"github\",\n    \"title\": \"GitHub\",\n    \"description\": \"Mo GitHub\",\n    \"svgIcon\": \"<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" class=\\\"icon icon-tabler icon-tabler-brand-github\\\" width=\\\"24\\\" height=\\\"24\\\" viewBox=\\\"0 0 24 24\\\" stroke-width=\\\"2\\\" stroke=\\\"currentColor\\\" fill=\\\"none\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path stroke=\\\"none\\\" d=\\\"M0 0h24v24H0z\\\" fill=\\\"none\\\"/><path d=\\\"M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5\\\" /></svg>\",\n    \"url\": \"https://github.com\",\n    \"openInNewTab\": true\n  },\n  {\n    \"id\": \"telegram\",\n    \"title\": \"Telegram\",\n    \"description\": \"Mo nhom Telegram\",\n    \"svgIcon\": \"<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" class=\\\"icon icon-tabler icon-tabler-brand-telegram\\\" width=\\\"24\\\" height=\\\"24\\\" viewBox=\\\"0 0 24 24\\\" stroke-width=\\\"2\\\" stroke=\\\"currentColor\\\" fill=\\\"none\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path stroke=\\\"none\\\" d=\\\"M0 0h24v24H0z\\\" fill=\\\"none\\\"/><path d=\\\"M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4\\\" /></svg>\",\n    \"url\": \"\",\n    \"openInNewTab\": true\n  }\n]",
+      "default_value": "[\n  {\n    \"id\": \"telegram_group\",\n    \"title\": \"Nhóm hỗ trợ Telegram\",\n    \"description\": \"Tham gia trao đổi & nhận hỗ trợ nhanh nhất từ cộng đồng\",\n    \"svgIcon\": \"<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" class=\\\"icon icon-tabler icon-tabler-brand-telegram\\\" width=\\\"24\\\" height=\\\"24\\\" viewBox=\\\"0 0 24 24\\\" stroke-width=\\\"2\\\" stroke=\\\"currentColor\\\" fill=\\\"none\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path stroke=\\\"none\\\" d=\\\"M0 0h24v24H0z\\\" fill=\\\"none\\\"/><path d=\\\"M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4\\\" /></svg>\",\n    \"url\": \"https://t.me/your_telegram_group_link\",\n    \"openInNewTab\": true\n  }\n]",
       "description": "Danh sách thẻ liên kết ngoài tùy chỉnh, nhập dạng JSON array."
     }
   ]

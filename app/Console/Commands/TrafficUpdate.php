@@ -70,11 +70,15 @@ class TrafficUpdate extends Command
         if (!$idList) {
             return;
         }
+        if (count($idList) > 1000) {
+            $this->updateTrafficInChunks($idList, $casesU, $casesD, $time);
+            return;
+        }
         $idListStr = implode(',', $idList);
         $casesUStr = implode(' ', $casesU);
         $casesDStr = implode(' ', $casesD);
         $sql = "UPDATE v2_user_subscription SET u = CASE id {$casesUStr} END, d = CASE id {$casesDStr} END, t = {$time}, updated_at = {$time} WHERE id IN ({$idListStr})";
-        $summarySql = "UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.t = subscriptions.t, users.updated_at = {$time} WHERE subscriptions.id IN ({$idListStr})";
+        $summarySql = "UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id AND users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.t = subscriptions.t, users.updated_at = {$time} WHERE subscriptions.id IN ({$idListStr})";
         try {
             DB::beginTransaction();
             DB::statement($sql);
@@ -84,6 +88,39 @@ class TrafficUpdate extends Command
             DB::rollBack();
             \Log::error('Cập nhật dung lượng thất bại: ' . $e->getMessage());
             return;
+        }
+    }
+
+    private function updateTrafficInChunks($idList, $casesU, $casesD, $time)
+    {
+        $caseByIdU = array_combine($idList, $casesU);
+        $caseByIdD = array_combine($idList, $casesD);
+
+        foreach (array_chunk($idList, 1000) as $chunkIds) {
+            $chunkCasesU = [];
+            $chunkCasesD = [];
+
+            foreach ($chunkIds as $id) {
+                $chunkCasesU[] = $caseByIdU[$id];
+                $chunkCasesD[] = $caseByIdD[$id];
+            }
+
+            $idListStr = implode(',', $chunkIds);
+            $casesUStr = implode(' ', $chunkCasesU);
+            $casesDStr = implode(' ', $chunkCasesD);
+            $sql = "UPDATE v2_user_subscription SET u = CASE id {$casesUStr} END, d = CASE id {$casesDStr} END, t = {$time}, updated_at = {$time} WHERE id IN ({$idListStr})";
+            $summarySql = "UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id AND users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.t = subscriptions.t, users.updated_at = {$time} WHERE subscriptions.id IN ({$idListStr})";
+
+            try {
+                DB::beginTransaction();
+                DB::statement($sql);
+                DB::statement($summarySql);
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Traffic update failed: ' . $e->getMessage());
+                return;
+            }
         }
     }
 }
