@@ -404,6 +404,7 @@ class UserController extends Controller
         $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscribeToken);
         $user['subscribe_url'] = $subscribeUrl['url'];
         $user['subscribe_url_error'] = $subscribeUrl['error'];
+        $user['subscribe_url_protected'] = (bool)($subscribeUrl['protected'] ?? false);
         $user->makeHidden(['token', 'uuid', 'subscription']);
 
         $userService = new UserService();

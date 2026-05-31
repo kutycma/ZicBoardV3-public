@@ -113,7 +113,8 @@ class Helper
         if ($token === '') {
             return [
                 'url' => null,
-                'error' => 'missing_subscription'
+                'error' => 'missing_subscription',
+                'protected' => false
             ];
         }
 
@@ -121,7 +122,8 @@ class Helper
         if (!$subscription) {
             return [
                 'url' => null,
-                'error' => 'missing_subscription'
+                'error' => 'missing_subscription',
+                'protected' => false
             ];
         }
 
@@ -129,7 +131,8 @@ class Helper
         if ($url === null) {
             return [
                 'url' => null,
-                'error' => 'missing_subscription'
+                'error' => 'missing_subscription',
+                'protected' => false
             ];
         }
 
@@ -193,7 +196,8 @@ class Helper
         if ((int)config('zicboard.device_hwid_enable', 0) !== 1) {
             return [
                 'url' => $url,
-                'error' => null
+                'error' => null,
+                'protected' => false
             ];
         }
 
@@ -202,13 +206,15 @@ class Helper
             if ($protectedUrl === null) {
                 return [
                     'url' => null,
-                    'error' => 'happ_unavailable'
+                    'error' => 'happ_unavailable',
+                    'protected' => false
                 ];
             }
 
             return [
                 'url' => $protectedUrl,
-                'error' => null
+                'error' => null,
+                'protected' => true
             ];
         } catch (\Throwable $exception) {
             Log::warning('Failed to get cached Happ subscribe URL.', [
@@ -216,7 +222,8 @@ class Helper
             ]);
             return [
                 'url' => null,
-                'error' => 'happ_unavailable'
+                'error' => 'happ_unavailable',
+                'protected' => false
             ];
         }
     }

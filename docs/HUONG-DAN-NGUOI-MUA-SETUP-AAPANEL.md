@@ -405,6 +405,7 @@ Kiểm tra core:
 ```bash
 systemctl status zicboard-core --no-pager
 curl http://127.0.0.1:18080/health
+bin/zicboard-core status
 php scripts/core-installer.php status
 ```
 

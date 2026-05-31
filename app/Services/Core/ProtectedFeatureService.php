@@ -85,6 +85,8 @@ class ProtectedFeatureService
 
     public function happSubscribeUrl(string $url)
     {
+        $this->ensureEnabled();
+
         $result = (new CoreRpcClient())->call('subscription.happ_encrypt', [
             'url' => $url,
         ]);

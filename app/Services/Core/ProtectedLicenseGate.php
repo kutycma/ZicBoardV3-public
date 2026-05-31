@@ -27,6 +27,17 @@ class ProtectedLicenseGate
         }
 
         if (empty($status['protected_features_enabled'])) {
+            try {
+                $refreshedStatus = $rpc->call('license.refresh');
+                if (is_array($refreshedStatus)) {
+                    $status = $refreshedStatus;
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Core license refresh failed: ' . $e->getMessage());
+            }
+        }
+
+        if (empty($status['protected_features_enabled'])) {
             abort(403, 'Cần license ZicBoard hợp lệ cho ' . $scope);
         }
 

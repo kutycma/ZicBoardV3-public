@@ -57,7 +57,33 @@ echo "Đang cập nhật zicboard-core nếu cần..."
 php scripts/core-installer.php update
 
 if [ "$(uname -s)" = "Linux" ] && command -v systemctl >/dev/null 2>&1; then
-  if systemctl list-unit-files | grep -q '^zicboard-core\.service'; then
+  if [ "$(id -u)" -eq 0 ]; then
+    cat >/etc/systemd/system/zicboard-core.service <<EOF
+[Unit]
+Description=ZicBoard Core
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=${ROOT_DIR}
+EnvironmentFile=-${ROOT_DIR}/.zicboard/core/core.env
+ExecStart=${ROOT_DIR}/bin/zicboard-core -listen \${ZICBOARD_CORE_LISTEN}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable zicboard-core
+    systemctl restart zicboard-core
+    if ! php scripts/core-installer.php health; then
+      echo "Core health check failed after update, rolling back core binary..."
+      php scripts/core-installer.php rollback
+      systemctl restart zicboard-core
+      php scripts/core-installer.php health
+    fi
+  elif systemctl list-unit-files | grep -q '^zicboard-core\.service'; then
     systemctl restart zicboard-core
     if ! php scripts/core-installer.php health; then
       echo "Kiểm tra tình trạng hoạt động của core thất bại sau cập nhật, đang khôi phục file chạy..."

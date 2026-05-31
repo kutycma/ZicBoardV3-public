@@ -42,6 +42,7 @@ class SubscriptionController extends Controller
             $subscribeUrl = Helper::getSubscribeUrlDetail($subscription->token);
             $subscription->subscribe_url = $subscribeUrl['url'];
             $subscription->subscribe_url_error = $subscribeUrl['error'];
+            $subscription->subscribe_url_protected = (bool)($subscribeUrl['protected'] ?? false);
             $subscription->alive_ip = is_array($aliveIps) ? count($aliveIps) : 0;
             $subscription->reset_day = $userService->getResetDay($serviceUser);
             $subscription->used_traffic = $usedTraffic;

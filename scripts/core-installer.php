@@ -167,6 +167,7 @@ function healthCheck(string $root): void
 
                 $license = $decoded['license'] ?? $decoded;
                 if (!empty($license['protected_features_enabled'])) {
+                    assertCoreCanEncryptHappSubscribe($root);
                     echo "Core health check passed.\n";
                     return;
                 }
@@ -176,6 +177,7 @@ function healthCheck(string $root): void
                     try {
                         $rpcStatus = coreRpcCall($root, 'license.refresh');
                         if (is_array($rpcStatus) && !empty($rpcStatus['protected_features_enabled'])) {
+                            assertCoreCanEncryptHappSubscribe($root);
                             echo "Core health check passed.\n";
                             return;
                         }
@@ -198,7 +200,17 @@ function healthCheck(string $root): void
     throw new RuntimeException('Core health check failed: ' . $lastError);
 }
 
-function coreRpcCall(string $root, string $method)
+function assertCoreCanEncryptHappSubscribe(string $root): void
+{
+    $result = coreRpcCall($root, 'subscription.happ_encrypt', [
+        'url' => 'https://example.com/api/v3/client/subscribe?token=health-check',
+    ]);
+    if (!is_array($result) || empty($result['url']) || !is_string($result['url'])) {
+        throw new RuntimeException('Core health check failed: subscription.happ_encrypt returned no encrypted URL');
+    }
+}
+
+function coreRpcCall(string $root, string $method, array $payload = [])
 {
     $env = array_merge(
         readEnvFile($root . DIRECTORY_SEPARATOR . '.env'),
@@ -218,7 +230,7 @@ function coreRpcCall(string $root, string $method)
         'request_id' => bin2hex(random_bytes(16)),
         'schema_version' => 1,
         'method' => $method,
-        'payload' => new stdClass(),
+        'payload' => (object)$payload,
     ], JSON_UNESCAPED_SLASHES);
     if ($body === false) {
         throw new RuntimeException('Unable to encode core RPC request');
