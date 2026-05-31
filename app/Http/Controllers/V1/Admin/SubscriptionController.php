@@ -17,32 +17,88 @@ class SubscriptionController extends Controller
     {
         $current = max(1, (int)$request->input('current', 1));
         $pageSize = max(10, min((int)$request->input('pageSize', 15), 100));
+        $includeSubscribeUrl = filter_var($request->input('include_subscribe_url', false), FILTER_VALIDATE_BOOLEAN);
+
+        $countBuilder = UserSubscription::query();
+        if ($this->hasEmailFilter($request)) {
+            $countBuilder->leftJoin('v2_user as users', 'users.id', '=', 'v2_user_subscription.user_id');
+        }
+        $this->applyFilters($request, $countBuilder);
+        $total = $countBuilder->count('v2_user_subscription.id');
 
         $builder = UserSubscription::query()
             ->select([
-                'v2_user_subscription.*',
+                'v2_user_subscription.id',
+                'v2_user_subscription.user_id',
+                'v2_user_subscription.plan_id',
+                'v2_user_subscription.group_id',
+                'v2_user_subscription.speed_limit',
+                'v2_user_subscription.device_limit',
+                'v2_user_subscription.u',
+                'v2_user_subscription.d',
+                'v2_user_subscription.transfer_enable',
+                'v2_user_subscription.expired_at',
+                'v2_user_subscription.auto_renewal',
+                'v2_user_subscription.token',
+                'v2_user_subscription.uuid',
+                'v2_user_subscription.status',
+                'v2_user_subscription.remarks',
+                'v2_user_subscription.created_at',
+                'v2_user_subscription.updated_at',
                 'users.email as user_email',
                 'plans.name as plan_name',
-                DB::raw('(v2_user_subscription.u + v2_user_subscription.d) as total_used'),
-                DB::raw("(SELECT COUNT(*) FROM v2_user_device AS devices WHERE devices.subscription_id = v2_user_subscription.id AND devices.status = 'bound') AS device_count")
+                DB::raw('(v2_user_subscription.u + v2_user_subscription.d) as total_used')
             ])
             ->leftJoin('v2_user as users', 'users.id', '=', 'v2_user_subscription.user_id')
             ->leftJoin('v2_plan as plans', 'plans.id', '=', 'v2_user_subscription.plan_id');
 
         $this->applyFilters($request, $builder);
-        $total = (clone $builder)->count('v2_user_subscription.id');
         $subscriptions = $builder->orderBy('v2_user_subscription.updated_at', 'DESC')
             ->orderBy('v2_user_subscription.id', 'DESC')
             ->forPage($current, $pageSize)
             ->get();
 
+        $subscriptionIds = $subscriptions->pluck('id')->all();
+        $deviceCounts = $subscriptionIds
+            ? DB::table('v2_user_device')
+                ->select('subscription_id', DB::raw('COUNT(*) AS total'))
+                ->whereIn('subscription_id', $subscriptionIds)
+                ->where('status', 'bound')
+                ->groupBy('subscription_id')
+                ->pluck('total', 'subscription_id')
+            : collect();
+
         foreach ($subscriptions as $subscription) {
-            $subscription->subscribe_url = Helper::getSubscribeUrl($subscription->token);
+            $subscription->device_count = (int)($deviceCounts[$subscription->id] ?? 0);
+        }
+
+        if ($includeSubscribeUrl) {
+            foreach ($subscriptions as $subscription) {
+                $subscription->subscribe_url = Helper::getSubscribeUrl($subscription->token);
+            }
         }
 
         return response([
             'data' => $subscriptions,
             'total' => $total
+        ]);
+    }
+
+    public function subscribeUrl(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer'
+        ]);
+
+        $subscription = UserSubscription::query()
+            ->select(['id', 'token'])
+            ->find($request->input('id'));
+        if (!$subscription) {
+            abort(500, 'Subscription does not exist');
+        }
+
+        return response([
+            'data' => Helper::getSubscribeUrl($subscription->token)
         ]);
     }
 
@@ -143,6 +199,17 @@ class SubscriptionController extends Controller
             $value = $condition === '=' ? $filter['value'] : "%{$filter['value']}%";
             $builder->where($column, $condition, $value);
         }
+    }
+
+    private function hasEmailFilter(Request $request)
+    {
+        foreach ($request->input('filter', []) ?: [] as $filter) {
+            if (($filter['key'] ?? null) === 'email' && trim((string)($filter['value'] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function filterColumn($key)

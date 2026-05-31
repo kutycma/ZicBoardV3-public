@@ -128,6 +128,7 @@ class AdminRoute
             $router->get ('/subscription/fetch', 'V1\\Admin\\SubscriptionController@fetch');
             $router->post('/subscription/update', 'V1\\Admin\\SubscriptionController@update');
             $router->post('/subscription/resetSecret', 'V1\\Admin\\SubscriptionController@resetSecret');
+            $router->post('/subscription/subscribeUrl', 'V1\\Admin\\SubscriptionController@subscribeUrl');
             // Device
             $router->get ('/device/fetch', 'V1\\Admin\\UserDeviceController@fetch');
             $router->post('/device/drop', 'V1\\Admin\\UserDeviceController@drop');

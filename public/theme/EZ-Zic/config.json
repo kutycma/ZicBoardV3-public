@@ -6,13 +6,13 @@
   "config": {
     "PANEL_TYPE": "Xiao-V2board",
     "API_CONFIG": {
-      "urlMode": "static",
+      "urlMode": "auto",
       "showCheckBackend": false,
       "staticBaseUrl": [],
       "autoConfig": {
         "useSameProtocol": true,
         "appendApiPath": true,
-        "apiPath": "/api/v1"
+        "apiPath": "/api/v3"
       }
     },
     "API_MIDDLEWARE_ENABLED": false,
@@ -315,7 +315,7 @@
       "placeholder": "Value for API_CONFIG.urlMode",
       "field_name": "API_CONFIG.urlMode",
       "field_type": "input",
-      "default_value": "static",
+      "default_value": "auto",
       "description": "Chế độ xác định API: auto tự lấy theo domain hiện tại, static dùng danh sách URL cố định."
     },
     {
@@ -367,7 +367,7 @@
       "placeholder": "Value for API_CONFIG.autoConfig.apiPath",
       "field_name": "API_CONFIG.autoConfig.apiPath",
       "field_type": "input",
-      "default_value": "/api/v1",
+      "default_value": "/api/v3",
       "description": "Đường dẫn API được nối thêm khi dùng chế độ auto, ví dụ /api/v3."
     },
     {

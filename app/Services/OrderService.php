@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserSubscription;
+use App\Utils\Helper;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -135,6 +136,7 @@ class OrderService
 
         DB::commit();
         (new UserDeviceService())->ensureWaitingSlot($this->subscription);
+        Helper::getSubscribeUrl($this->subscription->token);
     }
 
 

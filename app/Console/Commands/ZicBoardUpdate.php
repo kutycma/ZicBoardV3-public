@@ -116,7 +116,6 @@ class ZicBoardUpdate extends Command
 
         $this->repairSubscriptionSniSchema();
         $this->repairSubscriptionUserNoteSchema();
-        $this->alignSubscriptionUserColumnCollations();
         $this->insertMissingSubscriptions();
         $this->migrateLegacySniToSubscriptions();
         $this->repairOrdersSubscriptionSchema();
@@ -320,71 +319,6 @@ class ZicBoardUpdate extends Command
         }
 
         $this->runRepairStatement("ALTER TABLE `{$table}` {$definition}");
-    }
-
-    private function alignSubscriptionUserColumnCollations()
-    {
-        foreach (['token', 'uuid', 'name_sni', 'network_settings', 'remarks'] as $column) {
-            $this->alignStringColumnCollation('v2_user_subscription', $column, 'v2_user', $column);
-        }
-    }
-
-    private function alignStringColumnCollation($targetTable, $targetColumn, $sourceTable, $sourceColumn)
-    {
-        $source = $this->columnMetadata($sourceTable, $sourceColumn);
-        $target = $this->columnMetadata($targetTable, $targetColumn);
-
-        if (!$source || !$target ||
-            !$source->character_set_name || !$source->collation_name ||
-            !$target->character_set_name || !$target->collation_name) {
-            return;
-        }
-
-        if ($source->character_set_name === $target->character_set_name &&
-            $source->collation_name === $target->collation_name) {
-            return;
-        }
-
-        $charset = $this->safeSqlName($source->character_set_name);
-        $collation = $this->safeSqlName($source->collation_name);
-        $nullable = $target->is_nullable === 'YES' ? 'NULL' : 'NOT NULL';
-        $default = $target->column_default === null
-            ? ''
-            : ' DEFAULT ' . DB::connection()->getPdo()->quote((string)$target->column_default);
-
-        $this->runRepairStatement("
-            ALTER TABLE `{$targetTable}`
-            MODIFY `{$targetColumn}` {$target->column_type}
-                CHARACTER SET {$charset}
-                COLLATE {$collation}
-                {$nullable}{$default}
-        ");
-    }
-
-    private function columnMetadata($table, $column)
-    {
-        return DB::selectOne("
-            SELECT
-                COLUMN_TYPE AS column_type,
-                CHARACTER_SET_NAME AS character_set_name,
-                COLLATION_NAME AS collation_name,
-                IS_NULLABLE AS is_nullable,
-                COLUMN_DEFAULT AS column_default
-            FROM information_schema.COLUMNS
-            WHERE TABLE_SCHEMA = ?
-                AND TABLE_NAME = ?
-                AND COLUMN_NAME = ?
-            LIMIT 1
-        ", [DB::getDatabaseName(), $table, $column]);
-    }
-
-    private function safeSqlName($name)
-    {
-        if (!preg_match('/^[A-Za-z0-9_]+$/', $name)) {
-            throw new \RuntimeException("Invalid charset/collation name: {$name}");
-        }
-
-        return $name;
     }
 
     private function indexExists($table, $index)

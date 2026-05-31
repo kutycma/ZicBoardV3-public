@@ -39,6 +39,7 @@ class Kernel extends ConsoleKernel
         // reset
         $schedule->command('reset:traffic')->daily();
         $schedule->command('reset:log')->daily();
+        $schedule->command('happ-subscribe-cache:prune')->dailyAt('3:20');
         // send
         $schedule->command('send:remindMail')->dailyAt('11:30');
         // horizon metrics

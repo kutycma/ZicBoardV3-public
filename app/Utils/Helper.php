@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Utils;
+use App\Services\HappSubscribeCacheService;
 use App\Services\Core\ProtectedFeatureService;
 use App\Models\User;
 use App\Models\UserSubscription;
@@ -168,9 +169,9 @@ class Helper
         }
 
         try {
-            return (new ProtectedFeatureService())->happSubscribeUrl($url);
+            return (new HappSubscribeCacheService())->get($url);
         } catch (\Throwable $exception) {
-            Log::warning('Failed to encrypt subscribe URL with Happ.', [
+            Log::warning('Failed to get cached Happ subscribe URL.', [
                 'error' => $exception->getMessage(),
             ]);
             return null;
