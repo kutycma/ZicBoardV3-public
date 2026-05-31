@@ -1,5 +1,10 @@
 <?php
 
+if (PHP_MAJOR_VERSION < 8) {
+    echo "Bo qua Webman: PHP CLI hien tai la " . PHP_VERSION . ", Webman chi ho tro PHP >= 8.\n";
+    exit(0);
+}
+
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Adapterman\Adapterman;

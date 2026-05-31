@@ -216,9 +216,11 @@ class ConfigController extends Controller
         if(Cache::has('WEBMANPID')) {
             $pid = Cache::get('WEBMANPID');
             Cache::forget('WEBMANPID');
-            return response([
-                'data' => posix_kill($pid, 15)
-            ]);
+            if (function_exists('posix_kill')) {
+                return response([
+                    'data' => posix_kill($pid, 15)
+                ]);
+            }
         }
         return response([
             'data' => true
