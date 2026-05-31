@@ -13,7 +13,7 @@ class ZicBoardUpdate extends Command
      *
      * @var string
      */
-    protected $signature = 'zicboard:update';
+    protected $signature = 'zicboard:update {--force-sql : Force database update SQL even when database/update.sql is unchanged}';
 
     /**
      * The console command description.
@@ -49,6 +49,16 @@ class ZicBoardUpdate extends Command
         if (!$file) {
             abort(500, 'File cập nhật database không tồn tại');
         }
+        $sqlChecksum = hash('sha256', $file);
+        $this->ensureUpdateHistoryTable();
+
+        if ($this->shouldSkipSqlUpdates($sqlChecksum)) {
+            $this->info('database/update.sql has not changed; skipping database update SQL.');
+            \Artisan::call('horizon:terminate');
+            $this->info('Update completed. Queue workers were restarted, no further action is required.');
+            return;
+        }
+
         $file = preg_replace(
             '/DELIMITER\s+\$\$.*?DROP PROCEDURE IF EXISTS `path-2022-03-29`;\s*/is',
             '',
@@ -63,6 +73,7 @@ class ZicBoardUpdate extends Command
             return $item !== '';
         }));
         $totalStatements = count($statements);
+        $hasSqlErrors = false;
 
         $this->info("Importing database updates ({$totalStatements} statements), please wait...");
         foreach ($statements as $index => $item) {
@@ -73,10 +84,16 @@ class ZicBoardUpdate extends Command
                 if ($this->isIgnorableSqlError($e)) {
                     continue;
                 }
+                $hasSqlErrors = true;
                 $this->error(sprintf('SQL execution error at statement %d/%d: %s', $index + 1, $totalStatements, $e->getMessage()));
             }
         }
         $this->repairSubscriptionMigration();
+        if ($hasSqlErrors) {
+            $this->warn('Database update SQL had errors; checksum was not saved so the update can retry next time.');
+        } else {
+            $this->rememberSqlChecksum($sqlChecksum);
+        }
         \Artisan::call('horizon:terminate');
         $this->info('Update completed. Queue workers were restarted, no further action is required.');
     }
@@ -93,6 +110,47 @@ class ZicBoardUpdate extends Command
                 $this->warn('Could not set database timeout: ' . $e->getMessage());
             }
         }
+    }
+
+    private function ensureUpdateHistoryTable()
+    {
+        if (Schema::hasTable('v2_update_history')) {
+            return;
+        }
+
+        DB::statement("
+            CREATE TABLE IF NOT EXISTS `v2_update_history` (
+                `name` varchar(128) NOT NULL,
+                `checksum` char(64) NOT NULL,
+                `executed_at` int(11) NOT NULL DEFAULT '0',
+                PRIMARY KEY (`name`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
+
+    private function shouldSkipSqlUpdates($checksum)
+    {
+        if ($this->option('force-sql')) {
+            $this->warn('Forcing database update SQL because --force-sql was provided.');
+            return false;
+        }
+
+        $history = DB::table('v2_update_history')
+            ->where('name', 'database/update.sql')
+            ->first();
+
+        return $history && hash_equals((string)$history->checksum, $checksum);
+    }
+
+    private function rememberSqlChecksum($checksum)
+    {
+        DB::table('v2_update_history')->updateOrInsert(
+            ['name' => 'database/update.sql'],
+            [
+                'checksum' => $checksum,
+                'executed_at' => time(),
+            ]
+        );
     }
 
     private function isIgnorableSqlError(\Exception $e)

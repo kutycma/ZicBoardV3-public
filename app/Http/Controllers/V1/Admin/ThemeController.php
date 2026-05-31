@@ -15,6 +15,8 @@ class ThemeController extends Controller
     private $path;
     private $legacyThemeFieldMap = [
         'site_name' => 'SITE_CONFIG.siteName',
+        'logo' => 'SITE_CONFIG.logo',
+        'background_url' => 'AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage',
         'primary_color' => 'DEFAULT_CONFIG.primaryColor',
         'enable_landing_page' => 'DEFAULT_CONFIG.enableLandingPage',
         'show_logo' => 'SITE_CONFIG.showLogo',

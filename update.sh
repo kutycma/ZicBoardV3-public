@@ -71,9 +71,23 @@ if [ "$(uname -s)" = "Linux" ] && command -v systemctl >/dev/null 2>&1; then
 fi
 
 if [ -f "webman.php" ]; then
-  echo "Đang khởi động lại dịch vụ Webman..."
-  php -c cli-php.ini webman.php stop || true
-  php -c cli-php.ini webman.php start -d
+  PHP_MAJOR="$(php -r 'echo PHP_MAJOR_VERSION;' 2>/dev/null || echo 0)"
+  case "$PHP_MAJOR" in
+    ''|*[!0-9]*) PHP_MAJOR=0 ;;
+  esac
+
+  if [ "$PHP_MAJOR" -lt 8 ]; then
+    echo "Bo qua Webman: PHP CLI hien tai la ${PHP_MAJOR}, Webman chi bat khi PHP >= 8."
+  else
+    WEBMAN_READY="$(php -r '$autoload = getcwd() . "/vendor/autoload.php"; if (!is_file($autoload)) { echo "0"; exit; } require $autoload; echo (class_exists("Adapterman\\Adapterman") && class_exists("Workerman\\Worker")) ? "1" : "0";' 2>/dev/null || echo 0)"
+    if [ "$WEBMAN_READY" = "1" ]; then
+      echo "Đang khởi động lại dịch vụ Webman..."
+      php -c cli-php.ini webman.php stop || true
+      php -c cli-php.ini webman.php start -d
+    else
+      echo "Bo qua Webman: thieu Adapterman/Workerman trong vendor."
+    fi
+  fi
 fi
 
 if [ "$(id -u)" -eq 0 ]; then

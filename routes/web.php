@@ -42,11 +42,29 @@ Route::get('/', function (Request $request) {
 
     $themeConfig = config('theme.' . config('zicboard.frontend_theme', 'EZ-Zic')) ?: [];
     if ($staff) {
-        $themeConfig['background_url'] = $staff->background_url;
-        $themeConfig['custom_html'] = $staff->custom_html;
-        $renderParams['title'] = $staff->title ?: $renderParams['title'];
-        $renderParams['logo'] = $staff->logo ?: $renderParams['logo'];
-        $renderParams['description'] = $staff->description ?: $renderParams['description'];
+        if ($staff->title) {
+            $renderParams['title'] = $staff->title;
+            $themeConfig['SITE_CONFIG.siteName'] = $staff->title;
+        }
+        if ($staff->logo) {
+            $renderParams['logo'] = $staff->logo;
+            $themeConfig['SITE_CONFIG.logo'] = $staff->logo;
+        }
+        if ($staff->description) {
+            $renderParams['description'] = $staff->description;
+            $themeConfig['SITE_CONFIG.siteDescription'] = $staff->description;
+        }
+        if ($staff->background_url) {
+            $themeConfig['background_url'] = $staff->background_url;
+            $themeConfig['AUTH_LAYOUT_CONFIG.splitLayout.leftContent.backgroundImage'] = $staff->background_url;
+        }
+        if ($staff->custom_html) {
+            $themeConfig['custom_html'] = $staff->custom_html;
+            $themeConfig['CUSTOMER_SERVICE_CONFIG.customHtml'] = $staff->custom_html;
+            $themeConfig['CUSTOMER_SERVICE_CONFIG.enabled'] = 'true';
+            $themeConfig['CUSTOMER_SERVICE_CONFIG.type'] = 'other';
+            $themeConfig['CUSTOMER_SERVICE_CONFIG.embedMode'] = 'page';
+        }
     }
 
     $renderParams['theme_config'] = $themeConfig;

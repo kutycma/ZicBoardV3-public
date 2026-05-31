@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\V1\Guest;
 
 use App\Http\Controllers\Controller;
+use App\Models\Staff;
 use App\Utils\Dict;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class CommController extends Controller
 {
-    public function config()
+    public function config(Request $request)
     {
+        $staff = $this->activeWebcon($request);
+
         return response([
             'data' => [
                 'tos_url' => config('zicboard.tos_url'),
@@ -20,9 +24,9 @@ class CommController extends Controller
                     : 0,
                 'is_recaptcha' => (int)config('zicboard.recaptcha_enable', 0) ? 1 : 0,
                 'recaptcha_site_key' => config('zicboard.recaptcha_site_key'),
-                'app_description' => config('zicboard.app_description'),
+                'app_description' => $staff && $staff->description ? $staff->description : config('zicboard.app_description'),
                 'app_url' => config('zicboard.app_url'),
-                'logo' => config('zicboard.logo'),
+                'logo' => $staff && $staff->logo ? $staff->logo : config('zicboard.logo'),
             ]
         ]);
     }
@@ -34,5 +38,16 @@ class CommController extends Controller
             return preg_split('/,/', $suffix);
         }
         return $suffix;
+    }
+
+    private function activeWebcon(Request $request)
+    {
+        if (!Schema::hasTable('v2_staff')) {
+            return null;
+        }
+
+        return Staff::where('domain', $request->getHost())
+            ->where('status', 1)
+            ->first();
     }
 }

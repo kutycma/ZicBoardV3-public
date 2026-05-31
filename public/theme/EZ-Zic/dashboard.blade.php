@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
     <script>window.settings = {
-            title: '{{$title}}',
-            theme: '{{$theme}}',
-            assets_path: '/theme/{{$theme}}',
-            version: '{{$version}}',
-            background_url: '{{ isset($theme_config["background_url"]) ? $theme_config["background_url"] : "" }}',
-            description: '{{$description}}',
+            title: @json($title),
+            theme: @json($theme),
+            assets_path: @json('/theme/' . $theme),
+            version: @json($version),
+            background_url: @json(isset($theme_config["background_url"]) ? $theme_config["background_url"] : ""),
+            description: @json($description),
             i18n: [
                 'zh-CN',
                 'en-US',
@@ -25,8 +25,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="icon" href="/theme/{{$theme}}/images/logo.png">
-    <title>%VUE_APP_TITLE%</title>
+    <link rel="icon" href="{{ $logo ?: '/theme/' . $theme . '/images/logo.png' }}">
+    <title>{{ $title ?? 'ZicBoard' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
