@@ -37,7 +37,7 @@
     "DEFAULT_CONFIG": {
       "defaultLanguage": "vi-VN",
       "defaultTheme": "light",
-      "primaryColor": "#355cc2",
+      "primaryColor": "#00947c",
       "enableLandingPage": true
     },
     "AUTH_CONFIG": {
@@ -515,7 +515,7 @@
       "placeholder": "Value for DEFAULT_CONFIG.primaryColor",
       "field_name": "DEFAULT_CONFIG.primaryColor",
       "field_type": "input",
-      "default_value": "#355cc2",
+      "default_value": "#00947c",
       "description": "Màu chủ đạo của hệ thống, nhập mã HEX như #00947c."
     },
     {
