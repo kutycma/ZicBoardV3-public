@@ -242,6 +242,8 @@
     "config.subscribe.planChangeHelp": "Allow users to change their subscription plan.",
     "config.subscribe.deviceHwid": "Enable HWID device recognition",
     "config.subscribe.deviceHwidHelp": "When enabled, only clients sending X-Hwid may sync subscriptions; when disabled, any device may fetch subscriptions.",
+    "config.subscribe.happEncrypt": "Encrypt subscription links with Happ",
+    "config.subscribe.happEncryptHelp": "When enabled, generated subscription links are encrypted for Happ. HWID device recognition remains controlled separately.",
     "config.subscribe.changeSni": "Allow SNI changes",
     "config.subscribe.changeSniHelp": "Allow users to customize the SNI for each subscription.",
     "config.subscribe.giftcardNotice": "Notify admin on gift card use",

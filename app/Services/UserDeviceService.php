@@ -30,51 +30,36 @@ class UserDeviceService
         }
 
         $hwid = $this->readHwid($request);
-        if ($hwid === null) {
-            abort(403, 'Thiếu định danh thiết bị');
-        }
-        if (strlen($hwid) > self::HWID_MAX_LENGTH) {
-            abort(403, 'Định danh thiết bị không hợp lệ');
-        }
-        if (!$this->hasDeviceLimit($subscription)) {
-            return $subscription;
-        }
+        return $this->registerFromRequestViaCore($subscription, $request, $hwid);
+    }
 
-        $hwidHash = hash('sha256', $hwid);
-        $device = DB::transaction(function () use ($subscription, $request, $hwid, $hwidHash) {
+    private function registerFromRequestViaCore(UserSubscription $subscription, Request $request, $hwid)
+    {
+        $result = DB::transaction(function () use ($subscription, $request, $hwid) {
             $lockedSubscription = UserSubscription::where('id', $subscription->id)->lockForUpdate()->first();
             if (!$lockedSubscription) {
-                abort(403, 'Token không hợp lệ');
+                abort(403, 'Token khong hop le');
             }
 
-            $device = UserDevice::where('subscription_id', $lockedSubscription->id)
-                ->where('hwid_hash', $hwidHash)
+            $devices = UserDevice::where('subscription_id', $lockedSubscription->id)
                 ->lockForUpdate()
-                ->first();
-            if ($device) {
-                if ($device->status === self::STATUS_BANNED) {
-                    abort(403, 'Thiết bị đã bị chặn');
-                }
-                $this->updateSeenMetadata($device, $request);
-                return $device;
-            }
+                ->orderBy('id', 'ASC')
+                ->get(['id', 'uuid', 'status', 'hwid_hash']);
 
-            $device = $this->nextPendingSlot($lockedSubscription);
-            if (!$device) {
-                $this->ensureWaitingSlotForLockedSubscription($lockedSubscription);
-                $device = $this->nextPendingSlot($lockedSubscription);
-            }
-            if (!$device) {
-                abort(403, 'Đã đạt giới hạn thiết bị');
-            }
+            $decision = (new ProtectedFeatureService())->registerHwidDevice(
+                $this->subscriptionPayload($lockedSubscription),
+                $hwid,
+                $this->devicePayload($devices),
+                $this->requestPayload($request)
+            );
 
-            $this->bindSlot($device, $request, $hwid, $hwidHash);
-            $this->ensureWaitingSlotForLockedSubscription($lockedSubscription);
-
-            return $device;
+            return $this->applyHwidDecision($lockedSubscription, $decision);
         }, 3);
 
-        $subscription->uuid = $device->uuid;
+        if (!empty($result['subscription_uuid'])) {
+            $subscription->uuid = $result['subscription_uuid'];
+        }
+
         return $subscription;
     }
 
@@ -277,6 +262,131 @@ class UserDeviceService
         return $devices;
     }
 
+    private function applyHwidDecision(UserSubscription $subscription, array $decision): array
+    {
+        $action = (string)($decision['action'] ?? '');
+        if ($action === 'reject') {
+            $this->abortHwidDecision((string)($decision['code'] ?? 'unknown'));
+        }
+
+        if ($action === 'use_subscription') {
+            return [
+                'subscription_uuid' => (string)($decision['subscription_uuid'] ?? $subscription->uuid)
+            ];
+        }
+
+        $fields = is_array($decision['device'] ?? null) ? $decision['device'] : [];
+        if ($action === 'update_device' || $action === 'bind_device') {
+            $device = UserDevice::where('id', (int)($decision['device_id'] ?? 0))
+                ->where('subscription_id', $subscription->id)
+                ->lockForUpdate()
+                ->first();
+            if (!$device) {
+                abort(403, 'Thiet bi khong ton tai');
+            }
+
+            $allowed = $action === 'update_device'
+                ? ['user_agent', 'last_ip', 'last_seen_at']
+                : ['hwid_hash', 'hwid', 'status', 'user_agent', 'first_ip', 'last_ip', 'first_seen_at', 'last_seen_at'];
+            $device->update($this->onlyDeviceFields($fields, $allowed));
+            $this->createWaitingSlotFromDecision($subscription, $decision);
+
+            return [
+                'subscription_uuid' => (string)($decision['subscription_uuid'] ?? $device->uuid)
+            ];
+        }
+
+        if ($action === 'create_and_bind_device') {
+            $device = UserDevice::create(array_merge([
+                'user_id' => $subscription->user_id,
+                'subscription_id' => $subscription->id,
+            ], $this->onlyDeviceFields($fields, [
+                'uuid', 'hwid_hash', 'hwid', 'status', 'user_agent', 'first_ip', 'last_ip', 'first_seen_at', 'last_seen_at'
+            ])));
+            $this->createWaitingSlotFromDecision($subscription, $decision);
+
+            return [
+                'subscription_uuid' => (string)($decision['subscription_uuid'] ?? $device->uuid)
+            ];
+        }
+
+        abort(403, 'Xu ly thiet bi that bai');
+    }
+
+    private function abortHwidDecision(string $code): void
+    {
+        switch ($code) {
+            case 'missing_hwid':
+                abort(403, 'Thieu dinh danh thiet bi');
+            case 'invalid_hwid':
+                abort(403, 'Dinh danh thiet bi khong hop le');
+            case 'device_banned':
+                abort(403, 'Thiet bi da bi chan');
+            case 'limit_reached':
+                abort(403, 'Da dat gioi han thiet bi');
+            default:
+                abort(403, 'Xu ly thiet bi that bai');
+        }
+    }
+
+    private function createWaitingSlotFromDecision(UserSubscription $subscription, array $decision): void
+    {
+        if (empty($decision['create_waiting_slot']) || empty($decision['waiting_slot_uuid'])) {
+            return;
+        }
+
+        UserDevice::create([
+            'user_id' => $subscription->user_id,
+            'subscription_id' => $subscription->id,
+            'uuid' => (string)$decision['waiting_slot_uuid'],
+            'status' => self::STATUS_PENDING
+        ]);
+    }
+
+    private function onlyDeviceFields(array $fields, array $allowed): array
+    {
+        $result = [];
+        foreach ($allowed as $key) {
+            if (array_key_exists($key, $fields)) {
+                $result[$key] = $fields[$key];
+            }
+        }
+        return $result;
+    }
+
+    private function subscriptionPayload(UserSubscription $subscription): array
+    {
+        return [
+            'id' => (int)$subscription->id,
+            'user_id' => (int)$subscription->user_id,
+            'uuid' => (string)$subscription->uuid,
+            'device_limit' => (int)$subscription->device_limit
+        ];
+    }
+
+    private function devicePayload($devices): array
+    {
+        $result = [];
+        foreach ($devices as $device) {
+            $result[] = [
+                'id' => (int)$device->id,
+                'uuid' => (string)$device->uuid,
+                'status' => (string)$device->status,
+                'hwid_hash' => $device->hwid_hash
+            ];
+        }
+        return $result;
+    }
+
+    private function requestPayload(Request $request): array
+    {
+        return [
+            'ip' => $this->readIp($request),
+            'user_agent' => $this->readUserAgent($request),
+            'now' => time()
+        ];
+    }
+
     private function readHwid(Request $request)
     {
         $hwid = trim((string)$request->header(self::HWID_HEADER, ''));
@@ -325,31 +435,6 @@ class UserDeviceService
             'subscription_id' => $subscription->id,
             'uuid' => Helper::guid(true),
             'status' => self::STATUS_PENDING
-        ]);
-    }
-
-    private function bindSlot(UserDevice $device, Request $request, string $hwid, string $hwidHash)
-    {
-        $now = time();
-        $ip = $this->readIp($request);
-        $device->update([
-            'hwid_hash' => $hwidHash,
-            'hwid' => $hwid,
-            'status' => self::STATUS_BOUND,
-            'user_agent' => $this->readUserAgent($request),
-            'first_ip' => $ip,
-            'last_ip' => $ip,
-            'first_seen_at' => $now,
-            'last_seen_at' => $now
-        ]);
-    }
-
-    private function updateSeenMetadata(UserDevice $device, Request $request)
-    {
-        $device->update([
-            'user_agent' => $this->readUserAgent($request),
-            'last_ip' => $this->readIp($request),
-            'last_seen_at' => time()
         ]);
     }
 

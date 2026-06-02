@@ -36,7 +36,7 @@ class KnowledgeController extends Controller
             $subscribeTokenValue = $subscription ? $subscription->token : $user['token'];
             $subscribeUrlDetail = Helper::getSubscribeUrlDetail((string)$subscribeTokenValue);
             $subscribeUrl = (string)($subscribeUrlDetail['url'] ?? '');
-            $subscribeToken = (int)config('zicboard.device_hwid_enable', 0) === 1
+            $subscribeToken = Helper::isHappSubscribeEncryptEnabled()
                 ? ''
                 : $subscribeTokenValue;
             $knowledge['body'] = str_replace('{{siteName}}', config('zicboard.app_name', 'ZicBoard'), $knowledge['body']);

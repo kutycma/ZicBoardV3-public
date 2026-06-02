@@ -93,6 +93,17 @@ class ProtectedFeatureService
         return is_array($result) && !empty($result['url']) ? (string)$result['url'] : null;
     }
 
+    public function registerHwidDevice(array $subscription, $hwid, array $devices, array $request): array
+    {
+        $result = (new CoreRpcClient())->call('device.hwid_register', [
+            'subscription' => $subscription,
+            'hwid' => $hwid,
+            'devices' => array_values($devices),
+            'request' => $request,
+        ]);
+        return is_array($result) ? $result : [];
+    }
+
     public function nodeIdsForDeviceSlots(array $deviceIds)
     {
         $result = (new CoreRpcClient())->call('device.node_ids', [

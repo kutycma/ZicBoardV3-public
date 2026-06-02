@@ -46,6 +46,7 @@ class ConfigSave extends FormRequest
         'multiple_subscription_enable' => 'in:0,1',
         'plan_change_enable' => 'in:0,1',
         'device_hwid_enable' => 'in:0,1',
+        'happ_subscribe_encrypt_enable' => 'in:0,1',
         'change_sni_enable' => 'in:0,1',
         'reset_traffic_method' => 'in:0,1,2,3,4',
         'surplus_enable' => 'in:0,1',

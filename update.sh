@@ -31,11 +31,22 @@ git reset --hard "$TARGET"
 git clean -fd
 
 if command -v composer >/dev/null 2>&1; then
-  COMPOSER_CMD="composer"
+  COMPOSER_BIN="$(command -v composer)"
 else
   echo "Composer chưa được cài đặt hoặc không có trong PATH."
   exit 1
 fi
+
+run_composer() {
+  export COMPOSER_ALLOW_SUPERUSER=1
+  local first_line
+  first_line="$(head -n 1 "$COMPOSER_BIN" 2>/dev/null || true)"
+  if printf '%s' "$first_line" | grep -qi 'php'; then
+    php -d error_reporting="E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED" "$COMPOSER_BIN" "$@"
+  else
+    "$COMPOSER_BIN" "$@"
+  fi
+}
 
 if [ ! -f "composer.lock" ]; then
   echo "Thiếu composer.lock. Gói thương mại phải được phát hành với bộ thư viện phụ thuộc đã khóa phiên bản."
@@ -43,7 +54,7 @@ if [ ! -f "composer.lock" ]; then
 fi
 
 echo "Đang cài các thư viện PHP từ composer.lock..."
-$COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction
+run_composer install --no-dev --optimize-autoloader --no-interaction
 
 if [ -f "artisan" ]; then
   php artisan zicboard:update

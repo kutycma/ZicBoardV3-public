@@ -242,6 +242,8 @@
     "config.subscribe.planChangeHelp": "Cho phép người dùng thay đổi gói cước đăng ký.",
     "config.subscribe.deviceHwid": "Bật nhận diện thiết bị HWID",
     "config.subscribe.deviceHwidHelp": "Khi bật, chỉ thiết bị gửi X-Hwid mới được đồng bộ subscription; khi tắt, mọi thiết bị đều có thể tải subscription.",
+    "config.subscribe.happEncrypt": "Mã hóa link sub bằng Happ",
+    "config.subscribe.happEncryptHelp": "Khi bật, link sub được mã hóa riêng cho Happ. Nhận diện thiết bị HWID vẫn dùng công tắc riêng.",
     "config.subscribe.changeSni": "Cho phép thay SNI",
     "config.subscribe.changeSniHelp": "Cho phép người dùng tùy chỉnh SNI của từng gói đăng ký.",
     "config.subscribe.giftcardNotice": "Thông báo khi dùng thẻ quà tặng",

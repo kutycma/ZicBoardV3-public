@@ -1216,5 +1216,7 @@
     "ticket.replyPlaceholder": "在此处输入您的回复内容...",
     "ticket.send": "发送",
     "ticket.closedNotice": "该工单已关闭。"
+    ,"config.subscribe.happEncrypt": "Happ subscription encryption",
+    "config.subscribe.happEncryptHelp": "Encrypt generated subscription links for Happ. HWID device recognition is controlled separately."
   };
 })();

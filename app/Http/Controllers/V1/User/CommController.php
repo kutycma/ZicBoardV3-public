@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1\User;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Utils\Dict;
+use App\Utils\Helper;
 use Illuminate\Http\Request;
 
 class CommController extends Controller
@@ -22,6 +23,7 @@ class CommController extends Controller
                 'currency_symbol' => config('zicboard.currency_symbol', 'VND'),
                 'multiple_subscription_enable' => (int)config('zicboard.multiple_subscription_enable', 1),
                 'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 0),
+                'happ_subscribe_encrypt_enable' => Helper::isHappSubscribeEncryptEnabled() ? 1 : 0,
                 'change_sni_enable' => (int)config('zicboard.change_sni_enable', 1),
                 'commission_distribution_enable' => (int)config('zicboard.commission_distribution_enable', 0),
                 'commission_distribution_l1' => config('zicboard.commission_distribution_l1'),

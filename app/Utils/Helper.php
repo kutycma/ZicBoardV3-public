@@ -193,7 +193,7 @@ class Helper
 
     private static function happProtectedSubscribeUrl(string $url)
     {
-        if ((int)config('zicboard.device_hwid_enable', 0) !== 1) {
+        if (!self::isHappSubscribeEncryptEnabled()) {
             return [
                 'url' => $url,
                 'error' => null,
@@ -247,6 +247,16 @@ class Helper
             $b64 .= str_repeat('=', $pad);
         }
         return base64_decode($b64);
+    }
+
+    public static function isHappSubscribeEncryptEnabled(): bool
+    {
+        $value = config('zicboard.happ_subscribe_encrypt_enable', null);
+        if ($value === null) {
+            $value = config('zicboard.device_hwid_enable', 0);
+        }
+
+        return (int)$value === 1;
     }
 
     public static function encodeURIComponent($str) {
