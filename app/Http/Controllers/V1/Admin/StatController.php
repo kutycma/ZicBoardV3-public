@@ -25,19 +25,22 @@ class StatController extends Controller
 {
     public function getOverride(Request $request)
     {
+        $todayStart = strtotime(date('Y-m-d'));
+        $now = time();
+
         return [
             'data' => [
                 'online_user' => User::where('t','>=', time() - 600)
                     ->count(),
                 'month_income' => Order::where('created_at', '>=', strtotime(date('Y-m-1')))
-                    ->where('created_at', '<', time())
+                    ->where('created_at', '<', $now)
                     ->whereNotIn('status', [0, 2])
                     ->sum('total_amount'),
                 'month_register_total' => User::where('created_at', '>=', strtotime(date('Y-m-1')))
-                    ->where('created_at', '<', time())
+                    ->where('created_at', '<', $now)
                     ->count(),
-                'day_register_total' => User::where('created_at', '>=', strtotime(date('Y-m-d')))
-                    ->where('created_at', '<', time())
+                'day_register_total' => User::where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $now)
                     ->count(),
                 'ticket_pending_total' => Ticket::where('status', 0)
                     ->where('reply_status', 0)
@@ -47,16 +50,33 @@ class StatController extends Controller
                     ->whereNotIn('status', [0, 2])
                     ->where('commission_balance', '>', 0)
                     ->count(),
-                'day_income' => Order::where('created_at', '>=', strtotime(date('Y-m-d')))
-                    ->where('created_at', '<', time())
+                'day_income' => Order::where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $now)
                     ->whereNotIn('status', [0, 2])
                     ->sum('total_amount'),
+                'day_order_total' => Order::where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $now)
+                    ->count(),
+                'day_paid_order_total' => Order::where('paid_at', '>=', $todayStart)
+                    ->where('paid_at', '<', $now)
+                    ->whereNotIn('status', [0, 2])
+                    ->count(),
+                'day_paid_income' => Order::where('paid_at', '>=', $todayStart)
+                    ->where('paid_at', '<', $now)
+                    ->whereNotIn('status', [0, 2])
+                    ->sum('total_amount'),
+                'day_commission_payout' => CommissionLog::where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $now)
+                    ->sum('get_amount'),
+                'day_commission_count' => CommissionLog::where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $now)
+                    ->count(),
                 'last_month_income' => Order::where('created_at', '>=', strtotime('-1 month', strtotime(date('Y-m-1'))))
                     ->where('created_at', '<', strtotime(date('Y-m-1')))
                     ->whereNotIn('status', [0, 2])
                     ->sum('total_amount'),
                 'commission_month_payout' => CommissionLog::where('created_at', '>=', strtotime(date('Y-m-1')))
-                    ->where('created_at', '<', time())
+                    ->where('created_at', '<', $now)
                     ->sum('get_amount'),
                 'commission_last_month_payout' => CommissionLog::where('created_at', '>=', strtotime('-1 month', strtotime(date('Y-m-1'))))
                     ->where('created_at', '<', strtotime(date('Y-m-1')))
@@ -67,43 +87,90 @@ class StatController extends Controller
 
     public function getOrder(Request $request)
     {
+        $todayStart = strtotime(date('Y-m-d'));
+        $startAt = strtotime('-30 day', $todayStart);
+        $now = time();
         $statistics = Stat::where('record_type', 'd')
-            ->limit(31)
-            ->orderBy('record_at', 'DESC')
+            ->where('record_at', '>=', $startAt)
+            ->where('record_at', '<', $todayStart)
+            ->orderBy('record_at', 'ASC')
             ->get()
-            ->toArray();
+            ->keyBy(function ($statistic) {
+                return date('Y-m-d', $statistic['record_at']);
+            });
+
+        $series = [
+            ['type' => 'register_count', 'field' => 'register_count', 'amount' => false],
+            ['type' => 'order_count', 'field' => 'order_count', 'amount' => false],
+            ['type' => 'paid_count', 'field' => 'paid_count', 'amount' => false],
+            ['type' => 'paid_total', 'field' => 'paid_total', 'amount' => true],
+            ['type' => 'commission_count', 'field' => 'commission_count', 'amount' => false],
+            ['type' => 'commission_total', 'field' => 'commission_total', 'amount' => true],
+        ];
+
         $result = [];
-        foreach ($statistics as $statistic) {
-            $date = date('m-d', $statistic['record_at']);
-            $result[] = [
-                'type' => 'Số người đăng ký',
-                'date' => $date,
-                'value' => $statistic['register_count']
-            ];
-            $result[] = [
-                'type' => 'Số tiền thu',
-                'date' => $date,
-                'value' => $statistic['paid_total'] / 100
-            ];
-            $result[] = [
-                'type' => 'Số giao dịch thu',
-                'date' => $date,
-                'value' => $statistic['paid_count']
-            ];
-            $result[] = [
-                'type' => 'Số tiền hoa hồng (đã phát)',
-                'date' => $date,
-                'value' => $statistic['commission_total'] / 100
-            ];
-            $result[] = [
-                'type' => 'Số giao dịch hoa hồng (đã phát)',
-                'date' => $date,
-                'value' => $statistic['commission_count']
-            ];
+
+        for ($cursor = $startAt; $cursor <= $todayStart; $cursor = strtotime('+1 day', $cursor)) {
+            $dateKey = date('Y-m-d', $cursor);
+            $date = date('m-d', $cursor);
+            $statistic = $cursor === $todayStart
+                ? $this->buildLiveDailyStat($todayStart, $now)
+                : $this->normalizeDailyStat($statistics->get($dateKey));
+
+            foreach ($series as $item) {
+                $value = $statistic[$item['field']] ?? 0;
+                $result[] = [
+                    'type' => $item['type'],
+                    'date' => $date,
+                    'value' => $item['amount'] ? $value / 100 : $value
+                ];
+            }
         }
-        $result = array_reverse($result);
+
         return [
             'data' => $result
+        ];
+    }
+
+    private function buildLiveDailyStat($startAt, $endAt)
+    {
+        return [
+            'register_count' => User::where('created_at', '>=', $startAt)
+                ->where('created_at', '<', $endAt)
+                ->count(),
+            'order_count' => Order::where('created_at', '>=', $startAt)
+                ->where('created_at', '<', $endAt)
+                ->count(),
+            'paid_count' => Order::where('paid_at', '>=', $startAt)
+                ->where('paid_at', '<', $endAt)
+                ->whereNotIn('status', [0, 2])
+                ->count(),
+            'paid_total' => Order::where('paid_at', '>=', $startAt)
+                ->where('paid_at', '<', $endAt)
+                ->whereNotIn('status', [0, 2])
+                ->sum('total_amount'),
+            'commission_count' => CommissionLog::where('created_at', '>=', $startAt)
+                ->where('created_at', '<', $endAt)
+                ->count(),
+            'commission_total' => CommissionLog::where('created_at', '>=', $startAt)
+                ->where('created_at', '<', $endAt)
+                ->sum('get_amount'),
+        ];
+    }
+
+    private function normalizeDailyStat($statistic)
+    {
+        if (!$statistic) {
+            $statistic = [];
+        }
+
+        return [
+            'register_count' => $statistic['register_count'] ?? 0,
+            'order_count' => $statistic['order_count'] ?? 0,
+            'paid_count' => $statistic['paid_count'] ?? 0,
+            'paid_total' => $statistic['paid_total'] ?? 0,
+            'commission_count' => $statistic['commission_count'] ?? 0,
+            'commission_total' => $statistic['commission_total'] ?? 0,
         ];
     }
 
