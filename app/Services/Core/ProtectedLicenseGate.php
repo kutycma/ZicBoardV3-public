@@ -23,10 +23,10 @@ class ProtectedLicenseGate
             $rpc = new CoreRpcClient();
             $status = $rpc->call('license.status');
         } catch (\Throwable $e) {
-            abort(503, 'Dịch vụ license ZicBoard không khả dụng');
+            abort(503, 'ZicBoard license service is unavailable');
         }
 
-        if (empty($status['protected_features_enabled'])) {
+        if (!$this->licenseAllowsProtected($status)) {
             try {
                 $refreshedStatus = $rpc->call('license.refresh');
                 if (is_array($refreshedStatus)) {
@@ -37,8 +37,8 @@ class ProtectedLicenseGate
             }
         }
 
-        if (empty($status['protected_features_enabled'])) {
-            abort(403, 'Cần license ZicBoard hợp lệ cho ' . $scope);
+        if (!$this->licenseAllowsProtected($status)) {
+            abort(403, 'ZicBoard license is not active. Please renew your license for ' . $scope);
         }
 
         // Periodic runtime verification.
@@ -52,5 +52,13 @@ class ProtectedLicenseGate
                 abort(503, 'Core binary integrity verification failed');
             }
         }
+    }
+
+    private function licenseAllowsProtected($status): bool
+    {
+        return is_array($status)
+            && !empty($status['active'])
+            && !empty($status['protected_features_enabled'])
+            && (string)($status['status'] ?? '') === 'active';
     }
 }

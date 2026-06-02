@@ -185,6 +185,8 @@ class AdminRoute
             $router->get ('/system/getQueueWorkload', 'V1\\Admin\\SystemController@getQueueWorkload');
             $router->get ('/system/getQueueMasters', '\\Laravel\\Horizon\\Http\\Controllers\\MasterSupervisorController@index');
             $router->get ('/system/getSystemLog', 'V1\\Admin\\SystemController@getSystemLog');
+            $router->get ('/system/getCoreLicenseStatus', 'V1\\Admin\\SystemController@getCoreLicenseStatus');
+            $router->post('/system/refreshCoreLicenseStatus', 'V1\\Admin\\SystemController@refreshCoreLicenseStatus');
             // Theme
             $router->get ('/theme/getThemes', 'V1\\Admin\\ThemeController@getThemes');
             $router->post('/theme/saveThemeConfig', 'V1\\Admin\\ThemeController@saveThemeConfig');

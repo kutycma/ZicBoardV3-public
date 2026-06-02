@@ -96,6 +96,14 @@ class HappSubscribeCacheService
         } catch (\Throwable $exception) {
             $this->rememberFailureCooldown();
             $this->notifyFailure($exception);
+            if ($this->isLicenseFailure($exception)) {
+                Log::warning('Failed to encrypt subscribe URL with Happ because license is not active.', [
+                    'error' => $exception->getMessage(),
+                    'cache_key' => $cacheKey,
+                ]);
+                return null;
+            }
+
             $stale = $this->getStale($cacheKey, time());
             if ($stale !== null) {
                 Log::warning('Failed to encrypt subscribe URL with Happ, using stale cached URL.', [
@@ -259,6 +267,23 @@ class HappSubscribeCacheService
                 'error' => $notifyException->getMessage(),
             ]);
         }
+    }
+
+    private function isLicenseFailure(\Throwable $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+        return strpos($message, 'license_required') !== false
+            || strpos($message, 'license key is invalid') !== false
+            || strpos($message, 'license is not active') !== false
+            || strpos($message, 'no longer active') !== false
+            || strpos($message, 'renew your license') !== false
+            || strpos($message, 'valid protected-feature license') !== false
+            || strpos($message, 'license status is suspend') !== false
+            || strpos($message, 'activation is not active') !== false
+            || strpos($message, 'activation is bound to another') !== false
+            || strpos($message, 'suspended') !== false
+            || strpos($message, 'revoked') !== false
+            || strpos($message, 'expired') !== false;
     }
 
     private function cacheKey(string $rawUrl): string

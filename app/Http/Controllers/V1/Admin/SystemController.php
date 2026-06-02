@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Log as LogModel;
+use App\Services\Core\CoreRpcClient;
 use App\Utils\CacheKey;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -24,8 +25,23 @@ class SystemController extends Controller
             'data' => [
                 'schedule' => $this->getScheduleStatus(),
                 'horizon' => $this->getHorizonStatus(),
+                'core_license' => $this->coreLicenseStatus(false),
                 'schedule_last_runtime' => Cache::get(CacheKey::get('SCHEDULE_LAST_CHECK_AT', null))
             ]
+        ]);
+    }
+
+    public function getCoreLicenseStatus()
+    {
+        return response([
+            'data' => $this->coreLicenseStatus(false)
+        ]);
+    }
+
+    public function refreshCoreLicenseStatus()
+    {
+        return response([
+            'data' => $this->coreLicenseStatus(true)
         ]);
     }
 
@@ -115,5 +131,55 @@ class SystemController extends Controller
             'data' => $res,
             'total' => $total
         ]);
+    }
+
+    private function coreLicenseStatus(bool $refresh): array
+    {
+        try {
+            $rpc = new CoreRpcClient();
+            $status = $rpc->call($refresh ? 'license.refresh' : 'license.status');
+            return $this->normalizeCoreLicenseStatus(is_array($status) ? $status : [], true, null);
+        } catch (\Throwable $e) {
+            return $this->normalizeCoreLicenseStatus([], false, $e->getMessage());
+        }
+    }
+
+    private function normalizeCoreLicenseStatus(array $status, bool $available, $error): array
+    {
+        $state = (string)($status['status'] ?? ($available ? 'unknown' : 'unavailable'));
+        $protected = !empty($status['protected_features_enabled']);
+        $active = !empty($status['active']);
+        $expiresAt = isset($status['expires_at']) ? (int)$status['expires_at'] : null;
+        $daysUntilExpiry = $expiresAt ? (int)ceil(($expiresAt - time()) / 86400) : null;
+        $renewalWarning = $available
+            && $protected
+            && $state === 'active'
+            && $expiresAt
+            && $daysUntilExpiry !== null
+            && $daysUntilExpiry <= 14;
+        $requiresRenewal = !$available || !$protected || $state !== 'active';
+        $message = $requiresRenewal
+            ? 'ZicBoard license is not active. Please renew your license to continue using protected features.'
+            : 'ZicBoard license is active.';
+
+        return [
+            'available' => $available,
+            'status' => $state,
+            'active' => $active,
+            'protected_features_enabled' => $protected,
+            'offline_grace' => !empty($status['offline_grace']),
+            'requires_renewal' => $requiresRenewal,
+            'renewal_warning' => $renewalWarning,
+            'renewal_warning_days' => 14,
+            'days_until_expiry' => $daysUntilExpiry,
+            'message' => $message,
+            'license_id' => $status['license_id'] ?? null,
+            'activation_id' => $status['activation_id'] ?? null,
+            'expires_at' => $expiresAt,
+            'grace_until' => isset($status['grace_until']) ? (int)$status['grace_until'] : null,
+            'last_refresh_at' => isset($status['last_refresh_at']) ? (int)$status['last_refresh_at'] : null,
+            'blocked_at' => isset($status['blocked_at']) ? (int)$status['blocked_at'] : null,
+            'error' => $error ?: ($status['error'] ?? null),
+        ];
     }
 }
