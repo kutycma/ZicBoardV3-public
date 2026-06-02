@@ -246,11 +246,17 @@ class UserController extends Controller
                 case 5:
                     $plan = Plan::where('id', $giftcard->plan_id)->first();
                     if ($plan) {
-                        $subscription = $subscriptionService->createFromPlan($user, $plan, [
+                        $attributes = [
                             'expired_at' => $giftcard->value == 0
                                 ? null
                                 : $currentTime + $giftcard->value * 86400
-                        ]);
+                        ];
+                        if (!$subscriptionService->isMultipleSubscriptionEnabled()) {
+                            $subscription = $subscriptionService->getSingleModeTargetForUser($user);
+                        }
+                        $subscription = $subscription
+                            ? $subscriptionService->applyPlan($subscription, $plan, $attributes)
+                            : $subscriptionService->createFromPlan($user, $plan, $attributes);
                         $waitingSlotSubscription = $subscription;
                     } else {
                         abort(500, __('Not suitable gift card type'));
@@ -258,6 +264,11 @@ class UserController extends Controller
                     break;
                 default:
                     abort(500, __('Unknown gift card type'));
+            }
+
+            if ($subscription && !$subscriptionService->isMultipleSubscriptionEnabled()) {
+                $subscription->status = SubscriptionService::STATUS_ACTIVE;
+                $subscriptionService->disableOtherActiveSubscriptions($subscription);
             }
 
             if ($giftcard->limit_use !== null) {

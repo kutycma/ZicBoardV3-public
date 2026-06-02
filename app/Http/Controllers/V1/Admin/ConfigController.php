@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ConfigSave;
 use App\Jobs\SendEmailJob;
+use App\Services\SubscriptionService;
 use App\Services\TelegramService;
 use App\Utils\Dict;
 use Illuminate\Http\Request;
@@ -213,6 +214,13 @@ class ConfigController extends Controller
             }
         }
         Artisan::call('config:cache');
+        try {
+            Artisan::call('horizon:terminate');
+        } catch (\Throwable $e) {
+        }
+        if ((int)($config['multiple_subscription_enable'] ?? 1) === 0) {
+            (new SubscriptionService())->enforceSingleSubscriptionMode();
+        }
         if(Cache::has('WEBMANPID')) {
             $pid = Cache::get('WEBMANPID');
             Cache::forget('WEBMANPID');

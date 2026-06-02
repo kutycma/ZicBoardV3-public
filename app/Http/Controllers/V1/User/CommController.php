@@ -20,6 +20,7 @@ class CommController extends Controller
                 'withdraw_close' => (int)config('zicboard.withdraw_close_enable', 0),
                 'currency' => config('zicboard.currency', 'VND'),
                 'currency_symbol' => config('zicboard.currency_symbol', 'VND'),
+                'multiple_subscription_enable' => (int)config('zicboard.multiple_subscription_enable', 1),
                 'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 0),
                 'change_sni_enable' => (int)config('zicboard.change_sni_enable', 1),
                 'commission_distribution_enable' => (int)config('zicboard.commission_distribution_enable', 0),

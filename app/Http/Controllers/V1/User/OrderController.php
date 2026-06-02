@@ -132,7 +132,7 @@ class OrderController extends Controller
             && $request->input('period') !== 'reset_price'
             && !$subscriptionService->isMultipleSubscriptionEnabled()
         ) {
-            $subscription = $subscriptionService->getPrimaryForUser($user);
+            $subscription = $subscriptionService->getSingleModeTargetForUser($user);
         }
 
         if (!$plan) {

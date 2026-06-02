@@ -64,6 +64,10 @@ class OrderService
             DB::rollBack();
             abort(500, __('Subscription has expired or no active subscription, unable to purchase Data Reset Package'));
         }
+        if ($singleSubscriptionMode && !$this->subscription && $subscriptionService->userHasAnySubscription($this->user)) {
+            DB::rollBack();
+            abort(500, __('Unable to find the target subscription for single subscription mode'));
+        }
         if (!$this->subscription) {
             $this->subscription = $subscriptionService->createFromPlan($this->user, $plan, [
                 'origin_order_id' => $order->id
@@ -109,6 +113,7 @@ class OrderService
         }
 
         $this->setSpeedLimit($plan->speed_limit);
+        $this->subscription->status = SubscriptionService::STATUS_ACTIVE;
         $this->subscription->last_order_id = $order->id;
 
         if (!$this->subscription->save()) {

@@ -927,11 +927,17 @@ CREATE TABLE IF NOT EXISTS `v2_user_subscription` (
                                         KEY `v2_user_subscription_plan_id_index` (`plan_id`),
                                         KEY `v2_user_subscription_group_id_index` (`group_id`),
                                         KEY `v2_user_subscription_status_index` (`status`),
+                                        KEY `v2_user_subscription_user_status_index` (`user_id`,`status`),
+                                        KEY `v2_user_subscription_status_user_index` (`status`,`user_id`),
                                         CONSTRAINT `v2_user_subscription_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `v2_user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE `v2_user_subscription`
 ADD KEY `v2_user_subscription_user_id_index` (`user_id`);
+ALTER TABLE `v2_user_subscription`
+ADD KEY `v2_user_subscription_user_status_index` (`user_id`,`status`);
+ALTER TABLE `v2_user_subscription`
+ADD KEY `v2_user_subscription_status_user_index` (`status`,`user_id`);
 
 ALTER TABLE `v2_user_device`
 ADD KEY `v2_user_device_user_id_index` (`user_id`);

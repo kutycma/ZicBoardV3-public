@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\SubscriptionService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -55,6 +56,7 @@ class ZicBoardUpdate extends Command
         if ($this->shouldSkipSqlUpdates($sqlChecksum)) {
             $this->info('database/update.sql has not changed; skipping database update SQL.');
             $this->repairSubscriptionMigration();
+            $this->repairSingleSubscriptionMode();
             \Artisan::call('horizon:terminate');
             $this->info('Update completed. Queue workers were restarted, no further action is required.');
             return;
@@ -90,6 +92,7 @@ class ZicBoardUpdate extends Command
             }
         }
         $this->repairSubscriptionMigration();
+        $this->repairSingleSubscriptionMode();
         if ($hasSqlErrors) {
             $this->warn('Database update SQL had errors; checksum was not saved so the update can retry next time.');
         } else {
@@ -110,6 +113,18 @@ class ZicBoardUpdate extends Command
             } catch (\Exception $e) {
                 $this->warn('Could not set database timeout: ' . $e->getMessage());
             }
+        }
+    }
+
+    private function repairSingleSubscriptionMode()
+    {
+        if ((int)config('zicboard.multiple_subscription_enable', 1) === 1) {
+            return;
+        }
+
+        $affected = (new SubscriptionService())->enforceSingleSubscriptionMode();
+        if ($affected > 0) {
+            $this->info("Single subscription mode repaired; disabled extra active subscriptions: {$affected}.");
         }
     }
 
@@ -203,6 +218,9 @@ class ZicBoardUpdate extends Command
         $this->repairSubscriptionUserNoteSchema();
         $this->line('[repair] subscription lookup indexes');
         $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_user_id_index', 'ADD KEY `v2_user_subscription_user_id_index` (`user_id`)');
+        $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_status_index', 'ADD KEY `v2_user_subscription_status_index` (`status`)');
+        $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_user_status_index', 'ADD KEY `v2_user_subscription_user_status_index` (`user_id`,`status`)');
+        $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_status_user_index', 'ADD KEY `v2_user_subscription_status_user_index` (`status`,`user_id`)');
         $this->ensureIndex('v2_user_device', 'v2_user_device_user_id_index', 'ADD KEY `v2_user_device_user_id_index` (`user_id`)');
         $this->line('[repair] subscription text column collations');
         $this->alignSubscriptionUserColumnCollations();

@@ -269,6 +269,8 @@ class MigrateV2bZicToZicBoard extends Command
                     KEY `v2_user_subscription_plan_id_index` (`plan_id`),
                     KEY `v2_user_subscription_group_id_index` (`group_id`),
                     KEY `v2_user_subscription_status_index` (`status`),
+                    KEY `v2_user_subscription_user_status_index` (`user_id`,`status`),
+                    KEY `v2_user_subscription_status_user_index` (`status`,`user_id`),
                     CONSTRAINT `v2_user_subscription_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `v2_user` (`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ");
@@ -313,6 +315,8 @@ class MigrateV2bZicToZicBoard extends Command
         $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_plan_id_index', 'ADD KEY `v2_user_subscription_plan_id_index` (`plan_id`)');
         $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_group_id_index', 'ADD KEY `v2_user_subscription_group_id_index` (`group_id`)');
         $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_status_index', 'ADD KEY `v2_user_subscription_status_index` (`status`)');
+        $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_user_status_index', 'ADD KEY `v2_user_subscription_user_status_index` (`user_id`,`status`)');
+        $this->ensureIndex('v2_user_subscription', 'v2_user_subscription_status_user_index', 'ADD KEY `v2_user_subscription_status_user_index` (`status`,`user_id`)');
 
         if ($this->countInvalidReferences('v2_user_subscription', 'user_id', 'v2_user', 'id') > 0) {
             throw new \RuntimeException('v2_user_subscription co user_id khong ton tai trong v2_user, khong the them foreign key.');

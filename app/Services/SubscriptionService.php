@@ -70,6 +70,66 @@ class SubscriptionService
         return $this->createFromLegacyUser($user);
     }
 
+    public function getSingleModeTargetForUser(User $user)
+    {
+        $subscription = $this->getPrimaryForUser($user);
+        if ($subscription) {
+            return $subscription;
+        }
+
+        return UserSubscription::where('user_id', $user->id)
+            ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [self::STATUS_ACTIVE])
+            ->orderByRaw('CASE WHEN token = ? THEN 0 ELSE 1 END', [$user->token])
+            ->orderBy('updated_at', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->first();
+    }
+
+    public function userHasAnySubscription(User $user)
+    {
+        return UserSubscription::where('user_id', $user->id)->exists();
+    }
+
+    public function enforceSingleSubscriptionMode($userId = null)
+    {
+        $affected = 0;
+        $lastUserId = 0;
+
+        do {
+            $query = UserSubscription::select('user_id')
+                ->where('status', self::STATUS_ACTIVE)
+                ->groupBy('user_id')
+                ->havingRaw('COUNT(*) > 1')
+                ->orderBy('user_id')
+                ->limit(500);
+
+            if ($userId) {
+                $query->where('user_id', $userId);
+            } else {
+                $query->where('user_id', '>', $lastUserId);
+            }
+
+            $userIds = $query->pluck('user_id');
+            foreach ($userIds as $currentUserId) {
+                $lastUserId = max($lastUserId, (int)$currentUserId);
+                $user = User::find($currentUserId);
+                if (!$user) {
+                    continue;
+                }
+
+                $primary = $this->getPrimaryForUser($user);
+                if (!$primary) {
+                    continue;
+                }
+
+                $affected += $this->disableOtherActiveSubscriptions($primary);
+                $this->syncUserSummary($primary);
+            }
+        } while (!$userId && $userIds->isNotEmpty());
+
+        return $affected;
+    }
+
     public function getForUser(User $user, $subscriptionId)
     {
         if (!$subscriptionId) {
@@ -112,20 +172,31 @@ class SubscriptionService
 
     public function resolveOrderTarget(User $user, Order $order)
     {
-        if ($order->subscription_id) {
-            return $this->getForUser($user, $order->subscription_id);
-        }
-
         if (!$order->plan_id || $order->period === 'deposit') {
             return null;
         }
 
         if ($order->period === 'reset_price') {
+            if ($order->subscription_id) {
+                return $this->getForUser($user, $order->subscription_id);
+            }
+
             return $this->getRenewableForPlan($user, (int)$order->plan_id);
         }
 
         if (!$this->isMultipleSubscriptionEnabled()) {
-            return $this->getPrimaryForUser($user);
+            if ($order->subscription_id) {
+                $subscription = $this->getForUser($user, $order->subscription_id);
+                if ($subscription) {
+                    return $subscription;
+                }
+            }
+
+            return $this->getSingleModeTargetForUser($user);
+        }
+
+        if ($order->subscription_id) {
+            return $this->getForUser($user, $order->subscription_id);
         }
 
         return null;
@@ -154,6 +225,25 @@ class SubscriptionService
             'uuid' => $uuid,
             'status' => self::STATUS_ACTIVE
         ], $attributes));
+    }
+
+    public function applyPlan(UserSubscription $subscription, Plan $plan, array $attributes = [])
+    {
+        $subscription->plan_id = $plan->id;
+        $subscription->group_id = $plan->group_id;
+        $subscription->speed_limit = $plan->speed_limit;
+        $subscription->device_limit = $plan->device_limit;
+        $subscription->t = $attributes['t'] ?? 0;
+        $subscription->u = $attributes['u'] ?? 0;
+        $subscription->d = $attributes['d'] ?? 0;
+        $subscription->transfer_enable = $attributes['transfer_enable'] ?? $plan->transfer_enable * 1073741824;
+        $subscription->expired_at = array_key_exists('expired_at', $attributes) ? $attributes['expired_at'] : 0;
+        $subscription->auto_renewal = $attributes['auto_renewal'] ?? 0;
+        $subscription->remind_expire = $attributes['remind_expire'] ?? 1;
+        $subscription->remind_traffic = $attributes['remind_traffic'] ?? 1;
+        $subscription->status = $attributes['status'] ?? self::STATUS_ACTIVE;
+
+        return $subscription;
     }
 
     public function createFromLegacyUser(User $user)
