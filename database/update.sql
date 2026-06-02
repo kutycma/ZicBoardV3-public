@@ -732,13 +732,13 @@ ALTER TABLE `v2_user`
 CREATE TABLE IF NOT EXISTS `v2_user_device` (
                               `id` int(11) NOT NULL AUTO_INCREMENT,
                               `user_id` int(11) NOT NULL,
-                              `hwid_hash` char(64) NOT NULL,
-                              `hwid` varchar(255) NOT NULL,
+                              `hwid_hash` char(64) DEFAULT NULL,
+                              `hwid` varchar(255) DEFAULT NULL,
                               `user_agent` varchar(255) DEFAULT NULL,
                               `first_ip` varchar(128) DEFAULT NULL,
                               `last_ip` varchar(128) DEFAULT NULL,
-                              `first_seen_at` int(11) NOT NULL,
-                              `last_seen_at` int(11) NOT NULL,
+                              `first_seen_at` int(11) DEFAULT NULL,
+                              `last_seen_at` int(11) DEFAULT NULL,
                               `created_at` int(11) NOT NULL,
                               `updated_at` int(11) NOT NULL,
                               PRIMARY KEY (`id`),
@@ -989,6 +989,15 @@ MODIFY `subscription_id` int(11) NOT NULL,
 DROP INDEX `v2_user_device_user_hwid_unique`,
 ADD UNIQUE KEY `v2_user_device_subscription_hwid_unique` (`subscription_id`,`hwid_hash`),
 ADD CONSTRAINT `v2_user_device_subscription_id_foreign` FOREIGN KEY (`subscription_id`) REFERENCES `v2_user_subscription` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `v2_user_device`
+MODIFY `hwid_hash` char(64) DEFAULT NULL,
+MODIFY `hwid` varchar(255) DEFAULT NULL,
+MODIFY `user_agent` varchar(255) DEFAULT NULL,
+MODIFY `first_ip` varchar(128) DEFAULT NULL,
+MODIFY `last_ip` varchar(128) DEFAULT NULL,
+MODIFY `first_seen_at` int(11) DEFAULT NULL,
+MODIFY `last_seen_at` int(11) DEFAULT NULL;
 
 ALTER TABLE `v2_stat_user`
 ADD `subscription_id` int(11) NULL AFTER `user_id`,

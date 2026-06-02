@@ -375,6 +375,19 @@ class ZicBoardUpdate extends Command
         }
 
         $this->ensureColumn('v2_user_device', 'subscription_id', 'ADD `subscription_id` int(11) NULL AFTER `user_id`');
+        $this->ensureColumn('v2_user_device', 'uuid', 'ADD `uuid` char(36) DEFAULT NULL AFTER `subscription_id`');
+        $this->ensureColumn('v2_user_device', 'hwid_hash', 'ADD `hwid_hash` char(64) DEFAULT NULL AFTER `uuid`');
+        $this->ensureColumn('v2_user_device', 'hwid', 'ADD `hwid` varchar(255) DEFAULT NULL AFTER `hwid_hash`');
+        $this->ensureColumn('v2_user_device', 'status', "ADD `status` varchar(16) NOT NULL DEFAULT 'pending' AFTER `hwid`");
+        $this->ensureColumn('v2_user_device', 'user_agent', 'ADD `user_agent` varchar(255) DEFAULT NULL AFTER `status`');
+        $this->ensureColumn('v2_user_device', 'first_ip', 'ADD `first_ip` varchar(128) DEFAULT NULL AFTER `user_agent`');
+        $this->ensureColumn('v2_user_device', 'last_ip', 'ADD `last_ip` varchar(128) DEFAULT NULL AFTER `first_ip`');
+        $this->ensureColumn('v2_user_device', 'first_seen_at', 'ADD `first_seen_at` int(11) DEFAULT NULL AFTER `last_ip`');
+        $this->ensureColumn('v2_user_device', 'last_seen_at', 'ADD `last_seen_at` int(11) DEFAULT NULL AFTER `first_seen_at`');
+        $this->ensureColumn('v2_user_device', 'created_at', "ADD `created_at` int(11) NOT NULL DEFAULT '0'");
+        $this->ensureColumn('v2_user_device', 'updated_at', "ADD `updated_at` int(11) NOT NULL DEFAULT '0'");
+        $this->repairDevicePendingSlotColumns();
+
         $this->ensureIndex('v2_user_device', 'v2_user_device_subscription_id_index', 'ADD KEY `v2_user_device_subscription_id_index` (`subscription_id`)');
 
         $this->runRepairStatement("
@@ -388,15 +401,46 @@ class ZicBoardUpdate extends Command
             WHERE devices.subscription_id IS NULL
         ");
 
+        $this->runRepairStatement("UPDATE `v2_user_device` SET `uuid` = UUID() WHERE `uuid` IS NULL OR `uuid` = ''");
+
         if ($this->indexExists('v2_user_device', 'v2_user_device_user_hwid_unique')) {
             $this->runRepairStatement('ALTER TABLE `v2_user_device` DROP INDEX `v2_user_device_user_hwid_unique`');
         }
 
+        $this->ensureIndex('v2_user_device', 'v2_user_device_uuid_unique', 'ADD UNIQUE KEY `v2_user_device_uuid_unique` (`uuid`)');
+        $this->ensureIndex('v2_user_device', 'v2_user_device_status_index', 'ADD KEY `v2_user_device_status_index` (`status`)');
+        $this->ensureIndex('v2_user_device', 'v2_user_device_last_seen_index', 'ADD KEY `v2_user_device_last_seen_index` (`last_seen_at`)');
         $this->ensureIndex('v2_user_device', 'v2_user_device_subscription_hwid_unique', 'ADD UNIQUE KEY `v2_user_device_subscription_hwid_unique` (`subscription_id`,`hwid_hash`)');
         $this->ensureForeignKey('v2_user_device', 'v2_user_device_subscription_id_foreign', 'ADD CONSTRAINT `v2_user_device_subscription_id_foreign` FOREIGN KEY (`subscription_id`) REFERENCES `v2_user_subscription` (`id`) ON DELETE CASCADE');
 
         if (!$this->columnHasNulls('v2_user_device', 'subscription_id')) {
             $this->runRepairStatement('ALTER TABLE `v2_user_device` MODIFY `subscription_id` int(11) NOT NULL');
+        }
+        if (!$this->columnHasNulls('v2_user_device', 'uuid')) {
+            $this->runRepairStatement('ALTER TABLE `v2_user_device` MODIFY `uuid` char(36) NOT NULL');
+        }
+    }
+
+    private function repairDevicePendingSlotColumns()
+    {
+        if (!Schema::hasTable('v2_user_device')) {
+            return;
+        }
+
+        $definitions = [
+            'hwid_hash' => 'char(64) DEFAULT NULL',
+            'hwid' => 'varchar(255) DEFAULT NULL',
+            'user_agent' => 'varchar(255) DEFAULT NULL',
+            'first_ip' => 'varchar(128) DEFAULT NULL',
+            'last_ip' => 'varchar(128) DEFAULT NULL',
+            'first_seen_at' => 'int(11) DEFAULT NULL',
+            'last_seen_at' => 'int(11) DEFAULT NULL',
+        ];
+
+        foreach ($definitions as $column => $definition) {
+            if (Schema::hasColumn('v2_user_device', $column)) {
+                $this->runRepairStatement("ALTER TABLE `v2_user_device` MODIFY `{$column}` {$definition}");
+            }
         }
     }
 

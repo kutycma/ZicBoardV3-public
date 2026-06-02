@@ -517,6 +517,7 @@ class MigrateV2bZicToZicBoard extends Command
         $this->ensureColumn('v2_user_device', 'last_seen_at', 'ADD `last_seen_at` int(11) DEFAULT NULL AFTER `first_seen_at`');
         $this->ensureColumn('v2_user_device', 'created_at', "ADD `created_at` int(11) NOT NULL DEFAULT '0'");
         $this->ensureColumn('v2_user_device', 'updated_at', "ADD `updated_at` int(11) NOT NULL DEFAULT '0'");
+        $this->repairDevicePendingSlotColumns();
 
         DB::statement("UPDATE `v2_user_device` SET `uuid` = UUID() WHERE `uuid` IS NULL OR `uuid` = ''");
 
@@ -560,6 +561,29 @@ class MigrateV2bZicToZicBoard extends Command
         }
         if (!$this->columnHasNulls('v2_user_device', 'uuid')) {
             DB::statement('ALTER TABLE `v2_user_device` MODIFY `uuid` char(36) NOT NULL');
+        }
+    }
+
+    private function repairDevicePendingSlotColumns()
+    {
+        if (!Schema::hasTable('v2_user_device')) {
+            return;
+        }
+
+        $definitions = [
+            'hwid_hash' => 'char(64) DEFAULT NULL',
+            'hwid' => 'varchar(255) DEFAULT NULL',
+            'user_agent' => 'varchar(255) DEFAULT NULL',
+            'first_ip' => 'varchar(128) DEFAULT NULL',
+            'last_ip' => 'varchar(128) DEFAULT NULL',
+            'first_seen_at' => 'int(11) DEFAULT NULL',
+            'last_seen_at' => 'int(11) DEFAULT NULL',
+        ];
+
+        foreach ($definitions as $column => $definition) {
+            if (Schema::hasColumn('v2_user_device', $column)) {
+                DB::statement("ALTER TABLE `v2_user_device` MODIFY `{$column}` {$definition}");
+            }
         }
     }
 
