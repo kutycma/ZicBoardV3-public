@@ -1127,14 +1127,15 @@ bash install.sh --api-host ${jh(o)} --node-id ${s} --api-key ${jh(d)}`}function 
           white-space: nowrap;
         }
         .order-table {
-          min-width: 980px;
+          width: 900px;
+          min-width: 900px;
           table-layout: fixed;
         }
         .order-table th:nth-child(1) { width: 150px; }
-        .order-table th:nth-child(2) { width: 300px; }
-        .order-table th:nth-child(3) { width: 178px; }
-        .order-table th:nth-child(4) { width: 170px; }
-        .order-table th:nth-child(5) { width: 190px; }
+        .order-table th:nth-child(2) { width: 230px; }
+        .order-table th:nth-child(3) { width: 155px; }
+        .order-table th:nth-child(4) { width: 165px; }
+        .order-table th:nth-child(5) { width: 170px; }
         .order-table th:nth-child(6) { width: 128px; }
         .order-cell-stack,
         .order-user-plan,
