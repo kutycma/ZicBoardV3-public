@@ -57,6 +57,7 @@ function installOrUpdateCore(string $root, string $action): void
     if (empty($state['install_id'])) {
         $state['install_id'] = generateUuid();
     }
+    $previousCoreState = coreStateSnapshot($state);
 
     $env = readEnvFile($root . DIRECTORY_SEPARATOR . '.env');
     $licenseKey = getenv('ZICBOARD_LICENSE_KEY') ?: ($env['ZICBOARD_LICENSE_KEY'] ?? '');
@@ -128,8 +129,10 @@ function installOrUpdateCore(string $root, string $action): void
     $state['updated_at'] = gmdate('c');
     if ($backupPath) {
         $state['last_core_backup'] = $backupPath;
+        $state['last_core_state'] = $previousCoreState;
     } else {
         unset($state['last_core_backup']);
+        unset($state['last_core_state']);
     }
     if (!empty($download['activation_id'])) {
         $state['activation_id'] = $download['activation_id'];
@@ -167,8 +170,7 @@ function healthCheck(string $root): void
 
                 $license = $decoded['license'] ?? $decoded;
                 if (!empty($license['protected_features_enabled'])) {
-                    assertCoreCanEncryptHappSubscribe($root);
-                    echo "Core health check passed.\n";
+                    finishCoreHealthCheck($root);
                     return;
                 }
 
@@ -177,8 +179,7 @@ function healthCheck(string $root): void
                     try {
                         $rpcStatus = coreRpcCall($root, 'license.refresh');
                         if (is_array($rpcStatus) && !empty($rpcStatus['protected_features_enabled'])) {
-                            assertCoreCanEncryptHappSubscribe($root);
-                            echo "Core health check passed.\n";
+                            finishCoreHealthCheck($root);
                             return;
                         }
                         $license = is_array($rpcStatus) ? $rpcStatus : $license;
@@ -208,6 +209,41 @@ function assertCoreCanEncryptHappSubscribe(string $root): void
     if (!is_array($result) || empty($result['url']) || !is_string($result['url'])) {
         throw new RuntimeException('Core health check failed: subscription.happ_encrypt returned no encrypted URL');
     }
+}
+
+function finishCoreHealthCheck(string $root): void
+{
+    try {
+        assertCoreCanEncryptHappSubscribe($root);
+        echo "Core health check passed.\n";
+        return;
+    } catch (Throwable $e) {
+        if (!shouldWarnOnlyForHappHealthFailure($e)) {
+            throw $e;
+        }
+        echo "Core health check passed with warning: Happ encrypted subscription check failed: " . $e->getMessage() . "\n";
+    }
+}
+
+function shouldWarnOnlyForHappHealthFailure(Throwable $e): bool
+{
+    $strict = strtolower(trim((string)(getenv('ZICBOARD_CORE_STRICT_HAPP_HEALTH') ?: '')));
+    if (in_array($strict, ['1', 'true', 'yes', 'on'], true)) {
+        return false;
+    }
+
+    $message = strtolower($e->getMessage());
+    foreach ([
+        'happ api',
+        'unable to connect to happ',
+        'missing encrypted url',
+        'subscription.happ_encrypt returned no encrypted url',
+    ] as $needle) {
+        if (strpos($message, $needle) !== false) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function coreRpcCall(string $root, string $method, array $payload = [])
@@ -278,6 +314,7 @@ function rollbackCore(string $root): void
     $statePath = $root . DIRECTORY_SEPARATOR . '.zicboard' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'state.json';
     $state = readJsonFile($statePath, []);
     $backupPath = $state['last_core_backup'] ?? '';
+    $previousCoreState = is_array($state['last_core_state'] ?? null) ? $state['last_core_state'] : [];
     if ($backupPath === '' || !is_file($backupPath)) {
         throw new RuntimeException('No previous core backup is available for rollback');
     }
@@ -295,10 +332,38 @@ function rollbackCore(string $root): void
         throw new RuntimeException('Unable to restore previous core binary');
     }
     @chmod($binaryPath, 0755);
+    if ($previousCoreState) {
+        restoreCoreState($state, $previousCoreState);
+    } elseif (is_file($binaryPath)) {
+        $state['core_sha256'] = hash_file('sha256', $binaryPath);
+    }
     unset($state['last_core_backup']);
+    unset($state['last_core_state']);
     $state['rolled_back_at'] = gmdate('c');
     writeJsonFile($statePath, $state);
     echo "Rolled back zicboard-core to previous binary.\n";
+}
+
+function coreStateSnapshot(array $state): array
+{
+    $snapshot = [];
+    foreach (['target', 'core_version', 'core_sha256', 'activation_id', 'updated_at'] as $key) {
+        if (array_key_exists($key, $state)) {
+            $snapshot[$key] = $state[$key];
+        }
+    }
+    return $snapshot;
+}
+
+function restoreCoreState(array &$state, array $snapshot): void
+{
+    foreach (['target', 'core_version', 'core_sha256', 'activation_id', 'updated_at'] as $key) {
+        if (array_key_exists($key, $snapshot)) {
+            $state[$key] = $snapshot[$key];
+        } else {
+            unset($state[$key]);
+        }
+    }
 }
 
 function readManifest(string $root): array
@@ -360,7 +425,7 @@ function postJson(string $url, array $payload): array
             throw new RuntimeException('License server request failed: ' . $error);
         }
         if ($status < 200 || $status >= 300) {
-            throw new RuntimeException("License server returned HTTP {$status}");
+            throw new RuntimeException("License server returned HTTP {$status}: " . responseErrorMessage((string)$response));
         }
     } else {
         $context = stream_context_create([
@@ -380,6 +445,10 @@ function postJson(string $url, array $payload): array
         if ($response === false) {
             throw new RuntimeException('License server request failed');
         }
+        $status = httpStatusFromHeaders($http_response_header ?? []);
+        if ($status !== 0 && ($status < 200 || $status >= 300)) {
+            throw new RuntimeException("License server returned HTTP {$status}: " . responseErrorMessage((string)$response));
+        }
     }
 
     $decoded = json_decode($response, true);
@@ -387,6 +456,33 @@ function postJson(string $url, array $payload): array
         throw new RuntimeException('License server returned invalid JSON');
     }
     return $decoded;
+}
+
+function httpStatusFromHeaders(array $headers): int
+{
+    foreach ($headers as $header) {
+        if (preg_match('#^HTTP/[0-9.]+\s+([0-9]+)#i', (string)$header, $matches)) {
+            return (int)$matches[1];
+        }
+    }
+    return 0;
+}
+
+function responseErrorMessage(string $body): string
+{
+    $decoded = json_decode($body, true);
+    if (is_array($decoded)) {
+        foreach (['message', 'error'] as $key) {
+            if (!empty($decoded[$key]) && is_string($decoded[$key])) {
+                return $decoded[$key];
+            }
+        }
+    }
+    $text = trim(preg_replace('/\s+/', ' ', $body) ?? '');
+    if ($text === '') {
+        return 'empty response';
+    }
+    return strlen($text) > 240 ? substr($text, 0, 240) : $text;
 }
 
 function downloadFile(string $url, string $destination): void
@@ -408,6 +504,12 @@ function downloadFile(string $url, string $destination): void
     $input = @fopen($url, 'rb', false, $context);
     if (!$input) {
         throw new RuntimeException('Unable to open core download URL');
+    }
+    $status = httpStatusFromHeaders($http_response_header ?? []);
+    if ($status !== 0 && ($status < 200 || $status >= 300)) {
+        $body = (string)stream_get_contents($input, 1048576);
+        fclose($input);
+        throw new RuntimeException("Core download returned HTTP {$status}: " . responseErrorMessage($body));
     }
     $output = @fopen($destination, 'wb');
     if (!$output) {

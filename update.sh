@@ -56,6 +56,18 @@ chmod -R 775 storage bootstrap/cache config/theme public/theme bin .zicboard || 
 echo "Đang cập nhật zicboard-core nếu cần..."
 php scripts/core-installer.php update
 
+restart_core_service_with_health() {
+  local rollback_message="$1"
+  if systemctl restart zicboard-core && php scripts/core-installer.php health; then
+    return 0
+  fi
+
+  echo "$rollback_message"
+  php scripts/core-installer.php rollback
+  systemctl restart zicboard-core
+  php scripts/core-installer.php health
+}
+
 if [ "$(uname -s)" = "Linux" ] && command -v systemctl >/dev/null 2>&1; then
   if [ "$(id -u)" -eq 0 ]; then
     cat >/etc/systemd/system/zicboard-core.service <<EOF
@@ -76,21 +88,9 @@ WantedBy=multi-user.target
 EOF
     systemctl daemon-reload
     systemctl enable zicboard-core
-    systemctl restart zicboard-core
-    if ! php scripts/core-installer.php health; then
-      echo "Core health check failed after update, rolling back core binary..."
-      php scripts/core-installer.php rollback
-      systemctl restart zicboard-core
-      php scripts/core-installer.php health
-    fi
+    restart_core_service_with_health "Core service restart or health check failed after update, rolling back core binary..."
   elif systemctl list-unit-files | grep -q '^zicboard-core\.service'; then
-    systemctl restart zicboard-core
-    if ! php scripts/core-installer.php health; then
-      echo "Kiểm tra tình trạng hoạt động của core thất bại sau cập nhật, đang khôi phục file chạy..."
-      php scripts/core-installer.php rollback
-      systemctl restart zicboard-core
-      php scripts/core-installer.php health
-    fi
+    restart_core_service_with_health "Kiem tra trang thai core that bai sau cap nhat, dang khoi phuc file chay..."
   else
     echo "Chưa cài zicboard-core.service; bỏ qua bước khởi động lại dịch vụ."
   fi
