@@ -149,12 +149,17 @@ class SystemController extends Controller
         $state = (string)($status['status'] ?? ($available ? 'unknown' : 'unavailable'));
         $protected = !empty($status['protected_features_enabled']);
         $active = !empty($status['active']);
-        $expiresAt = isset($status['expires_at']) ? (int)$status['expires_at'] : null;
-        $daysUntilExpiry = $expiresAt ? (int)ceil(($expiresAt - time()) / 86400) : null;
+        $entitlementExpiresAt = isset($status['entitlement_expires_at'])
+            ? (int)$status['entitlement_expires_at']
+            : (isset($status['expires_at']) ? (int)$status['expires_at'] : null);
+        $licenseExpiresAt = isset($status['license_expires_at'])
+            ? (int)$status['license_expires_at']
+            : $entitlementExpiresAt;
+        $daysUntilExpiry = $licenseExpiresAt ? (int)ceil(($licenseExpiresAt - time()) / 86400) : null;
         $renewalWarning = $available
             && $protected
             && $state === 'active'
-            && $expiresAt
+            && $licenseExpiresAt
             && $daysUntilExpiry !== null
             && $daysUntilExpiry <= 14;
         $requiresRenewal = !$available || !$protected || $state !== 'active';
@@ -175,7 +180,9 @@ class SystemController extends Controller
             'message' => $message,
             'license_id' => $status['license_id'] ?? null,
             'activation_id' => $status['activation_id'] ?? null,
-            'expires_at' => $expiresAt,
+            'expires_at' => $licenseExpiresAt,
+            'license_expires_at' => $licenseExpiresAt,
+            'entitlement_expires_at' => $entitlementExpiresAt,
             'grace_until' => isset($status['grace_until']) ? (int)$status['grace_until'] : null,
             'last_refresh_at' => isset($status['last_refresh_at']) ? (int)$status['last_refresh_at'] : null,
             'blocked_at' => isset($status['blocked_at']) ? (int)$status['blocked_at'] : null,
