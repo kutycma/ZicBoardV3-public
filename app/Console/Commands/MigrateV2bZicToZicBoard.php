@@ -161,6 +161,7 @@ class MigrateV2bZicToZicBoard extends Command
         $this->line('3. Chuyen name_sni/network_settings tu v2_user sang v2_user_subscription neu co.');
         $this->line('4. Gan subscription_id cho v2_order, v2_user_device, v2_stat_user.');
         $this->line('5. Tao v2_server_zicnode va copy node tu v2_server_v2node neu co.');
+        $this->line('6. Chuan hoa config ZicNode de node nhan object {} thay vi array [] khi ket noi.');
         $this->line('Chay that: php artisan zicboard:migrate-v2b-zic');
     }
 
@@ -183,6 +184,7 @@ class MigrateV2bZicToZicBoard extends Command
                 : '';
             $this->warn('- con ' . $missingZicnodeTotal . ' v2node ID chua co trong zicnode: ' . implode(', ', $missingZicnodeIds) . $suffix);
         }
+        $this->printZicnodeCompatibilitySummary();
         $this->line('');
     }
 
@@ -664,6 +666,7 @@ class MigrateV2bZicToZicBoard extends Command
 
         $this->ensureZicnodeTable();
         $this->copyV2nodeToZicnode();
+        $this->repairZicnodeNodeCompatibility();
     }
 
     private function ensureZicnodeTable()
@@ -721,15 +724,23 @@ class MigrateV2bZicToZicBoard extends Command
         if (!Schema::hasTable('v2_server_v2node')) {
             return;
         }
+        if (!Schema::hasColumn('v2_server_v2node', 'id')) {
+            $this->warnings[] = 'v2_server_v2node thieu cot id nen khong copy duoc node legacy sang zicnode.';
+            return;
+        }
 
-        $columns = array_keys($this->zicnodeColumnsForCopy());
-        $this->requireColumns('v2_server_v2node', $columns);
-        $this->requireColumns('v2_server_zicnode', $columns);
-
+        $columns = array_merge(['id'], array_keys($this->zicnodeColumns()));
         $columnSql = '`' . implode('`, `', $columns) . '`';
+        $selectColumns = [];
+        foreach ($columns as $column) {
+            $selectColumns[] = Schema::hasColumn('v2_server_v2node', $column)
+                ? "`{$column}`"
+                : $this->zicnodeDefaultExpression($column) . " AS `{$column}`";
+        }
+
         DB::statement("
             INSERT IGNORE INTO `v2_server_zicnode` ({$columnSql})
-            SELECT {$columnSql}
+            SELECT " . implode(', ', $selectColumns) . "
             FROM `v2_server_v2node`
         ");
     }
@@ -772,9 +783,75 @@ class MigrateV2bZicToZicBoard extends Command
         ];
     }
 
-    private function zicnodeColumnsForCopy()
+    private function zicnodeDefaultExpression($column)
     {
-        return array_merge(['id' => null], $this->zicnodeColumns());
+        $defaults = [
+            'group_id' => "''",
+            'name' => "''",
+            'host' => "''",
+            'listen_ip' => "'0.0.0.0'",
+            'port' => "''",
+            'server_port' => '0',
+            'rate' => "'1'",
+            'show' => '0',
+            'protocol' => "'vless'",
+            'tls' => '0',
+            'tls_settings' => "'{}'",
+            'network' => "'tcp'",
+            'network_settings' => "'{}'",
+            'encryption_settings' => "'{}'",
+            'disable_sni' => '0',
+            'zero_rtt_handshake' => '0',
+            'up_mbps' => '0',
+            'down_mbps' => '0',
+            'created_at' => '0',
+            'updated_at' => '0',
+        ];
+
+        return $defaults[$column] ?? 'NULL';
+    }
+
+    private function repairZicnodeNodeCompatibility()
+    {
+        if (!Schema::hasTable('v2_server_zicnode')) {
+            return;
+        }
+
+        foreach (['network_settings', 'tls_settings', 'encryption_settings'] as $column) {
+            if (!Schema::hasColumn('v2_server_zicnode', $column)) {
+                continue;
+            }
+
+            $nonEmptyArrayCount = $this->countZicnodeJsonArrayRoots($column);
+            if ($nonEmptyArrayCount > 0) {
+                $this->warnings[] = "v2_server_zicnode.{$column} co {$nonEmptyArrayCount} gia tri JSON array khong rong. Command chi tu sua [] rong thanh {}, hay kiem tra tay cac row nay.";
+            }
+
+            DB::statement("
+                UPDATE `v2_server_zicnode`
+                SET `{$column}` = '{}'
+                WHERE TRIM(COALESCE(`{$column}`, '')) = ''
+                    OR TRIM(COALESCE(`{$column}`, '')) = '[]'
+                    OR TRIM(COALESCE(`{$column}`, '')) = 'null'
+            ");
+        }
+
+        if (Schema::hasColumn('v2_server_zicnode', 'listen_ip')) {
+            DB::statement("
+                UPDATE `v2_server_zicnode`
+                SET `listen_ip` = '0.0.0.0'
+                WHERE TRIM(COALESCE(`listen_ip`, '')) = ''
+            ");
+        }
+
+        if (Schema::hasColumn('v2_server_zicnode', 'network')) {
+            DB::statement("
+                UPDATE `v2_server_zicnode`
+                SET `network` = 'tcp'
+                WHERE TRIM(COALESCE(`network`, '')) = ''
+                    OR `network` NOT IN ('tcp', 'ws', 'grpc', 'http', 'httpupgrade', 'xhttp', 'splithttp')
+            ");
+        }
     }
 
     private function ensureColumn($table, $column, $definition)
@@ -964,6 +1041,85 @@ class MigrateV2bZicToZicBoard extends Command
                 return (int)$id;
             })
             ->all();
+    }
+
+    private function printZicnodeCompatibilitySummary()
+    {
+        if (!Schema::hasTable('v2_server_zicnode')) {
+            return;
+        }
+
+        $issues = [];
+        foreach (['network_settings', 'tls_settings', 'encryption_settings'] as $column) {
+            if (!Schema::hasColumn('v2_server_zicnode', $column)) {
+                continue;
+            }
+
+            $blankCount = $this->countZicnodeBlankJsonValues($column);
+            $arrayCount = $this->countZicnodeJsonArrayRoots($column);
+            if ($blankCount > 0 || $arrayCount > 0) {
+                $issues[] = "{$column}: empty/[]/null={$blankCount}, array_root_non_empty={$arrayCount}";
+            }
+        }
+
+        if (Schema::hasColumn('v2_server_zicnode', 'listen_ip')) {
+            $missingListenIp = DB::table('v2_server_zicnode')
+                ->whereRaw("TRIM(COALESCE(`listen_ip`, '')) = ''")
+                ->count();
+            if ($missingListenIp > 0) {
+                $issues[] = "listen_ip_empty={$missingListenIp}";
+            }
+        }
+
+        $badNetworkCount = $this->countZicnodeBadNetworks();
+        if ($badNetworkCount > 0) {
+            $issues[] = "unsupported_network={$badNetworkCount}";
+        }
+
+        if ($issues) {
+            $this->line('- zicnode config can repair: ' . implode('; ', $issues));
+        } else {
+            $this->line('- zicnode config compatibility: OK');
+        }
+    }
+
+    private function countZicnodeBlankJsonValues($column)
+    {
+        if (!Schema::hasTable('v2_server_zicnode') || !Schema::hasColumn('v2_server_zicnode', $column)) {
+            return 0;
+        }
+
+        return DB::table('v2_server_zicnode')
+            ->whereRaw("
+                TRIM(COALESCE(`{$column}`, '')) = ''
+                OR TRIM(COALESCE(`{$column}`, '')) = '[]'
+                OR TRIM(COALESCE(`{$column}`, '')) = 'null'
+            ")
+            ->count();
+    }
+
+    private function countZicnodeJsonArrayRoots($column)
+    {
+        if (!Schema::hasTable('v2_server_zicnode') || !Schema::hasColumn('v2_server_zicnode', $column)) {
+            return 0;
+        }
+
+        return DB::table('v2_server_zicnode')
+            ->whereRaw("TRIM(COALESCE(`{$column}`, '')) LIKE '[%'")
+            ->whereRaw("TRIM(COALESCE(`{$column}`, '')) <> '[]'")
+            ->count();
+    }
+
+    private function countZicnodeBadNetworks()
+    {
+        if (!Schema::hasTable('v2_server_zicnode') || !Schema::hasColumn('v2_server_zicnode', 'network')) {
+            return 0;
+        }
+
+        return DB::table('v2_server_zicnode')
+            ->whereRaw("TRIM(COALESCE(`network`, '')) = ''")
+            ->orWhereNotIn('network', ['tcp', 'ws', 'grpc', 'http', 'httpupgrade', 'xhttp', 'splithttp'])
+            ->count();
     }
 
     private function legacySubscriptionCandidateCount()

@@ -227,7 +227,12 @@ class ServerService
 
     public function getAvailableUsers($groupId)
     {
-        $users = UserSubscription::whereIn('group_id', $groupId)
+        $groupIds = $this->normalizeGroupIds($groupId);
+        if (!$groupIds) {
+            return collect();
+        }
+
+        $users = UserSubscription::whereIn('group_id', $groupIds)
             ->whereRaw('u + d < transfer_enable')
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())
@@ -289,6 +294,37 @@ class ServerService
         }
 
         return $nodeUsers;
+    }
+
+    private function normalizeGroupIds($groupId): array
+    {
+        if (is_array($groupId)) {
+            $values = $groupId;
+        } elseif (is_string($groupId)) {
+            $decoded = json_decode($groupId, true);
+            if (is_array($decoded)) {
+                $values = $decoded;
+            } elseif (is_numeric($decoded)) {
+                $values = [$decoded];
+            } elseif (strpos($groupId, ',') !== false) {
+                $values = explode(',', $groupId);
+            } elseif (is_numeric($groupId)) {
+                $values = [$groupId];
+            } else {
+                $values = [];
+            }
+        } elseif (is_numeric($groupId)) {
+            $values = [$groupId];
+        } else {
+            $values = [];
+        }
+
+        $values = array_map('intval', $values);
+        $values = array_filter($values, function ($id) {
+            return $id > 0;
+        });
+
+        return array_values(array_unique($values));
     }
 
     public function log(int $userId, int $serverId, int $u, int $d, float $rate, string $method)

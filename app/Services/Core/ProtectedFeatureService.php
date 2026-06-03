@@ -48,6 +48,9 @@ class ProtectedFeatureService
 
     public function prepareServerParams(string $type, array $params)
     {
+        if ($type === 'zicnode') {
+            $params = self::normalizeZicnodeConfigShape($params, false);
+        }
         if (!self::paramsUseProtected($type, $params)) {
             return $params;
         }
@@ -55,11 +58,19 @@ class ProtectedFeatureService
             'type' => $type,
             'params' => $params,
         ]);
-        return is_array($result) ? $result : $params;
+        if (!is_array($result)) {
+            return $params;
+        }
+        return $type === 'zicnode'
+            ? self::normalizeZicnodeConfigShape($result, false)
+            : $result;
     }
 
     public function nodeConfig(string $type, array $node, array $baseConfig, array $routes = null)
     {
+        if ($type === 'zicnode') {
+            $node = self::normalizeZicnodeConfigShape($node, false);
+        }
         $payload = [
             'node_type' => $type,
             'node' => $node,
@@ -69,7 +80,12 @@ class ProtectedFeatureService
             $payload['routes'] = $routes;
         }
         $result = (new CoreRpcClient())->call('node.config', $payload);
-        return is_array($result) ? $result : [];
+        if (!is_array($result)) {
+            return [];
+        }
+        return $type === 'zicnode'
+            ? self::normalizeZicnodeConfigShape($result, true)
+            : $result;
     }
 
     public function protectedEncryption(array $server)
@@ -167,5 +183,86 @@ class ProtectedFeatureService
             }
         }
         return $value;
+    }
+
+    private static function normalizeZicnodeConfigShape(array $config, bool $forNodeResponse): array
+    {
+        foreach (['network_settings', 'tls_settings', 'encryption_settings'] as $field) {
+            if (array_key_exists($field, $config)) {
+                $config[$field] = self::jsonObjectRoot($config[$field]);
+            } else {
+                $config[$field] = (object)[];
+            }
+        }
+
+        if (empty($config['listen_ip'])) {
+            $config['listen_ip'] = '0.0.0.0';
+        }
+
+        if (empty($config['network']) || !in_array((string)$config['network'], ['tcp', 'ws', 'grpc', 'http', 'httpupgrade', 'xhttp', 'splithttp'], true)) {
+            $config['network'] = 'tcp';
+        }
+
+        foreach (['server_port', 'tls', 'up_mbps', 'down_mbps'] as $field) {
+            if (array_key_exists($field, $config) && $config[$field] !== null && $config[$field] !== '') {
+                $config[$field] = (int)$config[$field];
+            }
+        }
+
+        if (array_key_exists('zero_rtt_handshake', $config)) {
+            $config['zero_rtt_handshake'] = $forNodeResponse
+                ? self::boolish($config['zero_rtt_handshake'])
+                : (int)self::boolish($config['zero_rtt_handshake']);
+        }
+
+        return $config;
+    }
+
+    private static function jsonObjectRoot($value)
+    {
+        if ($value instanceof \stdClass) {
+            return $value;
+        }
+
+        if ($value === null || $value === '' || $value === false) {
+            return (object)[];
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return self::jsonObjectRoot($decoded);
+            }
+            return (object)[];
+        }
+
+        if (is_array($value)) {
+            if (!$value) {
+                return (object)[];
+            }
+            return self::isListArray($value) ? (object)$value : $value;
+        }
+
+        return (object)[];
+    }
+
+    private static function isListArray(array $value): bool
+    {
+        if (!$value) {
+            return true;
+        }
+        return array_keys($value) === range(0, count($value) - 1);
+    }
+
+    private static function boolish($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int)$value !== 0;
+        }
+        $value = strtolower(trim((string)$value));
+        return in_array($value, ['1', 'true', 'yes', 'on'], true);
     }
 }

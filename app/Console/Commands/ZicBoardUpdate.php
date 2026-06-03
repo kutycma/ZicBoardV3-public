@@ -56,6 +56,7 @@ class ZicBoardUpdate extends Command
         if ($this->shouldSkipSqlUpdates($sqlChecksum)) {
             $this->info('database/update.sql has not changed; skipping database update SQL.');
             $this->repairSubscriptionMigration();
+            $this->repairZicnodeNodeCompatibility();
             $this->repairSingleSubscriptionMode();
             \Artisan::call('horizon:terminate');
             $this->info('Update completed. Queue workers were restarted, no further action is required.');
@@ -92,6 +93,7 @@ class ZicBoardUpdate extends Command
             }
         }
         $this->repairSubscriptionMigration();
+        $this->repairZicnodeNodeCompatibility();
         $this->repairSingleSubscriptionMode();
         if ($hasSqlErrors) {
             $this->warn('Database update SQL had errors; checksum was not saved so the update can retry next time.');
@@ -487,6 +489,200 @@ class ZicBoardUpdate extends Command
 
         $this->ensureIndex('v2_stat_user', 'server_rate_subscription_id_record_at', 'ADD UNIQUE KEY `server_rate_subscription_id_record_at` (`server_rate`,`subscription_id`,`record_at`)');
         $this->ensureIndex('v2_stat_user', 'subscription_id', 'ADD KEY `subscription_id` (`subscription_id`)');
+    }
+
+    private function repairZicnodeNodeCompatibility()
+    {
+        $this->ensureZicnodeCompatTable();
+        $this->copyLegacyV2nodeToZicnode();
+
+        if (!Schema::hasTable('v2_server_zicnode')) {
+            return;
+        }
+
+        $this->line('[repair] zicnode node compatibility');
+        $this->ensureColumn('v2_server_zicnode', 'listen_ip', "ADD `listen_ip` varchar(255) NOT NULL DEFAULT '0.0.0.0' AFTER `host`");
+        $this->ensureColumn('v2_server_zicnode', 'network_settings', "ADD `network_settings` text AFTER `network`");
+        $this->ensureColumn('v2_server_zicnode', 'tls_settings', "ADD `tls_settings` text AFTER `tls`");
+        $this->ensureColumn('v2_server_zicnode', 'encryption_settings', "ADD `encryption_settings` text AFTER `encryption`");
+
+        foreach (['network_settings', 'tls_settings', 'encryption_settings'] as $column) {
+            if (!Schema::hasColumn('v2_server_zicnode', $column)) {
+                continue;
+            }
+            $nonEmptyArrayCount = $this->countZicnodeJsonArrayRoots($column);
+            if ($nonEmptyArrayCount > 0) {
+                $this->warn("zicnode {$column} has {$nonEmptyArrayCount} non-empty JSON array root values; empty arrays will be repaired, but non-empty arrays should be reviewed manually.");
+            }
+            $this->runRepairStatement("
+                UPDATE `v2_server_zicnode`
+                SET `{$column}` = '{}'
+                WHERE TRIM(COALESCE(`{$column}`, '')) = ''
+                    OR TRIM(COALESCE(`{$column}`, '')) = '[]'
+                    OR TRIM(COALESCE(`{$column}`, '')) = 'null'
+            ");
+        }
+
+        if (Schema::hasColumn('v2_server_zicnode', 'listen_ip')) {
+            $this->runRepairStatement("
+                UPDATE `v2_server_zicnode`
+                SET `listen_ip` = '0.0.0.0'
+                WHERE TRIM(COALESCE(`listen_ip`, '')) = ''
+            ");
+        }
+
+        if (Schema::hasColumn('v2_server_zicnode', 'network')) {
+            $this->runRepairStatement("
+                UPDATE `v2_server_zicnode`
+                SET `network` = 'tcp'
+                WHERE TRIM(COALESCE(`network`, '')) = ''
+                    OR `network` NOT IN ('tcp', 'ws', 'grpc', 'http', 'httpupgrade', 'xhttp', 'splithttp')
+            ");
+        }
+    }
+
+    private function countZicnodeJsonArrayRoots($column)
+    {
+        return DB::table('v2_server_zicnode')
+            ->whereRaw("TRIM(COALESCE(`{$column}`, '')) LIKE '[%'")
+            ->whereRaw("TRIM(COALESCE(`{$column}`, '')) <> '[]'")
+            ->count();
+    }
+
+    private function ensureZicnodeCompatTable()
+    {
+        if (!Schema::hasTable('v2_server_zicnode')) {
+            $this->runRepairStatement("
+                CREATE TABLE IF NOT EXISTS `v2_server_zicnode` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `group_id` varchar(255) NOT NULL DEFAULT '',
+                    `route_id` varchar(255) DEFAULT NULL,
+                    `name` varchar(255) NOT NULL DEFAULT '',
+                    `parent_id` int(11) DEFAULT NULL,
+                    `host` varchar(255) NOT NULL DEFAULT '',
+                    `listen_ip` varchar(255) NOT NULL DEFAULT '0.0.0.0',
+                    `port` varchar(11) NOT NULL DEFAULT '',
+                    `server_port` int(11) NOT NULL DEFAULT '0',
+                    `tags` varchar(255) DEFAULT NULL,
+                    `rate` varchar(11) NOT NULL DEFAULT '1',
+                    `show` tinyint(1) NOT NULL DEFAULT '0',
+                    `sort` int(11) DEFAULT NULL,
+                    `protocol` varchar(24) NOT NULL DEFAULT 'vless',
+                    `tls` tinyint(1) NOT NULL DEFAULT '0',
+                    `tls_settings` text,
+                    `flow` varchar(64) DEFAULT NULL,
+                    `network` varchar(11) NOT NULL DEFAULT 'tcp',
+                    `network_settings` text,
+                    `encryption` varchar(64) DEFAULT NULL,
+                    `encryption_settings` text,
+                    `disable_sni` tinyint(1) NOT NULL DEFAULT '0',
+                    `udp_relay_mode` varchar(64) DEFAULT NULL,
+                    `zero_rtt_handshake` tinyint(1) NOT NULL DEFAULT '0',
+                    `congestion_control` varchar(64) DEFAULT NULL,
+                    `cipher` varchar(64) DEFAULT NULL,
+                    `up_mbps` int(11) NOT NULL DEFAULT '0',
+                    `down_mbps` int(11) NOT NULL DEFAULT '0',
+                    `obfs` varchar(64) DEFAULT NULL,
+                    `obfs_password` varchar(255) DEFAULT NULL,
+                    `padding_scheme` text,
+                    `created_at` int(11) NOT NULL DEFAULT '0',
+                    `updated_at` int(11) NOT NULL DEFAULT '0',
+                    PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+
+        foreach ($this->zicnodeColumnDefinitions() as $column => $definition) {
+            $this->ensureColumn('v2_server_zicnode', $column, $definition);
+        }
+    }
+
+    private function copyLegacyV2nodeToZicnode()
+    {
+        if (!Schema::hasTable('v2_server_v2node') || !Schema::hasTable('v2_server_zicnode') || !Schema::hasColumn('v2_server_v2node', 'id')) {
+            return;
+        }
+
+        $columns = array_merge(['id'], array_keys($this->zicnodeColumnDefinitions()));
+        $insertColumns = '`' . implode('`, `', $columns) . '`';
+        $selectColumns = [];
+        foreach ($columns as $column) {
+            $selectColumns[] = Schema::hasColumn('v2_server_v2node', $column)
+                ? "`{$column}`"
+                : $this->zicnodeDefaultExpression($column) . " AS `{$column}`";
+        }
+
+        $this->runRepairStatement("
+            INSERT IGNORE INTO `v2_server_zicnode` ({$insertColumns})
+            SELECT " . implode(', ', $selectColumns) . "
+            FROM `v2_server_v2node`
+        ");
+    }
+
+    private function zicnodeColumnDefinitions()
+    {
+        return [
+            'group_id' => "ADD `group_id` varchar(255) NOT NULL DEFAULT '' AFTER `id`",
+            'route_id' => "ADD `route_id` varchar(255) DEFAULT NULL AFTER `group_id`",
+            'name' => "ADD `name` varchar(255) NOT NULL DEFAULT '' AFTER `route_id`",
+            'parent_id' => "ADD `parent_id` int(11) DEFAULT NULL AFTER `name`",
+            'host' => "ADD `host` varchar(255) NOT NULL DEFAULT '' AFTER `parent_id`",
+            'listen_ip' => "ADD `listen_ip` varchar(255) NOT NULL DEFAULT '0.0.0.0' AFTER `host`",
+            'port' => "ADD `port` varchar(11) NOT NULL DEFAULT '' AFTER `listen_ip`",
+            'server_port' => "ADD `server_port` int(11) NOT NULL DEFAULT '0' AFTER `port`",
+            'tags' => "ADD `tags` varchar(255) DEFAULT NULL AFTER `server_port`",
+            'rate' => "ADD `rate` varchar(11) NOT NULL DEFAULT '1' AFTER `tags`",
+            'show' => "ADD `show` tinyint(1) NOT NULL DEFAULT '0' AFTER `rate`",
+            'sort' => "ADD `sort` int(11) DEFAULT NULL AFTER `show`",
+            'protocol' => "ADD `protocol` varchar(24) NOT NULL DEFAULT 'vless' AFTER `sort`",
+            'tls' => "ADD `tls` tinyint(1) NOT NULL DEFAULT '0' AFTER `protocol`",
+            'tls_settings' => "ADD `tls_settings` text AFTER `tls`",
+            'flow' => "ADD `flow` varchar(64) DEFAULT NULL AFTER `tls_settings`",
+            'network' => "ADD `network` varchar(11) NOT NULL DEFAULT 'tcp' AFTER `flow`",
+            'network_settings' => "ADD `network_settings` text AFTER `network`",
+            'encryption' => "ADD `encryption` varchar(64) DEFAULT NULL AFTER `network_settings`",
+            'encryption_settings' => "ADD `encryption_settings` text AFTER `encryption`",
+            'disable_sni' => "ADD `disable_sni` tinyint(1) NOT NULL DEFAULT '0' AFTER `encryption_settings`",
+            'udp_relay_mode' => "ADD `udp_relay_mode` varchar(64) DEFAULT NULL AFTER `disable_sni`",
+            'zero_rtt_handshake' => "ADD `zero_rtt_handshake` tinyint(1) NOT NULL DEFAULT '0' AFTER `udp_relay_mode`",
+            'congestion_control' => "ADD `congestion_control` varchar(64) DEFAULT NULL AFTER `zero_rtt_handshake`",
+            'cipher' => "ADD `cipher` varchar(64) DEFAULT NULL AFTER `congestion_control`",
+            'up_mbps' => "ADD `up_mbps` int(11) NOT NULL DEFAULT '0' AFTER `cipher`",
+            'down_mbps' => "ADD `down_mbps` int(11) NOT NULL DEFAULT '0' AFTER `up_mbps`",
+            'obfs' => "ADD `obfs` varchar(64) DEFAULT NULL AFTER `down_mbps`",
+            'obfs_password' => "ADD `obfs_password` varchar(255) DEFAULT NULL AFTER `obfs`",
+            'padding_scheme' => "ADD `padding_scheme` text AFTER `obfs_password`",
+            'created_at' => "ADD `created_at` int(11) NOT NULL DEFAULT '0'",
+            'updated_at' => "ADD `updated_at` int(11) NOT NULL DEFAULT '0'",
+        ];
+    }
+
+    private function zicnodeDefaultExpression($column)
+    {
+        $defaults = [
+            'group_id' => "''",
+            'name' => "''",
+            'host' => "''",
+            'listen_ip' => "'0.0.0.0'",
+            'port' => "''",
+            'server_port' => '0',
+            'rate' => "'1'",
+            'show' => '0',
+            'protocol' => "'vless'",
+            'tls' => '0',
+            'tls_settings' => "'{}'",
+            'network' => "'tcp'",
+            'network_settings' => "'{}'",
+            'encryption_settings' => "'{}'",
+            'disable_sni' => '0',
+            'zero_rtt_handshake' => '0',
+            'up_mbps' => '0',
+            'down_mbps' => '0',
+            'created_at' => '0',
+            'updated_at' => '0',
+        ];
+
+        return $defaults[$column] ?? 'NULL';
     }
 
     private function ensureColumn($table, $column, $definition)
