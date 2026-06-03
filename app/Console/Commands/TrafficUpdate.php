@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Models\UserDevice;
 use App\Models\UserSubscription;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -48,20 +49,35 @@ class TrafficUpdate extends Command
         Redis::del('zicboard_upload_traffic');
         $downloads = Redis::hgetall('zicboard_download_traffic');
         Redis::del('zicboard_download_traffic');
-        if (empty($uploads) && empty($downloads)) {
+        $deviceUploads = Redis::hgetall('zicboard_device_upload_traffic');
+        Redis::del('zicboard_device_upload_traffic');
+        $deviceDownloads = Redis::hgetall('zicboard_device_download_traffic');
+        Redis::del('zicboard_device_download_traffic');
+        if (empty($uploads) && empty($downloads) && empty($deviceUploads) && empty($deviceDownloads)) {
             return;
         }
 
-        $ids = array_unique(array_merge(array_keys($uploads), array_keys($downloads)));
-        $subscriptions = UserSubscription::whereIn('id', $ids)->get(['id', 'u', 'd']);
         $time = time();
+        $this->updateSubscriptionTraffic($uploads, $downloads, $time);
+        $this->updateDeviceTraffic($deviceUploads, $deviceDownloads, $time);
+    }
+
+    private function updateSubscriptionTraffic(array $uploads, array $downloads, int $time): void
+    {
+        $ids = array_unique(array_merge(array_keys($uploads), array_keys($downloads)));
+        $ids = $this->positiveIntegerIds($ids);
+        if (!$ids) {
+            return;
+        }
+
+        $subscriptions = UserSubscription::whereIn('id', $ids)->get(['id', 'u', 'd']);
         $casesU = [];
         $casesD = [];
         $idList = [];
 
         foreach ($subscriptions as $subscription) {
-            $upload = $uploads[$subscription->id] ?? 0;
-            $download = $downloads[$subscription->id] ?? 0;
+            $upload = (int)($uploads[$subscription->id] ?? 0);
+            $download = (int)($downloads[$subscription->id] ?? 0);
 
             $casesU[] = "WHEN {$subscription->id} THEN " . ($subscription->u + $upload);
             $casesD[] = "WHEN {$subscription->id} THEN " . ($subscription->d + $download);
@@ -87,6 +103,47 @@ class TrafficUpdate extends Command
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Cập nhật dung lượng thất bại: ' . $e->getMessage());
+            return;
+        }
+    }
+
+    private function updateDeviceTraffic(array $uploads, array $downloads, int $time): void
+    {
+        $ids = array_unique(array_merge(array_keys($uploads), array_keys($downloads)));
+        $ids = $this->positiveIntegerIds($ids);
+        if (!$ids) {
+            return;
+        }
+
+        $devices = UserDevice::whereIn('id', $ids)->get(['id', 'u', 'd']);
+        $casesU = [];
+        $casesD = [];
+        $idList = [];
+
+        foreach ($devices as $device) {
+            $upload = (int)($uploads[$device->id] ?? 0);
+            $download = (int)($downloads[$device->id] ?? 0);
+
+            $casesU[] = "WHEN {$device->id} THEN " . ((int)$device->u + $upload);
+            $casesD[] = "WHEN {$device->id} THEN " . ((int)$device->d + $download);
+            $idList[] = $device->id;
+        }
+        if (!$idList) {
+            return;
+        }
+        if (count($idList) > 1000) {
+            $this->updateDeviceTrafficInChunks($idList, $casesU, $casesD, $time);
+            return;
+        }
+
+        $idListStr = implode(',', $idList);
+        $casesUStr = implode(' ', $casesU);
+        $casesDStr = implode(' ', $casesD);
+        $sql = "UPDATE v2_user_device SET u = CASE id {$casesUStr} END, d = CASE id {$casesDStr} END, t = {$time}, updated_at = {$time} WHERE id IN ({$idListStr})";
+        try {
+            DB::statement($sql);
+        } catch (\Exception $e) {
+            \Log::error('Device traffic update failed: ' . $e->getMessage());
             return;
         }
     }
@@ -122,5 +179,40 @@ class TrafficUpdate extends Command
                 return;
             }
         }
+    }
+
+    private function updateDeviceTrafficInChunks($idList, $casesU, $casesD, $time)
+    {
+        $caseByIdU = array_combine($idList, $casesU);
+        $caseByIdD = array_combine($idList, $casesD);
+
+        foreach (array_chunk($idList, 1000) as $chunkIds) {
+            $chunkCasesU = [];
+            $chunkCasesD = [];
+
+            foreach ($chunkIds as $id) {
+                $chunkCasesU[] = $caseByIdU[$id];
+                $chunkCasesD[] = $caseByIdD[$id];
+            }
+
+            $idListStr = implode(',', $chunkIds);
+            $casesUStr = implode(' ', $chunkCasesU);
+            $casesDStr = implode(' ', $chunkCasesD);
+            $sql = "UPDATE v2_user_device SET u = CASE id {$casesUStr} END, d = CASE id {$casesDStr} END, t = {$time}, updated_at = {$time} WHERE id IN ({$idListStr})";
+
+            try {
+                DB::statement($sql);
+            } catch (\Exception $e) {
+                \Log::error('Device traffic update failed: ' . $e->getMessage());
+                return;
+            }
+        }
+    }
+
+    private function positiveIntegerIds(array $ids): array
+    {
+        return array_values(array_unique(array_filter(array_map('intval', $ids), function ($id) {
+            return $id > 0;
+        })));
     }
 }

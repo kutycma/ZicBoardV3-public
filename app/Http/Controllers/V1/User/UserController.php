@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\Plan;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Models\UserDevice;
 use App\Services\AuthService;
 use App\Services\OrderService;
 use App\Services\SubscriptionService;
@@ -242,6 +243,11 @@ class UserController extends Controller
                     }
                     $subscription->u = 0;
                     $subscription->d = 0;
+                    UserDevice::where('subscription_id', $subscription->id)->update([
+                        'u' => 0,
+                        'd' => 0,
+                        't' => null
+                    ]);
                     break;
                 case 5:
                     $plan = Plan::where('id', $giftcard->plan_id)->first();

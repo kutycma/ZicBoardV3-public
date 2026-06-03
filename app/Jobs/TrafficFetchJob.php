@@ -13,6 +13,7 @@ class TrafficFetchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
     protected $data;
+    protected $deviceData;
     protected $server;
     protected $protocol;
 
@@ -24,10 +25,11 @@ class TrafficFetchJob implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(array $data, array $server, $protocol)
+    public function __construct(array $data, array $server, $protocol, array $deviceData = [])
     {
         $this->onQueue('traffic_fetch');
         $this->data =$data;
+        $this->deviceData = $deviceData;
         $this->server = $server;
         $this->protocol = $protocol;
     }
@@ -42,6 +44,10 @@ class TrafficFetchJob implements ShouldQueue
         foreach(array_keys($this->data) as $userId){
             Redis::hincrby('zicboard_upload_traffic', $userId, $this->data[$userId][0] * $this->server['rate']);
             Redis::hincrby('zicboard_download_traffic', $userId, $this->data[$userId][1] * $this->server['rate']);
+        }
+        foreach(array_keys($this->deviceData) as $deviceId){
+            Redis::hincrby('zicboard_device_upload_traffic', $deviceId, $this->deviceData[$deviceId][0] * $this->server['rate']);
+            Redis::hincrby('zicboard_device_download_traffic', $deviceId, $this->deviceData[$deviceId][1] * $this->server['rate']);
         }
     }
 }

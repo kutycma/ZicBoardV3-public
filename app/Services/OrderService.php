@@ -6,6 +6,7 @@ use App\Jobs\OrderHandleJob;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
+use App\Models\UserDevice;
 use App\Models\UserSubscription;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\DB;
@@ -352,6 +353,11 @@ class OrderService
     {
         $this->subscription->u = 0;
         $this->subscription->d = 0;
+        UserDevice::where('subscription_id', $this->subscription->id)->update([
+            'u' => 0,
+            'd' => 0,
+            't' => null
+        ]);
     }
 
     private function buyByPeriod(Order $order, Plan $plan)

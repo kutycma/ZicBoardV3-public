@@ -503,6 +503,9 @@ class MigrateV2bZicToZicBoard extends Command
                     `last_ip` varchar(128) DEFAULT NULL,
                     `first_seen_at` int(11) DEFAULT NULL,
                     `last_seen_at` int(11) DEFAULT NULL,
+                    `u` bigint(20) NOT NULL DEFAULT '0',
+                    `d` bigint(20) NOT NULL DEFAULT '0',
+                    `t` int(11) DEFAULT NULL,
                     `created_at` int(11) NOT NULL DEFAULT '0',
                     `updated_at` int(11) NOT NULL DEFAULT '0',
                     PRIMARY KEY (`id`),
@@ -529,6 +532,9 @@ class MigrateV2bZicToZicBoard extends Command
         $this->ensureColumn('v2_user_device', 'last_ip', 'ADD `last_ip` varchar(128) DEFAULT NULL AFTER `first_ip`');
         $this->ensureColumn('v2_user_device', 'first_seen_at', 'ADD `first_seen_at` int(11) DEFAULT NULL AFTER `last_ip`');
         $this->ensureColumn('v2_user_device', 'last_seen_at', 'ADD `last_seen_at` int(11) DEFAULT NULL AFTER `first_seen_at`');
+        $this->ensureColumn('v2_user_device', 'u', "ADD `u` bigint(20) NOT NULL DEFAULT '0' AFTER `last_seen_at`");
+        $this->ensureColumn('v2_user_device', 'd', "ADD `d` bigint(20) NOT NULL DEFAULT '0' AFTER `u`");
+        $this->ensureColumn('v2_user_device', 't', 'ADD `t` int(11) DEFAULT NULL AFTER `d`');
         $this->ensureColumn('v2_user_device', 'created_at', "ADD `created_at` int(11) NOT NULL DEFAULT '0'");
         $this->ensureColumn('v2_user_device', 'updated_at', "ADD `updated_at` int(11) NOT NULL DEFAULT '0'");
         $this->repairDevicePendingSlotColumns();
@@ -592,6 +598,9 @@ class MigrateV2bZicToZicBoard extends Command
             'last_ip' => 'varchar(128) DEFAULT NULL',
             'first_seen_at' => 'int(11) DEFAULT NULL',
             'last_seen_at' => 'int(11) DEFAULT NULL',
+            'u' => "bigint(20) NOT NULL DEFAULT '0'",
+            'd' => "bigint(20) NOT NULL DEFAULT '0'",
+            't' => 'int(11) DEFAULT NULL',
         ];
 
         foreach ($definitions as $column => $definition) {

@@ -148,13 +148,26 @@ class UserDeviceService
 
     public function translateNodeTraffic(array $data): array
     {
+        return $this->translateNodeTrafficWithDevices($data)['subscriptions'];
+    }
+
+    public function translateNodeTrafficWithDevices(array $data): array
+    {
         if (!$this->isHwidEnabled()) {
-            return $this->normalizeNodeTraffic($data);
+            return [
+                'subscriptions' => $this->normalizeNodeTraffic($data),
+                'devices' => []
+            ];
         }
 
         $protectedFeatures = new ProtectedFeatureService();
-        $subscriptionIdMap = $this->loadVirtualSubscriptionMap(array_keys($data), $protectedFeatures);
-        return $protectedFeatures->translateTraffic($data, $subscriptionIdMap);
+        $deviceIdMap = $protectedFeatures->resolveVirtualDeviceIds(array_keys($data));
+        $subscriptionIdMap = $this->subscriptionMapFromDeviceIdMap($deviceIdMap);
+
+        return [
+            'subscriptions' => $protectedFeatures->translateTraffic($data, $subscriptionIdMap),
+            'devices' => $this->normalizeDeviceTraffic($data, $deviceIdMap)
+        ];
     }
 
     public function translateNodeAliveData(array $data): array
@@ -260,6 +273,62 @@ class UserDeviceService
         }
 
         return $devices;
+    }
+
+    public function filterOnlineDeviceIdsByNode(array $deviceIds, $nodeType = null, $nodeId = null): array
+    {
+        $deviceIds = array_values(array_unique(array_filter(array_map('intval', $deviceIds), function ($id) {
+            return $id > 0;
+        })));
+
+        if (!$deviceIds) {
+            return [];
+        }
+
+        $nodeType = trim((string)$nodeType);
+        $nodeType = $nodeType === '' ? null : $nodeType;
+        $nodeId = (int)$nodeId;
+        $nodeId = $nodeId > 0 ? $nodeId : null;
+
+        if ($nodeType === null && $nodeId === null) {
+            return $deviceIds;
+        }
+
+        $keys = [];
+        $keyToId = [];
+        foreach ($deviceIds as $id) {
+            $key = $this->onlineDeviceCacheKey($id);
+            $keys[] = $key;
+            $keyToId[$key] = $id;
+        }
+
+        $matchedIds = [];
+        foreach (Cache::many($keys) as $key => $state) {
+            if (!isset($keyToId[$key])) {
+                continue;
+            }
+
+            $onlineState = $this->normalizeOnlineState(is_array($state) ? $state : []);
+            foreach (($onlineState['online_nodes'] ?? []) as $node) {
+                $currentType = (string)($node['node_type'] ?? '');
+                $currentId = (int)($node['node_id'] ?? 0);
+
+                if ($nodeType !== null && strcasecmp($currentType, $nodeType) !== 0) {
+                    continue;
+                }
+                if ($nodeId !== null && $currentId !== $nodeId) {
+                    continue;
+                }
+
+                $matchedIds[] = $keyToId[$key];
+                break;
+            }
+        }
+
+        $matchedMap = array_flip($matchedIds);
+        return array_values(array_filter($deviceIds, function ($id) use ($matchedMap) {
+            return isset($matchedMap[$id]);
+        }));
     }
 
     private function applyHwidDecision(UserSubscription $subscription, array $decision): array
@@ -453,6 +522,11 @@ class UserDeviceService
     private function loadVirtualSubscriptionMap(array $nodeUserIds, ProtectedFeatureService $protectedFeatures): array
     {
         $deviceIds = $protectedFeatures->resolveVirtualDeviceIds($nodeUserIds);
+        return $this->subscriptionMapFromDeviceIdMap($deviceIds);
+    }
+
+    private function subscriptionMapFromDeviceIdMap(array $deviceIds): array
+    {
         if (!$deviceIds) {
             return [];
         }
@@ -464,6 +538,29 @@ class UserDeviceService
             if (isset($slots[$deviceId])) {
                 $result[$nodeUserId] = (int)$slots[$deviceId];
             }
+        }
+
+        return $result;
+    }
+
+    private function normalizeDeviceTraffic(array $data, array $deviceIdMap): array
+    {
+        $result = [];
+        foreach ($data as $nodeUserId => $traffic) {
+            if (!is_numeric($nodeUserId) || !is_array($traffic) || !isset($deviceIdMap[$nodeUserId])) {
+                continue;
+            }
+
+            $deviceId = (int)$deviceIdMap[$nodeUserId];
+            if ($deviceId <= 0) {
+                continue;
+            }
+
+            if (!isset($result[$deviceId])) {
+                $result[$deviceId] = [0, 0];
+            }
+            $result[$deviceId][0] += (int)($traffic[0] ?? 0);
+            $result[$deviceId][1] += (int)($traffic[1] ?? 0);
         }
 
         return $result;

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Plan;
+use App\Models\UserDevice;
 use Illuminate\Console\Command;
 use App\Models\UserSubscription;
 use Illuminate\Support\Facades\DB;
@@ -124,10 +125,7 @@ class ResetTraffic extends Command
             }
         }
         $this->retryTransaction(function () use ($users) {
-            UserSubscription::whereIn('id', $users)->update([
-                'u' => 0,
-                'd' => 0
-            ]);
+            $this->resetSubscriptionTrafficByIds($users);
         });
     }
 
@@ -135,10 +133,7 @@ class ResetTraffic extends Command
     {
         if ((string)date('md') === '0101') {
             $this->retryTransaction(function () use ($builder) {
-                $builder->update([
-                    'u' => 0,
-                    'd' => 0
-                ]);
+                $this->resetSubscriptionTrafficByBuilder($builder);
             });
         }
     }
@@ -147,10 +142,7 @@ class ResetTraffic extends Command
     {
         if ((string)date('d') === '01') {
             $this->retryTransaction(function () use ($builder) {
-                $builder->update([
-                    'u' => 0,
-                    'd' => 0
-                ]);
+                $this->resetSubscriptionTrafficByBuilder($builder);
             });
         }
     }
@@ -171,11 +163,36 @@ class ResetTraffic extends Command
 
         }
         $this->retryTransaction(function () use ($users) {
-            UserSubscription::whereIn('id', $users)->update([
-                'u' => 0,
-                'd' => 0
-            ]);
+            $this->resetSubscriptionTrafficByIds($users);
         });
+    }
+
+    private function resetSubscriptionTrafficByBuilder($builder): void
+    {
+        $ids = (clone $builder)->pluck('id')->map(function ($id) {
+            return (int)$id;
+        })->all();
+        $this->resetSubscriptionTrafficByIds($ids);
+    }
+
+    private function resetSubscriptionTrafficByIds(array $ids): void
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), function ($id) {
+            return $id > 0;
+        })));
+        if (!$ids) {
+            return;
+        }
+
+        UserSubscription::whereIn('id', $ids)->update([
+            'u' => 0,
+            'd' => 0
+        ]);
+        UserDevice::whereIn('subscription_id', $ids)->update([
+            'u' => 0,
+            'd' => 0,
+            't' => null
+        ]);
     }
 
     private function retryTransaction($callback)

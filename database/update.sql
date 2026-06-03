@@ -1009,6 +1009,11 @@ MODIFY `last_ip` varchar(128) DEFAULT NULL,
 MODIFY `first_seen_at` int(11) DEFAULT NULL,
 MODIFY `last_seen_at` int(11) DEFAULT NULL;
 
+ALTER TABLE `v2_user_device`
+ADD `u` bigint(20) NOT NULL DEFAULT '0' AFTER `last_seen_at`,
+ADD `d` bigint(20) NOT NULL DEFAULT '0' AFTER `u`,
+ADD `t` int(11) DEFAULT NULL AFTER `d`;
+
 ALTER TABLE `v2_stat_user`
 ADD `subscription_id` int(11) NULL AFTER `user_id`,
 DROP INDEX `server_rate_user_id_record_at`,

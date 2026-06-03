@@ -12,7 +12,7 @@ class UserDeviceFetch extends FormRequest
             'current' => 'nullable|integer|min:1',
             'pageSize' => 'nullable|integer|min:10|max:100',
             'filter' => 'nullable|array',
-            'filter.*.key' => 'required|in:user_id,subscription_id,email,hwid,last_ip',
+            'filter.*.key' => 'required|in:user_id,subscription_id,email,hwid,last_ip,user_agent,node,node_type,node_id',
             'filter.*.condition' => 'required|in:=,like',
             'filter.*.value' => 'required'
         ];

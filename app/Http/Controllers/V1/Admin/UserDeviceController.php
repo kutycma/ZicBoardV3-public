@@ -32,12 +32,16 @@ class UserDeviceController extends Controller
                 'v2_user_device.last_ip',
                 'v2_user_device.first_seen_at',
                 'v2_user_device.last_seen_at',
+                'v2_user_device.u as device_upload',
+                'v2_user_device.d as device_download',
+                'v2_user_device.t as device_traffic_updated_at',
                 'v2_user_device.created_at',
                 'v2_user_device.updated_at',
                 'users.email as user_email',
                 'subscriptions.plan_id as user_plan_id',
                 'subscriptions.device_limit as user_device_limit',
                 'plans.name as plan_name',
+                DB::raw('(COALESCE(v2_user_device.u, 0) + COALESCE(v2_user_device.d, 0)) AS device_used_traffic'),
                 DB::raw("(SELECT COUNT(*) FROM v2_user_device AS user_devices WHERE user_devices.subscription_id = v2_user_device.subscription_id AND user_devices.status = 'bound') AS user_device_count")
             ])
             ->leftJoin('v2_user as users', 'users.id', '=', 'v2_user_device.user_id')
@@ -46,12 +50,41 @@ class UserDeviceController extends Controller
 
         $this->applyFilters($request, $devices);
 
-        $total = (clone $devices)->count('v2_user_device.id');
-        $res = $devices->orderBy('v2_user_device.last_seen_at', 'DESC')
-            ->orderBy('v2_user_device.id', 'DESC')
-            ->forPage($current, $pageSize)
-            ->get();
-        $res = (new UserDeviceService())->withOnlineState($res);
+        $deviceService = new UserDeviceService();
+        $nodeFilter = $this->onlineNodeFilter($request);
+        if ($nodeFilter) {
+            $candidateIds = (clone $devices)
+                ->select('v2_user_device.id')
+                ->orderBy('v2_user_device.last_seen_at', 'DESC')
+                ->orderBy('v2_user_device.id', 'DESC')
+                ->pluck('v2_user_device.id')
+                ->map(function ($id) {
+                    return (int)$id;
+                })
+                ->all();
+            $matchedIds = $deviceService->filterOnlineDeviceIdsByNode(
+                $candidateIds,
+                $nodeFilter['node_type'],
+                $nodeFilter['node_id']
+            );
+            $total = count($matchedIds);
+            $pageIds = array_slice($matchedIds, ($current - 1) * $pageSize, $pageSize);
+            $res = $pageIds
+                ? (clone $devices)
+                    ->whereIn('v2_user_device.id', $pageIds)
+                    ->orderBy('v2_user_device.last_seen_at', 'DESC')
+                    ->orderBy('v2_user_device.id', 'DESC')
+                    ->get()
+                : collect();
+        } else {
+            $total = (clone $devices)->count('v2_user_device.id');
+            $res = $devices->orderBy('v2_user_device.last_seen_at', 'DESC')
+                ->orderBy('v2_user_device.id', 'DESC')
+                ->forPage($current, $pageSize)
+                ->get();
+        }
+
+        $res = $deviceService->withOnlineState($res);
 
         return response([
             'data' => $res,
@@ -122,8 +155,68 @@ class UserDeviceController extends Controller
                 return 'v2_user_device.hwid';
             case 'last_ip':
                 return 'v2_user_device.last_ip';
+            case 'user_agent':
+                return 'v2_user_device.user_agent';
             default:
                 return null;
         }
+    }
+
+    private function onlineNodeFilter(UserDeviceFetch $request)
+    {
+        $nodeType = null;
+        $nodeId = null;
+
+        foreach ($request->input('filter', []) ?: [] as $filter) {
+            $key = $filter['key'] ?? '';
+            $value = trim((string)($filter['value'] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+
+            if ($key === 'node') {
+                $parsed = $this->parseNodeValue($value);
+                $nodeType = $parsed['node_type'] ?? $nodeType;
+                $nodeId = $parsed['node_id'] ?? $nodeId;
+            } elseif ($key === 'node_type') {
+                $nodeType = $value;
+            } elseif ($key === 'node_id') {
+                $id = (int)$value;
+                if ($id > 0) {
+                    $nodeId = $id;
+                }
+            }
+        }
+
+        if ($nodeType === null && $nodeId === null) {
+            return null;
+        }
+
+        return [
+            'node_type' => $nodeType,
+            'node_id' => $nodeId
+        ];
+    }
+
+    private function parseNodeValue(string $value): array
+    {
+        if (preg_match('/^([a-zA-Z0-9_-]+)[:#](\d+)$/', $value, $matches)) {
+            return [
+                'node_type' => $matches[1],
+                'node_id' => (int)$matches[2]
+            ];
+        }
+
+        if (preg_match('/^\d+$/', $value)) {
+            return [
+                'node_type' => null,
+                'node_id' => (int)$value
+            ];
+        }
+
+        return [
+            'node_type' => $value,
+            'node_id' => null
+        ];
     }
 }

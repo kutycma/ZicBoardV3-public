@@ -234,14 +234,18 @@ class UserService
 
     public function trafficFetch(array $server, string $protocol, array $data)
     {
-        $data = (new UserDeviceService())->translateNodeTraffic($data);
-        if (!$data) {
+        $traffic = (new UserDeviceService())->translateNodeTrafficWithDevices($data);
+        $data = $traffic['subscriptions'] ?? [];
+        $deviceData = $traffic['devices'] ?? [];
+        if (!$data && !$deviceData) {
             return;
         }
 
-        TrafficFetchJob::dispatch($data, $server, $protocol);
-        StatUserJob::dispatch($data, $server, $protocol, 'd');
-        StatServerJob::dispatch($data, $server, $protocol, 'd');
+        TrafficFetchJob::dispatch($data, $server, $protocol, $deviceData);
+        if ($data) {
+            StatUserJob::dispatch($data, $server, $protocol, 'd');
+            StatServerJob::dispatch($data, $server, $protocol, 'd');
+        }
     }
 
     public static function getMaxId()

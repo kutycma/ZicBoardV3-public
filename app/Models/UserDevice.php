@@ -10,6 +10,9 @@ class UserDevice extends Model
     protected $dateFormat = 'U';
     protected $guarded = ['id'];
     protected $casts = [
+        'u' => 'integer',
+        'd' => 'integer',
+        't' => 'integer',
         'created_at' => 'timestamp',
         'updated_at' => 'timestamp'
     ];
