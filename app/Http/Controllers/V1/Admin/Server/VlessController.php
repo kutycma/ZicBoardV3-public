@@ -32,6 +32,15 @@ class VlessController extends Controller
             'sort' => 'nullable'
         ]);
 
+        $server = null;
+        if ($request->input('id')) {
+            $server = ServerVless::find($request->input('id'));
+            if (!$server) {
+                abort(500, 'Máy chủ không tồn tại');
+            }
+            $params = $this->preserveTlsSecrets($params, $server);
+        }
+
         $params = (new ProtectedFeatureService())->prepareServerParams('vless', $params);
         if ($params['network'] != 'tcp') {
             $params['flow'] = null;
@@ -67,11 +76,7 @@ class VlessController extends Controller
             }
             $params['network_settings'] = $ns;
         }
-        if ($request->input('id')) {
-            $server = ServerVless::find($request->input('id'));
-            if (!$server) {
-                abort(500, 'Máy chủ không tồn tại');
-            }
+        if ($server) {
             try {
                 $server->update($params);
             } catch (\Exception $e) {
@@ -89,6 +94,30 @@ class VlessController extends Controller
         return response([
             'data' => true
         ]);
+    }
+
+    private function preserveTlsSecrets(array $params, ServerVless $server): array
+    {
+        $existing = $server->tls_settings;
+        if (!is_array($existing)) {
+            return $params;
+        }
+
+        $incoming = isset($params['tls_settings']) && is_array($params['tls_settings'])
+            ? $params['tls_settings']
+            : [];
+
+        foreach (['private_key', 'ech_key'] as $key) {
+            if (
+                array_key_exists($key, $existing)
+                && (!array_key_exists($key, $incoming) || $incoming[$key] === '' || $incoming[$key] === null)
+            ) {
+                $incoming[$key] = $existing[$key];
+            }
+        }
+
+        $params['tls_settings'] = $incoming;
+        return $params;
     }
 
     public function drop(Request $request)
