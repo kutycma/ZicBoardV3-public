@@ -90,6 +90,7 @@
     "device.onlineIps": "Online IPs",
     "device.onlineNodes": "Online nodes",
     "device.lastOnline": "Last online",
+    "device.deviceInfo": "Device info",
     "device.uuid": "Slot UUID",
     "device.hwid": "HWID",
     "device.client": "Client",

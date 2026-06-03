@@ -90,6 +90,7 @@
     "device.onlineIps": "在线 IP",
     "device.onlineNodes": "在线节点",
     "device.lastOnline": "最近在线",
+    "device.deviceInfo": "设备信息",
     "device.uuid": "槽位 UUID",
     "device.hwid": "HWID",
     "device.client": "客户端",

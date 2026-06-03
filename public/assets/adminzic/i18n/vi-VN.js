@@ -90,6 +90,7 @@
     "device.onlineIps": "IP online",
     "device.onlineNodes": "Node online",
     "device.lastOnline": "Online cuối",
+    "device.deviceInfo": "Thông tin thiết bị",
     "device.uuid": "UUID slot",
     "device.hwid": "HWID",
     "device.client": "Ứng dụng",
