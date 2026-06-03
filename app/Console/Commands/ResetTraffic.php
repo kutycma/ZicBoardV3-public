@@ -110,7 +110,7 @@ class ResetTraffic extends Command
                 }
             }
         }
-        DB::statement('UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id AND users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.updated_at = subscriptions.updated_at');
+        DB::statement($this->primarySubscriptionSummarySql());
         Redis::del('traffic_reset_lock');
     }
 
@@ -216,5 +216,32 @@ class ResetTraffic extends Command
                 sleep(5);
             }
         }
+    }
+
+    private function primarySubscriptionSummarySql(): string
+    {
+        return "UPDATE v2_user AS users
+            INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id
+            LEFT JOIN v2_user_subscription AS better_subscriptions
+                ON better_subscriptions.user_id = subscriptions.user_id
+                AND better_subscriptions.status = 'active'
+                AND (
+                    (CASE WHEN better_subscriptions.token = users.token THEN 0 ELSE 1 END) < (CASE WHEN subscriptions.token = users.token THEN 0 ELSE 1 END)
+                    OR (
+                        (CASE WHEN better_subscriptions.token = users.token THEN 0 ELSE 1 END) = (CASE WHEN subscriptions.token = users.token THEN 0 ELSE 1 END)
+                        AND better_subscriptions.updated_at > subscriptions.updated_at
+                    )
+                    OR (
+                        (CASE WHEN better_subscriptions.token = users.token THEN 0 ELSE 1 END) = (CASE WHEN subscriptions.token = users.token THEN 0 ELSE 1 END)
+                        AND better_subscriptions.updated_at = subscriptions.updated_at
+                        AND better_subscriptions.id > subscriptions.id
+                    )
+                )
+            SET users.u = subscriptions.u,
+                users.d = subscriptions.d,
+                users.t = subscriptions.t,
+                users.updated_at = subscriptions.updated_at
+            WHERE subscriptions.status = 'active'
+                AND better_subscriptions.id IS NULL";
     }
 }

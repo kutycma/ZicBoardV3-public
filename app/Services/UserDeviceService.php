@@ -153,9 +153,10 @@ class UserDeviceService
 
     public function translateNodeTrafficWithDevices(array $data): array
     {
+        $data = $this->normalizeNodeTraffic($data);
         if (!$this->isHwidEnabled()) {
             return [
-                'subscriptions' => $this->normalizeNodeTraffic($data),
+                'subscriptions' => $data,
                 'devices' => []
             ];
         }
@@ -550,6 +551,10 @@ class UserDeviceService
             if (!is_numeric($nodeUserId) || !is_array($traffic) || !isset($deviceIdMap[$nodeUserId])) {
                 continue;
             }
+            $trafficPair = $this->trafficPair($traffic);
+            if (!$trafficPair) {
+                continue;
+            }
 
             $deviceId = (int)$deviceIdMap[$nodeUserId];
             if ($deviceId <= 0) {
@@ -559,8 +564,8 @@ class UserDeviceService
             if (!isset($result[$deviceId])) {
                 $result[$deviceId] = [0, 0];
             }
-            $result[$deviceId][0] += (int)($traffic[0] ?? 0);
-            $result[$deviceId][1] += (int)($traffic[1] ?? 0);
+            $result[$deviceId][0] += $trafficPair[0];
+            $result[$deviceId][1] += $trafficPair[1];
         }
 
         return $result;
@@ -710,21 +715,64 @@ class UserDeviceService
 
     private function normalizeNodeTraffic(array $data): array
     {
+        if (isset($data['data']) && is_array($data['data'])) {
+            $data = $data['data'];
+        }
+
         $result = [];
         foreach ($data as $nodeUserId => $traffic) {
             if (!is_numeric($nodeUserId) || !is_array($traffic)) {
+                if (!is_array($traffic)) {
+                    continue;
+                }
+                $nodeUserId = $traffic['subscription_id'] ?? $traffic['user_id'] ?? $traffic['id'] ?? null;
+                if (!is_numeric($nodeUserId)) {
+                    continue;
+                }
+            } elseif (isset($traffic['subscription_id']) || isset($traffic['user_id']) || isset($traffic['id'])) {
+                $nodeUserId = $traffic['subscription_id'] ?? $traffic['user_id'] ?? $traffic['id'];
+                if (!is_numeric($nodeUserId)) {
+                    continue;
+                }
+            }
+
+            $trafficPair = $this->trafficPair($traffic);
+            if (!$trafficPair) {
                 continue;
             }
 
             $subscriptionId = (int)$nodeUserId;
+            if ($subscriptionId <= 0) {
+                continue;
+            }
             if (!isset($result[$subscriptionId])) {
                 $result[$subscriptionId] = [0, 0];
             }
-            $result[$subscriptionId][0] += (int)($traffic[0] ?? 0);
-            $result[$subscriptionId][1] += (int)($traffic[1] ?? 0);
+            $result[$subscriptionId][0] += $trafficPair[0];
+            $result[$subscriptionId][1] += $trafficPair[1];
         }
 
         return $result;
+    }
+
+    private function trafficPair(array $traffic)
+    {
+        $upload = $traffic[0]
+            ?? $traffic['u']
+            ?? $traffic['upload']
+            ?? $traffic['up']
+            ?? null;
+        $download = $traffic[1]
+            ?? $traffic['d']
+            ?? $traffic['download']
+            ?? $traffic['down']
+            ?? null;
+
+        if ($upload === null && $download === null) {
+            return null;
+        }
+
+        return [max(0, (int)$upload), max(0, (int)$download)];
     }
 
     private function normalizeNodeAliveData(array $data): array

@@ -41,13 +41,42 @@ class TrafficFetchJob implements ShouldQueue
      */
     public function handle()
     {
-        foreach(array_keys($this->data) as $userId){
-            Redis::hincrby('zicboard_upload_traffic', $userId, $this->data[$userId][0] * $this->server['rate']);
-            Redis::hincrby('zicboard_download_traffic', $userId, $this->data[$userId][1] * $this->server['rate']);
+        foreach($this->data as $userId => $trafficData){
+            $userId = (int)$userId;
+            if ($userId <= 0 || !is_array($trafficData)) {
+                continue;
+            }
+            $this->incrementTraffic('zicboard_upload_traffic', $userId, $trafficData[0] ?? 0);
+            $this->incrementTraffic('zicboard_download_traffic', $userId, $trafficData[1] ?? 0);
         }
-        foreach(array_keys($this->deviceData) as $deviceId){
-            Redis::hincrby('zicboard_device_upload_traffic', $deviceId, $this->deviceData[$deviceId][0] * $this->server['rate']);
-            Redis::hincrby('zicboard_device_download_traffic', $deviceId, $this->deviceData[$deviceId][1] * $this->server['rate']);
+        foreach($this->deviceData as $deviceId => $trafficData){
+            $deviceId = (int)$deviceId;
+            if ($deviceId <= 0 || !is_array($trafficData)) {
+                continue;
+            }
+            $this->incrementTraffic('zicboard_device_upload_traffic', $deviceId, $trafficData[0] ?? 0);
+            $this->incrementTraffic('zicboard_device_download_traffic', $deviceId, $trafficData[1] ?? 0);
         }
+    }
+
+    private function incrementTraffic(string $key, int $id, $traffic): void
+    {
+        $increment = $this->weightedTraffic($traffic);
+        if ($increment <= 0) {
+            return;
+        }
+
+        Redis::hincrby($key, $id, $increment);
+    }
+
+    private function weightedTraffic($traffic): int
+    {
+        $rate = is_numeric($this->server['rate'] ?? null) ? (float)$this->server['rate'] : 1.0;
+        $traffic = is_numeric($traffic) ? (float)$traffic : 0.0;
+        if ($rate <= 0 || $traffic <= 0) {
+            return 0;
+        }
+
+        return (int)round($traffic * $rate);
     }
 }

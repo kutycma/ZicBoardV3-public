@@ -1,6 +1,6 @@
 ﻿{
     "panel_version":  "3.0.0",
-    "required_core_version":  "0.1.7",
+    "required_core_version":  "0.1.8",
     "core_download_endpoint":  "https://license.zicnet.vn/api/v1/core/download",
     "release_key_id":  "ed25519-v1",
     "release_public_key":  "yMvWkOXndjlt+gaWKjNpPMLA6nV5cJWQ8SLhUSgTsR8=",

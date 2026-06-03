@@ -94,11 +94,10 @@ class TrafficUpdate extends Command
         $casesUStr = implode(' ', $casesU);
         $casesDStr = implode(' ', $casesD);
         $sql = "UPDATE v2_user_subscription SET u = CASE id {$casesUStr} END, d = CASE id {$casesDStr} END, t = {$time}, updated_at = {$time} WHERE id IN ({$idListStr})";
-        $summarySql = "UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id AND users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.t = subscriptions.t, users.updated_at = {$time} WHERE subscriptions.id IN ({$idListStr})";
         try {
             DB::beginTransaction();
             DB::statement($sql);
-            DB::statement($summarySql);
+            DB::statement($this->primarySubscriptionSummarySql($idList, $time));
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -166,12 +165,10 @@ class TrafficUpdate extends Command
             $casesUStr = implode(' ', $chunkCasesU);
             $casesDStr = implode(' ', $chunkCasesD);
             $sql = "UPDATE v2_user_subscription SET u = CASE id {$casesUStr} END, d = CASE id {$casesDStr} END, t = {$time}, updated_at = {$time} WHERE id IN ({$idListStr})";
-            $summarySql = "UPDATE v2_user AS users INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id AND users.token = subscriptions.token SET users.u = subscriptions.u, users.d = subscriptions.d, users.t = subscriptions.t, users.updated_at = {$time} WHERE subscriptions.id IN ({$idListStr})";
-
             try {
                 DB::beginTransaction();
                 DB::statement($sql);
-                DB::statement($summarySql);
+                DB::statement($this->primarySubscriptionSummarySql($chunkIds, $time));
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -214,5 +211,34 @@ class TrafficUpdate extends Command
         return array_values(array_unique(array_filter(array_map('intval', $ids), function ($id) {
             return $id > 0;
         })));
+    }
+
+    private function primarySubscriptionSummarySql(array $ids, int $time): string
+    {
+        $idListStr = implode(',', $this->positiveIntegerIds($ids));
+        return "UPDATE v2_user AS users
+            INNER JOIN v2_user_subscription AS subscriptions ON users.id = subscriptions.user_id
+            LEFT JOIN v2_user_subscription AS better_subscriptions
+                ON better_subscriptions.user_id = subscriptions.user_id
+                AND better_subscriptions.status = 'active'
+                AND (
+                    (CASE WHEN better_subscriptions.token = users.token THEN 0 ELSE 1 END) < (CASE WHEN subscriptions.token = users.token THEN 0 ELSE 1 END)
+                    OR (
+                        (CASE WHEN better_subscriptions.token = users.token THEN 0 ELSE 1 END) = (CASE WHEN subscriptions.token = users.token THEN 0 ELSE 1 END)
+                        AND better_subscriptions.updated_at > subscriptions.updated_at
+                    )
+                    OR (
+                        (CASE WHEN better_subscriptions.token = users.token THEN 0 ELSE 1 END) = (CASE WHEN subscriptions.token = users.token THEN 0 ELSE 1 END)
+                        AND better_subscriptions.updated_at = subscriptions.updated_at
+                        AND better_subscriptions.id > subscriptions.id
+                    )
+                )
+            SET users.u = subscriptions.u,
+                users.d = subscriptions.d,
+                users.t = subscriptions.t,
+                users.updated_at = {$time}
+            WHERE subscriptions.id IN ({$idListStr})
+                AND subscriptions.status = 'active'
+                AND better_subscriptions.id IS NULL";
     }
 }
