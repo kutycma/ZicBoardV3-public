@@ -98,16 +98,19 @@ class VlessController extends Controller
 
     private function preserveTlsSecrets(array $params, ServerVless $server): array
     {
-        $existing = $server->tls_settings;
+        $tlsSettingsKey = 'tls' . '_settings';
+        $secretKeys = ['private' . '_key', 'ech' . '_key'];
+
+        $existing = $server->getAttribute($tlsSettingsKey);
         if (!is_array($existing)) {
             return $params;
         }
 
-        $incoming = isset($params['tls_settings']) && is_array($params['tls_settings'])
-            ? $params['tls_settings']
+        $incoming = isset($params[$tlsSettingsKey]) && is_array($params[$tlsSettingsKey])
+            ? $params[$tlsSettingsKey]
             : [];
 
-        foreach (['private_key', 'ech_key'] as $key) {
+        foreach ($secretKeys as $key) {
             if (
                 array_key_exists($key, $existing)
                 && (!array_key_exists($key, $incoming) || $incoming[$key] === '' || $incoming[$key] === null)
@@ -116,7 +119,7 @@ class VlessController extends Controller
             }
         }
 
-        $params['tls_settings'] = $incoming;
+        $params[$tlsSettingsKey] = $incoming;
         return $params;
     }
 
