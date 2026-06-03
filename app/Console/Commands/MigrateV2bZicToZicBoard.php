@@ -175,6 +175,14 @@ class MigrateV2bZicToZicBoard extends Command
         $this->line('- devices: ' . $this->countRowsIfExists('v2_user_device') . ', missing subscription_id: ' . $this->countMissingSubscription('v2_user_device'));
         $this->line('- stat_user: ' . $this->countRowsIfExists('v2_stat_user') . ', missing subscription_id: ' . $this->countMissingSubscription('v2_stat_user'));
         $this->line('- v2node: ' . $this->countRowsIfExists('v2_server_v2node') . ', zicnode: ' . $this->countRowsIfExists('v2_server_zicnode'));
+        $missingZicnodeTotal = $this->missingCopiedZicnodeTotal();
+        if ($missingZicnodeTotal > 0) {
+            $missingZicnodeIds = $this->missingCopiedZicnodeIds();
+            $suffix = $missingZicnodeTotal > count($missingZicnodeIds)
+                ? ' (chi liet ke 50 ID dau, lenh copy van copy toan bo row hop le)'
+                : '';
+            $this->warn('- con ' . $missingZicnodeTotal . ' v2node ID chua co trong zicnode: ' . implode(', ', $missingZicnodeIds) . $suffix);
+        }
         $this->line('');
     }
 
@@ -926,6 +934,36 @@ class MigrateV2bZicToZicBoard extends Command
         }
 
         return (string)DB::table($table)->whereNull('subscription_id')->count();
+    }
+
+    private function missingCopiedZicnodeTotal()
+    {
+        if (!Schema::hasTable('v2_server_v2node') || !Schema::hasTable('v2_server_zicnode')) {
+            return 0;
+        }
+
+        return DB::table('v2_server_v2node as legacy')
+            ->leftJoin('v2_server_zicnode as active', 'legacy.id', '=', 'active.id')
+            ->whereNull('active.id')
+            ->count();
+    }
+
+    private function missingCopiedZicnodeIds($limit = 50)
+    {
+        if (!Schema::hasTable('v2_server_v2node') || !Schema::hasTable('v2_server_zicnode')) {
+            return [];
+        }
+
+        return DB::table('v2_server_v2node as legacy')
+            ->leftJoin('v2_server_zicnode as active', 'legacy.id', '=', 'active.id')
+            ->whereNull('active.id')
+            ->orderBy('legacy.id')
+            ->limit($limit)
+            ->pluck('legacy.id')
+            ->map(function ($id) {
+                return (int)$id;
+            })
+            ->all();
     }
 
     private function legacySubscriptionCandidateCount()

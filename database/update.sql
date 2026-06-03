@@ -890,8 +890,12 @@ CREATE TABLE IF NOT EXISTS `v2_server_zicnode` (
                                     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `v2_server_v2node` LIKE `v2_server_zicnode`;
+
 INSERT IGNORE INTO `v2_server_zicnode`
-SELECT * FROM `v2_server_v2node`;
+(`id`, `group_id`, `route_id`, `name`, `parent_id`, `host`, `listen_ip`, `port`, `server_port`, `tags`, `rate`, `show`, `sort`, `protocol`, `tls`, `tls_settings`, `flow`, `network`, `network_settings`, `encryption`, `encryption_settings`, `disable_sni`, `udp_relay_mode`, `zero_rtt_handshake`, `congestion_control`, `cipher`, `up_mbps`, `down_mbps`, `obfs`, `obfs_password`, `padding_scheme`, `created_at`, `updated_at`)
+SELECT `id`, `group_id`, `route_id`, `name`, `parent_id`, `host`, `listen_ip`, `port`, `server_port`, `tags`, `rate`, `show`, `sort`, `protocol`, `tls`, `tls_settings`, `flow`, `network`, `network_settings`, `encryption`, `encryption_settings`, `disable_sni`, `udp_relay_mode`, `zero_rtt_handshake`, `congestion_control`, `cipher`, `up_mbps`, `down_mbps`, `obfs`, `obfs_password`, `padding_scheme`, `created_at`, `updated_at`
+FROM `v2_server_v2node`;
 
 ALTER TABLE `v2_server_route`
 CHANGE `action_value` `action_value` text NULL AFTER `action`;
