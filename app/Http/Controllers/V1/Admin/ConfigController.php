@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\ConfigSave;
 use App\Jobs\SendEmailJob;
 use App\Services\SubscriptionService;
 use App\Services\TelegramService;
+use App\Services\UserDeviceService;
 use App\Utils\Dict;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -69,6 +70,7 @@ class ConfigController extends Controller
     public function fetch(Request $request)
     {
         $key = $request->input('key');
+        $deviceService = new UserDeviceService();
         $data = [
             'ticket' => [
                 'ticket_status' => config('zicboard.ticket_status', 0)
@@ -110,6 +112,8 @@ class ConfigController extends Controller
                 'multiple_subscription_enable' => (int)config('zicboard.multiple_subscription_enable', 1),
                 'plan_change_enable' => (int)config('zicboard.plan_change_enable', 1),
                 'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 0),
+                'device_hwid_mode' => $deviceService->hwidMode(),
+                'device_hwid_available' => $deviceService->isDeviceTrackingAvailable() ? 1 : 0,
                 'happ_subscribe_encrypt_enable' => (int)config('zicboard.happ_subscribe_encrypt_enable', config('zicboard.device_hwid_enable', 0)),
                 'change_sni_enable' => (int)config('zicboard.change_sni_enable', 1),
                 'reset_traffic_method' => (int)config('zicboard.reset_traffic_method', 0),

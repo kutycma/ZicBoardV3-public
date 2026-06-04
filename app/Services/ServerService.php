@@ -250,18 +250,14 @@ class ServerService
             ])
             ->get();
 
-        if ((int)config('zicboard.device_hwid_enable', 0) !== 1) {
-            return $users->map(function ($user) {
-                $user->device_limit = null;
-                return $user;
-            });
-        }
-
+        $deviceService = new UserDeviceService();
         $limitedUserIds = $users->filter(function ($user) {
             return (int)$user->device_limit > 0;
         })->pluck('id')->all();
         if (!$limitedUserIds) {
-            return $users;
+            return $users->map(function ($user) {
+                return $this->nodeUserWithoutDeviceLimit($user);
+            });
         }
 
         $slotsByUser = UserDevice::whereIn('subscription_id', $limitedUserIds)
@@ -269,19 +265,26 @@ class ServerService
             ->select(['id', 'subscription_id', 'uuid'])
             ->get()
             ->groupBy('subscription_id');
-        $protectedFeatures = new ProtectedFeatureService();
-        $nodeIdMap = $protectedFeatures->nodeIdsForDeviceSlots(
-            $slotsByUser->flatten(1)->pluck('id')->all()
-        );
+
+        $slotIds = $slotsByUser->flatten(1)->pluck('id')->all();
+        $nodeIdMap = $slotIds
+            ? (new ProtectedFeatureService())->nodeIdsForDeviceSlots($slotIds)
+            : [];
         $nodeUsers = collect();
 
         foreach ($users as $user) {
-            if ((int)$user->device_limit <= 0) {
-                $nodeUsers->push($user);
+            $deviceLimit = (int)$user->device_limit;
+            if ($deviceLimit <= 0) {
+                $nodeUsers->push($this->nodeUserWithoutDeviceLimit($user));
                 continue;
             }
 
-            foreach ($slotsByUser->get($user->id, []) as $slot) {
+            $boundSlots = $slotsByUser->get($user->id, collect());
+            if (!$deviceService->isStrictHwidMode() && $boundSlots->count() < $deviceLimit) {
+                $nodeUsers->push($this->nodeUserWithoutDeviceLimit($user));
+            }
+
+            foreach ($boundSlots as $slot) {
                 $slotUser = clone $user;
                 $slotUser->id = (int)($nodeIdMap[(string)$slot->id] ?? 0);
                 if ($slotUser->id <= 0) {
@@ -294,6 +297,13 @@ class ServerService
         }
 
         return $nodeUsers;
+    }
+
+    private function nodeUserWithoutDeviceLimit($user)
+    {
+        $nodeUser = clone $user;
+        $nodeUser->device_limit = null;
+        return $nodeUser;
     }
 
     private function normalizeGroupIds($groupId): array

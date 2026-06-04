@@ -11,12 +11,6 @@ class UserDeviceController extends Controller
 {
     public function fetch(Request $request)
     {
-        if (!(int)config('zicboard.device_hwid_enable', 0)) {
-            return response([
-                'data' => []
-            ]);
-        }
-
         $devices = UserDevice::where('user_id', $request->user['id'])
             ->select([
                 'id',
@@ -44,7 +38,6 @@ class UserDeviceController extends Controller
 
     public function drop(Request $request)
     {
-        $this->ensureFeatureEnabled();
         $device = $this->getOwnDevice($request);
 
         return response([
@@ -54,7 +47,6 @@ class UserDeviceController extends Controller
 
     public function ban(Request $request)
     {
-        $this->ensureFeatureEnabled();
         $device = $this->getOwnDevice($request);
 
         return response([
@@ -77,12 +69,5 @@ class UserDeviceController extends Controller
         }
 
         return $device;
-    }
-
-    private function ensureFeatureEnabled()
-    {
-        if (!(int)config('zicboard.device_hwid_enable', 0)) {
-            abort(404);
-        }
     }
 }

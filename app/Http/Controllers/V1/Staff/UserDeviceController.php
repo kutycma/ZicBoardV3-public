@@ -13,12 +13,6 @@ class UserDeviceController extends Controller
 {
     public function fetch(Request $request)
     {
-        if (!$this->isHwidEnabled()) {
-            return response([
-                'data' => []
-            ]);
-        }
-
         $targetUserId = $request->input('target_user_id', $request->input('user_id'));
         if (!$targetUserId) {
             abort(500, 'Tham số không hợp lệ');
@@ -59,10 +53,6 @@ class UserDeviceController extends Controller
 
     public function ban(Request $request)
     {
-        if (!$this->isHwidEnabled()) {
-            abort(404);
-        }
-
         $deviceId = $request->input('id');
         if (!$deviceId || !is_numeric($deviceId)) {
             abort(500, 'Thiết bị không tồn tại');
@@ -97,10 +87,5 @@ class UserDeviceController extends Controller
         }
 
         return $user;
-    }
-
-    private function isHwidEnabled()
-    {
-        return (int)config('zicboard.device_hwid_enable', 0) === 1;
     }
 }

@@ -168,10 +168,6 @@ class UserService
 
     public function getDeviceLimitedUsers()
     {
-        if ((int)config('zicboard.device_hwid_enable', 0) !== 1) {
-            return collect();
-        }
-
         return UserSubscription::whereRaw('u + d < transfer_enable')
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())

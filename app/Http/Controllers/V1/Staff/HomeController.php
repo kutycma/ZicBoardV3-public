@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Staff;
 use App\Models\User;
 use App\Services\SubscriptionService;
+use App\Services\UserDeviceService;
 use App\Services\UserService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class HomeController extends Controller
     {
         $staff = $this->activeStaff($request);
         $user = User::find($request->user['id']);
+        $deviceService = new UserDeviceService();
 
         return response()->json([
             'status' => 'success',
@@ -32,6 +34,8 @@ class HomeController extends Controller
                 'commission_rate' => $user->commission_rate ?? config('zicboard.invite_commission', 10),
                 'discount' => $user->discount ?? '0',
                 'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 0),
+                'device_hwid_mode' => $deviceService->hwidMode(),
+                'device_hwid_available' => $deviceService->isDeviceTrackingAvailable() ? 1 : 0,
                 'staff' => [
                     'domain' => $staff->domain,
                     'title' => $staff->title,

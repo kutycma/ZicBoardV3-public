@@ -14,6 +14,8 @@ use App\Models\Order;
 use App\Models\Plan;
 use App\Models\TicketMessage;
 use App\Models\User;
+use App\Models\UserDevice;
+use App\Models\UserSubscription;
 use App\Services\AuthService;
 use App\Services\SubscriptionService;
 use App\Services\UserDeviceService;
@@ -88,36 +90,170 @@ class UserController extends Controller
         $total = $userModel->count();
         $res = $userModel->forPage($current, $pageSize)
             ->get();
-        $plan = Plan::get();
-        for ($i = 0; $i < count($res); $i++) {
-            for ($k = 0; $k < count($plan); $k++) {
-                if ($plan[$k]['id'] == $res[$i]['plan_id']) {
-                    $res[$i]['plan_name'] = $plan[$k]['name'];
-                }
+        $plans = Plan::get()->keyBy('id');
+        $subscriptionService = new SubscriptionService();
+        $subscriptionsByUser = $this->primarySubscriptionsByUser($res);
+        $subscriptionIds = $subscriptionsByUser->values()->pluck('id')->map(function ($id) {
+            return (int)$id;
+        })->filter()->values()->all();
+        $deviceCountsBySubscription = $this->deviceStatusCountsBySubscription($subscriptionIds);
+        $onlineDeviceCountsBySubscription = $this->onlineDeviceCountsBySubscription($subscriptionIds);
+
+        $aliveCacheKeys = [];
+        $aliveCacheKeyByUser = [];
+        foreach ($res as $user) {
+            $subscription = $subscriptionsByUser->get($user->id);
+            $cacheKey = $subscription
+                ? 'ALIVE_IP_SUBSCRIPTION_' . $subscription->id
+                : 'ALIVE_IP_USER_' . $user->id;
+            $aliveCacheKeys[] = $cacheKey;
+            $aliveCacheKeyByUser[(int)$user->id] = $cacheKey;
+        }
+        $aliveCache = $aliveCacheKeys ? Cache::many(array_values(array_unique($aliveCacheKeys))) : [];
+
+        foreach ($res as $user) {
+            $subscription = $subscriptionsByUser->get($user->id);
+            if ($subscription) {
+                $subscriptionService->applyToUser($user, $subscription);
             }
-            //Thống kê thiết bị online
-            $countalive = 0;
-            $ips = [];
-            $ips_array = Cache::get('ALIVE_IP_USER_'. $res[$i]['id']);
-            if ($ips_array) {
-                $countalive = $ips_array['alive_ip'];
-                foreach($ips_array as $nodetypeid => $data) {
-                    if (!is_int($data) && isset($data['aliveips'])) {
-                        foreach($data['aliveips'] as $ip_NodeId) {
-                            $ip = explode("_", $ip_NodeId)[0];
-                            $ips[] = $ip . '_' . $nodetypeid;
-                        }
-                    }
-                }
+
+            if ($user->plan_id && isset($plans[$user->plan_id])) {
+                $user->plan_name = $plans[$user->plan_id]->name;
             }
-            $res[$i]['alive_ip'] = $countalive;
-            $res[$i]['ips'] = implode(', ', $ips);
-            $res[$i]['subscribe_url'] = Helper::getSubscribeUrl($res[$i]['token']);
+
+            $subscriptionId = $subscription ? (int)$subscription->id : null;
+            $deviceCounts = $subscriptionId ? ($deviceCountsBySubscription[$subscriptionId] ?? []) : [];
+            $user->device_bound_count = (int)($deviceCounts[UserDeviceService::STATUS_BOUND] ?? 0);
+            $user->device_pending_count = (int)($deviceCounts[UserDeviceService::STATUS_PENDING] ?? 0);
+            $user->device_banned_count = (int)($deviceCounts[UserDeviceService::STATUS_BANNED] ?? 0);
+            $user->device_online_count = $subscriptionId ? (int)($onlineDeviceCountsBySubscription[$subscriptionId] ?? 0) : 0;
+
+            $aliveCacheKey = $aliveCacheKeyByUser[(int)$user->id] ?? null;
+            $alive = $this->aliveSummary($aliveCacheKey ? ($aliveCache[$aliveCacheKey] ?? null) : null);
+            $user->alive_ip = $alive['alive_ip'];
+            $user->ips = $alive['ips'];
+            $user->subscribe_url = Helper::getSubscribeUrl($user->token);
+            $user->makeHidden(['subscription']);
         }
         return response([
             'data' => $res,
             'total' => $total
         ]);
+    }
+
+    private function primarySubscriptionsByUser($users)
+    {
+        if (!$users || $users->isEmpty()) {
+            return collect();
+        }
+
+        $usersById = $users->keyBy('id');
+        $subscriptions = UserSubscription::whereIn('user_id', $usersById->keys()->all())
+            ->where('status', SubscriptionService::STATUS_ACTIVE)
+            ->get();
+
+        return $subscriptions->groupBy('user_id')->map(function ($items, $userId) use ($usersById) {
+            $user = $usersById->get($userId);
+            $userToken = (string)($user->token ?? '');
+
+            return $items->sort(function ($a, $b) use ($userToken) {
+                $aPriority = $userToken !== '' && (string)$a->token === $userToken ? 0 : 1;
+                $bPriority = $userToken !== '' && (string)$b->token === $userToken ? 0 : 1;
+                if ($aPriority !== $bPriority) {
+                    return $aPriority <=> $bPriority;
+                }
+
+                $updatedCompare = (int)$b->updated_at <=> (int)$a->updated_at;
+                if ($updatedCompare !== 0) {
+                    return $updatedCompare;
+                }
+
+                return (int)$b->id <=> (int)$a->id;
+            })->first();
+        });
+    }
+
+    private function deviceStatusCountsBySubscription(array $subscriptionIds): array
+    {
+        if (!$subscriptionIds) {
+            return [];
+        }
+
+        $rows = UserDevice::whereIn('subscription_id', $subscriptionIds)
+            ->select(['subscription_id', 'status', DB::raw('COUNT(*) as total')])
+            ->groupBy('subscription_id', 'status')
+            ->get();
+        $result = [];
+        foreach ($rows as $row) {
+            $subscriptionId = (int)$row->subscription_id;
+            $status = (string)$row->status;
+            if (!isset($result[$subscriptionId])) {
+                $result[$subscriptionId] = [];
+            }
+            $result[$subscriptionId][$status] = (int)$row->total;
+        }
+
+        return $result;
+    }
+
+    private function onlineDeviceCountsBySubscription(array $subscriptionIds): array
+    {
+        if (!$subscriptionIds) {
+            return [];
+        }
+
+        $devices = UserDevice::whereIn('subscription_id', $subscriptionIds)
+            ->where('status', UserDeviceService::STATUS_BOUND)
+            ->select(['id', 'subscription_id'])
+            ->get();
+        if ($devices->isEmpty()) {
+            return [];
+        }
+
+        (new UserDeviceService())->withOnlineState($devices);
+        $result = [];
+        foreach ($devices as $device) {
+            if (empty($device->is_online)) {
+                continue;
+            }
+
+            $subscriptionId = (int)$device->subscription_id;
+            if (!isset($result[$subscriptionId])) {
+                $result[$subscriptionId] = 0;
+            }
+            $result[$subscriptionId]++;
+        }
+
+        return $result;
+    }
+
+    private function aliveSummary($ipsArray): array
+    {
+        if (!is_array($ipsArray)) {
+            return [
+                'alive_ip' => 0,
+                'ips' => ''
+            ];
+        }
+
+        $ips = [];
+        foreach ($ipsArray as $nodeTypeId => $data) {
+            if ($nodeTypeId === 'alive_ip' || !is_array($data) || !isset($data['aliveips']) || !is_array($data['aliveips'])) {
+                continue;
+            }
+
+            foreach ($data['aliveips'] as $ipNodeId) {
+                $ip = explode('_', (string)$ipNodeId)[0];
+                if ($ip !== '') {
+                    $ips[] = $ip . '_' . $nodeTypeId;
+                }
+            }
+        }
+
+        return [
+            'alive_ip' => (int)($ipsArray['alive_ip'] ?? 0),
+            'ips' => implode(', ', $ips)
+        ];
     }
 
     public function getUserInfoById(Request $request)

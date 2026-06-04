@@ -15,6 +15,9 @@ class UserDeviceService
 {
     const HWID_HEADER = 'X-Hwid';
     const HWID_MAX_LENGTH = 255;
+    const MODE_STRICT = 'strict';
+    const MODE_MIXED = 'mixed';
+    const DEVICE_NODE_USER_ID_BASE = 1000000000;
     const USER_AGENT_MAX_LENGTH = 255;
     const IP_MAX_LENGTH = 128;
     const STATUS_PENDING = 'pending';
@@ -25,11 +28,20 @@ class UserDeviceService
 
     public function registerFromRequest(UserSubscription $subscription, Request $request)
     {
-        if (!$this->isHwidEnabled()) {
+        if (!$this->hasDeviceLimit($subscription)) {
             return $subscription;
         }
 
         $hwid = $this->readHwid($request);
+        if ($hwid === null) {
+            if ($this->isStrictHwidMode()) {
+                $this->abortHwidDecision('missing_hwid');
+            }
+
+            $this->ensureSharedSubscriptionAllowed($subscription);
+            return $subscription;
+        }
+
         return $this->registerFromRequestViaCore($subscription, $request, $hwid);
     }
 
@@ -65,7 +77,7 @@ class UserDeviceService
 
     public function ensureWaitingSlot(UserSubscription $subscription)
     {
-        if (!$this->isHwidEnabled() || !$this->hasDeviceLimit($subscription)) {
+        if (!$this->hasDeviceLimit($subscription)) {
             return null;
         }
 
@@ -154,7 +166,7 @@ class UserDeviceService
     public function translateNodeTrafficWithDevices(array $data): array
     {
         $data = $this->normalizeNodeTraffic($data);
-        if (!$this->isHwidEnabled()) {
+        if (!$this->hasVirtualNodeUserIds(array_keys($data))) {
             return [
                 'subscriptions' => $data,
                 'devices' => []
@@ -173,7 +185,7 @@ class UserDeviceService
 
     public function translateNodeAliveData(array $data): array
     {
-        if (!$this->isHwidEnabled()) {
+        if (!$this->hasVirtualNodeUserIds(array_keys($data))) {
             return $this->normalizeNodeAliveData($data);
         }
 
@@ -184,7 +196,7 @@ class UserDeviceService
 
     public function recordOnlineDevicesFromNodeAlive(array $rawData, string $nodeType, int $nodeId): void
     {
-        if (!$this->isHwidEnabled() || empty($rawData)) {
+        if (empty($rawData) || !$this->hasVirtualNodeUserIds(array_keys($rawData))) {
             return;
         }
 
@@ -463,14 +475,24 @@ class UserDeviceService
         return $hwid === '' ? null : $hwid;
     }
 
+    public function hwidMode(): string
+    {
+        return $this->isStrictHwidMode() ? self::MODE_STRICT : self::MODE_MIXED;
+    }
+
+    public function isStrictHwidMode(): bool
+    {
+        return (int)config('zicboard.device_hwid_enable', 0) === 1;
+    }
+
+    public function isDeviceTrackingAvailable(): bool
+    {
+        return true;
+    }
+
     private function hasDeviceLimit(UserSubscription $subscription)
     {
         return (int)$subscription->device_limit > 0;
-    }
-
-    private function isHwidEnabled()
-    {
-        return (int)config('zicboard.device_hwid_enable', 0) === 1;
     }
 
     private function nextPendingSlot(UserSubscription $subscription)
@@ -518,6 +540,41 @@ class UserDeviceService
     {
         $ip = trim((string)$request->ip());
         return $ip === '' ? null : substr($ip, 0, self::IP_MAX_LENGTH);
+    }
+
+    private function ensureSharedSubscriptionAllowed(UserSubscription $subscription): void
+    {
+        DB::transaction(function () use ($subscription) {
+            $lockedSubscription = UserSubscription::where('id', $subscription->id)->lockForUpdate()->first();
+            if (!$lockedSubscription) {
+                abort(403, 'Token khong hop le');
+            }
+
+            if (!$this->hasDeviceLimit($lockedSubscription)) {
+                return;
+            }
+
+            $boundSlots = UserDevice::where('subscription_id', $lockedSubscription->id)
+                ->where('status', self::STATUS_BOUND)
+                ->lockForUpdate()
+                ->get(['id'])
+                ->count();
+
+            if ($boundSlots >= (int)$lockedSubscription->device_limit) {
+                $this->abortHwidDecision('limit_reached');
+            }
+        }, 3);
+    }
+
+    private function hasVirtualNodeUserIds(array $nodeUserIds): bool
+    {
+        foreach ($nodeUserIds as $nodeUserId) {
+            if (is_numeric($nodeUserId) && (int)$nodeUserId > self::DEVICE_NODE_USER_ID_BASE) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function loadVirtualSubscriptionMap(array $nodeUserIds, ProtectedFeatureService $protectedFeatures): array
