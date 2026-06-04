@@ -83,6 +83,9 @@ class ProtectedFeatureService
         if (!is_array($result)) {
             return [];
         }
+        if ($type === 'zicnode' && !empty($node['host'])) {
+            $result['host'] = $node['host'];
+        }
         return $type === 'zicnode'
             ? self::normalizeZicnodeConfigShape($result, true)
             : $result;
