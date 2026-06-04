@@ -63,8 +63,8 @@ class ConfigSave extends FormRequest
         'server_pull_interval' => 'integer',
         'server_push_interval' => 'integer',
         'device_limit_mode' => 'in:0,1',
-        'server_node_report_min_traffic' => 'integer', 
-        'server_device_online_min_traffic' => 'integer', 
+        'server_node_report_min_traffic' => 'integer',
+        'server_device_online_min_traffic' => 'integer',
         // frontend
         'frontend_theme' => '',
         'frontend_theme_sidebar' => 'nullable|in:dark,light',
@@ -110,6 +110,7 @@ class ConfigSave extends FormRequest
         'password_limit_count' => 'integer',
         'password_limit_expire' => 'integer',
     ];
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -120,31 +121,35 @@ class ConfigSave extends FormRequest
         $rules = self::RULES;
 
         $rules['deposit_bounus'][] = function ($attribute, $value, $fail) {
+            if (!is_array($value)) {
+                return;
+            }
+
             foreach ($value as $tier) {
                 if (!preg_match('/^\d+(\.\d+)?:\d+(\.\d+)?$/', $tier)) {
-                    if($tier == '') {
+                    if ($tier == '') {
                         continue;
                     }
                     $fail('Thưởng nạp tiền không đúng định dạng, phải theo dạng số tiền nạp:số tiền thưởng');
                 }
             }
         };
+
         return $rules;
     }
 
     public function messages()
     {
-        // illiteracy prompt
         return [
-            'app_url.url' => 'URL websitekhông đúng định dạng,phải có http(s)://',
-            'subscribe_url.url' => 'URL đăng kýkhông đúng định dạng,phải có http(s)://',
-            'subscribe_path.regex' => 'Đường dẫn đăng kýphải bắt đầu bằng /',
+            'app_url.url' => 'URL website không đúng định dạng, phải có http(s)://',
+            'subscribe_url.url' => 'URL đăng ký không đúng định dạng, phải có http(s)://',
+            'subscribe_path.regex' => 'Đường dẫn đăng ký phải bắt đầu bằng /',
             'server_token.min' => 'Khóa liên lạc phải dài hơn 16 ký tự',
-            'tos_url.url' => 'URL điều khoản dịch vụkhông đúng định dạng,phải có http(s)://',
-            'telegram_discuss_link.url' => 'TelegramĐịa chỉ nhóm phải là URL,phải có http(s)://',
-            'logo.url' => 'LOGO URLkhông đúng định dạng,phải có https(s)://',
+            'tos_url.url' => 'URL điều khoản dịch vụ không đúng định dạng, phải có http(s)://',
+            'telegram_discuss_link.url' => 'Địa chỉ nhóm Telegram phải là URL, phải có http(s)://',
+            'logo.url' => 'LOGO URL không đúng định dạng, phải có http(s)://',
             'secure_path.min' => 'Đường dẫn admin tối thiểu 8 ký tự',
-            'secure_path.regex' => 'Đường dẫn admin chỉ được gồm chữ cái hoặc số',
+            'secure_path.regex' => 'Đường dẫn admin chỉ được gồm chữ cái, số, gạch dưới hoặc gạch ngang',
         ];
     }
 }

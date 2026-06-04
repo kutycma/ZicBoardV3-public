@@ -10,9 +10,8 @@ use Illuminate\Support\Facades\Schema;
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
+| These routes render the Laravel-served shells and legacy subscribe entry.
+| Application APIs are registered under /api/v3 by RouteServiceProvider.
 |
 */
 
@@ -27,6 +26,7 @@ Route::get('/', function (Request $request) {
             abort(403);
         }
     }
+
     $renderParams = [
         'title' => config('zicboard.app_name', 'ZicBoard'),
         'theme' => config('zicboard.frontend_theme', 'EZ-Zic'),
@@ -68,37 +68,34 @@ Route::get('/', function (Request $request) {
     }
 
     $renderParams['theme_config'] = $themeConfig;
+
     return view('theme::' . config('zicboard.frontend_theme', 'EZ-Zic') . '.dashboard', $renderParams);
 });
 
-//TODO:: tương thích
 $staffPath = config('zicboard.staff_path', 'webctv');
-
-Route::get('/' . $staffPath . '/login', function () use ($staffPath) {
+$staffPanel = function ($entry) use ($staffPath) {
     return view('staff', [
         'title' => 'Staff Panel',
         'staff_path' => $staffPath,
-        'entry' => 'login'
+        'entry' => $entry
     ]);
+};
+
+Route::get('/' . $staffPath . '/login', function () use ($staffPanel) {
+    return $staffPanel('login');
 });
 
-Route::get('/' . $staffPath, function () use ($staffPath) {
-    return view('staff', [
-        'title' => 'Staff Panel',
-        'staff_path' => $staffPath,
-        'entry' => 'dashboard'
-    ]);
+Route::get('/' . $staffPath, function () use ($staffPanel) {
+    return $staffPanel('dashboard');
 });
 
-Route::get('/' . $staffPath . '/', function () use ($staffPath) {
-    return view('staff', [
-        'title' => 'Staff Panel',
-        'staff_path' => $staffPath,
-        'entry' => 'dashboard'
-    ]);
+Route::get('/' . $staffPath . '/', function () use ($staffPanel) {
+    return $staffPanel('dashboard');
 });
 
-Route::get('/' . config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key')))), function () {
+$securePath = config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key'))));
+
+Route::get('/' . $securePath, function () use ($securePath) {
     return view('admin', [
         'title' => config('zicboard.app_name', 'ZicBoard'),
         'theme_sidebar' => config('zicboard.frontend_theme_sidebar', 'light'),
@@ -107,7 +104,7 @@ Route::get('/' . config('zicboard.secure_path', config('zicboard.frontend_admin_
         'background_url' => config('zicboard.frontend_background_url'),
         'version' => config('app.version'),
         'logo' => config('zicboard.logo'),
-        'secure_path' => config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key'))))
+        'secure_path' => $securePath
     ]);
 });
 
