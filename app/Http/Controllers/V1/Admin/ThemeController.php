@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ThemeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
 
@@ -79,8 +80,8 @@ class ThemeController extends Controller
         ]);
         $themeConfig = $this->readThemeConfig($payload['name']);
         $defaults = $this->getThemeDefaults($themeConfig);
-        $saved = config("theme.{$payload['name']}", []);
-        $saved = is_array($saved) ? $saved : [];
+        $themeService = new ThemeService($payload['name']);
+        $saved = $themeService->savedConfig();
 
         return response([
             'data' => $this->mergeLegacyThemeConfig($defaults, $saved)
@@ -93,13 +94,16 @@ class ThemeController extends Controller
             'name' => ['required', Rule::in($this->themes)],
             'config' => 'required'
         ]);
-        $payload['config'] = json_decode(base64_decode($payload['config']), true);
-        if (!$payload['config'] || !is_array($payload['config'])) abort(500, 'tham số không hợp lệ');
+        $decodedConfig = base64_decode($payload['config'], true);
+        if ($decodedConfig === false) abort(400, 'tham số không hợp lệ');
+
+        $payload['config'] = json_decode($decodedConfig, true);
+        if (!is_array($payload['config']) || json_last_error() !== JSON_ERROR_NONE) abort(400, 'tham số không hợp lệ');
         $themeConfig = $this->readThemeConfig($payload['name']);
         $validateFields = array_column($themeConfig['configs'], 'field_name');
         $defaults = $this->getThemeDefaults($themeConfig);
-        $current = config("theme.{$payload['name']}", []);
-        $current = is_array($current) ? $current : [];
+        $themeService = new ThemeService($payload['name']);
+        $current = $themeService->savedConfig();
         $config = [];
         foreach ($validateFields as $validateField) {
             if (array_key_exists($validateField, $payload['config'])) {
@@ -122,11 +126,28 @@ class ThemeController extends Controller
             abort(500, 'Chỉnh sửa thất bại');
         }
 
+        config(["theme.{$payload['name']}" => $config]);
+
+        if (function_exists('opcache_reset')) {
+            if (opcache_reset() === false) {
+                abort(500, 'Xóa cache thất bại, vui lòng gỡ hoặc kiểm tra cấu hình opcache');
+            }
+        }
+
         try {
             Artisan::call('config:cache');
 //            sleep(2);
         } catch (\Exception $e) {
             abort(500, 'Lưu thất bại');
+        }
+
+        if (Cache::has('WEBMANPID')) {
+            $pid = Cache::get('WEBMANPID');
+            Cache::forget('WEBMANPID');
+
+            if (function_exists('posix_kill')) {
+                posix_kill($pid, 15);
+            }
         }
 
         return response([

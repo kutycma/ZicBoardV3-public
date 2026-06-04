@@ -48,6 +48,18 @@ class ThemeService
         }
     }
 
+    public function savedConfig()
+    {
+        $configPath = base_path() . "/config/theme/{$this->theme}.php";
+        if (File::exists($configPath)) {
+            $loadedConfig = include($configPath);
+            return is_array($loadedConfig) ? $loadedConfig : [];
+        }
+
+        $loadedConfig = config("theme.{$this->theme}", []);
+        return is_array($loadedConfig) ? $loadedConfig : [];
+    }
+
     private function normalizeThemeName($theme)
     {
         $theme = (string)$theme;

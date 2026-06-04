@@ -35,12 +35,12 @@ Route::get('/', function (Request $request) {
         'logo' => config('zicboard.logo')
     ];
 
+    $themeService = new ThemeService($renderParams['theme']);
     if (!config("theme.{$renderParams['theme']}")) {
-        $themeService = new ThemeService($renderParams['theme']);
         $themeService->init();
     }
 
-    $themeConfig = config('theme.' . config('zicboard.frontend_theme', 'EZ-Zic')) ?: [];
+    $themeConfig = $themeService->savedConfig();
     if ($staff) {
         if ($staff->title) {
             $renderParams['title'] = $staff->title;
