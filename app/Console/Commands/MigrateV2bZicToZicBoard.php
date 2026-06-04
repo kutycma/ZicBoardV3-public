@@ -53,6 +53,10 @@ class MigrateV2bZicToZicBoard extends Command
                 $this->repairWebconSchema();
             });
 
+            $this->runStep('Sua schema runtime hien tai', function () {
+                $this->repairCurrentRuntimeSchema();
+            });
+
             $this->runStep('Sua schema subscription', function () {
                 $this->repairSubscriptionSchema();
             });
@@ -156,12 +160,13 @@ class MigrateV2bZicToZicBoard extends Command
     private function printDryRunPlan()
     {
         $this->info('Preflight OK. Khi chay that, command se lam cac viec sau:');
-        $this->line('1. Tao/sua v2_staff, v2_user_subscription, v2_user_device, v2_stat_user neu thieu.');
+        $this->line('1. Tao/sua v2_staff, v2_happ_subscribe_cache, v2_user_subscription, v2_user_device, v2_stat_user neu thieu.');
         $this->line('2. Tao subscription chinh cho moi user v2b-zic tu plan_id, token, uuid, traffic, expired_at.');
         $this->line('3. Chuyen name_sni/network_settings tu v2_user sang v2_user_subscription neu co.');
-        $this->line('4. Gan subscription_id cho v2_order, v2_user_device, v2_stat_user.');
-        $this->line('5. Tao v2_server_zicnode va copy node tu v2_server_v2node neu co.');
-        $this->line('6. Chuan hoa config ZicNode de node nhan object {} thay vi array [] khi ket noi.');
+        $this->line('4. Bo sung cac cot runtime hien tai cho plan/payment/order/trojan neu dump cu thieu.');
+        $this->line('5. Gan subscription_id cho v2_order, v2_user_device, v2_stat_user.');
+        $this->line('6. Tao v2_server_zicnode va copy node tu v2_server_v2node neu co.');
+        $this->line('7. Chuan hoa config ZicNode va device binding de chay muot voi ZicBoardV3 hien tai.');
         $this->line('Chay that: php artisan zicboard:migrate-v2b-zic');
     }
 
@@ -238,6 +243,102 @@ class MigrateV2bZicToZicBoard extends Command
                 INNER JOIN `v2_staff` AS staff ON staff.user_id = users.id
                 SET users.is_staff = 1
                 WHERE staff.status = 1
+            ");
+        }
+    }
+
+    private function repairCurrentRuntimeSchema()
+    {
+        $this->repairHappSubscribeCacheSchema();
+        $this->repairPlanRuntimeSchema();
+        $this->repairPaymentRuntimeSchema();
+    }
+
+    private function repairHappSubscribeCacheSchema()
+    {
+        if (!Schema::hasTable('v2_happ_subscribe_cache')) {
+            DB::statement("
+                CREATE TABLE `v2_happ_subscribe_cache` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `cache_key` varchar(96) NOT NULL,
+                    `encrypted_url` text NOT NULL,
+                    `expires_at` int(11) NOT NULL,
+                    `stale_until` int(11) NOT NULL,
+                    `created_at` int(11) NOT NULL,
+                    `updated_at` int(11) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `v2_happ_subscribe_cache_key_unique` (`cache_key`),
+                    KEY `v2_happ_subscribe_cache_expires_at_index` (`expires_at`),
+                    KEY `v2_happ_subscribe_cache_stale_until_index` (`stale_until`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+            return;
+        }
+
+        $this->ensureColumn('v2_happ_subscribe_cache', 'cache_key', "ADD `cache_key` varchar(96) NOT NULL DEFAULT ''" . $this->afterColumn('v2_happ_subscribe_cache', 'id'));
+        $this->ensureColumn('v2_happ_subscribe_cache', 'encrypted_url', 'ADD `encrypted_url` text NOT NULL' . $this->afterColumn('v2_happ_subscribe_cache', 'cache_key'));
+        $this->ensureColumn('v2_happ_subscribe_cache', 'expires_at', "ADD `expires_at` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_happ_subscribe_cache', 'encrypted_url'));
+        $this->ensureColumn('v2_happ_subscribe_cache', 'stale_until', "ADD `stale_until` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_happ_subscribe_cache', 'expires_at'));
+        $this->ensureColumn('v2_happ_subscribe_cache', 'created_at', "ADD `created_at` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_happ_subscribe_cache', 'stale_until'));
+        $this->ensureColumn('v2_happ_subscribe_cache', 'updated_at', "ADD `updated_at` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_happ_subscribe_cache', 'created_at'));
+
+        if (Schema::hasColumn('v2_happ_subscribe_cache', 'cache_key')) {
+            DB::statement("
+                UPDATE `v2_happ_subscribe_cache`
+                SET `cache_key` = CONCAT('legacy-', `id`)
+                WHERE TRIM(COALESCE(`cache_key`, '')) = ''
+            ");
+        }
+
+        $this->ensureIndex('v2_happ_subscribe_cache', 'v2_happ_subscribe_cache_key_unique', 'ADD UNIQUE KEY `v2_happ_subscribe_cache_key_unique` (`cache_key`)');
+        $this->ensureIndex('v2_happ_subscribe_cache', 'v2_happ_subscribe_cache_expires_at_index', 'ADD KEY `v2_happ_subscribe_cache_expires_at_index` (`expires_at`)');
+        $this->ensureIndex('v2_happ_subscribe_cache', 'v2_happ_subscribe_cache_stale_until_index', 'ADD KEY `v2_happ_subscribe_cache_stale_until_index` (`stale_until`)');
+    }
+
+    private function repairPlanRuntimeSchema()
+    {
+        if (!Schema::hasTable('v2_plan')) {
+            return;
+        }
+
+        $this->ensureColumn('v2_plan', 'allow_subscribe_url', "ADD `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1'" . $this->afterColumn('v2_plan', 'renew'));
+    }
+
+    private function repairPaymentRuntimeSchema()
+    {
+        if (!Schema::hasTable('v2_payment')) {
+            DB::statement("
+                CREATE TABLE `v2_payment` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `uuid` char(32) NOT NULL,
+                    `payment` varchar(16) NOT NULL,
+                    `name` varchar(255) NOT NULL,
+                    `icon` varchar(255) DEFAULT NULL,
+                    `config` text NOT NULL,
+                    `notify_domain` varchar(128) DEFAULT NULL,
+                    `handling_fee_fixed` int(11) DEFAULT NULL,
+                    `handling_fee_percent` decimal(5,2) DEFAULT NULL,
+                    `enable` tinyint(1) NOT NULL DEFAULT '0',
+                    `sort` int(11) DEFAULT NULL,
+                    `created_at` int(11) NOT NULL DEFAULT '0',
+                    `updated_at` int(11) NOT NULL DEFAULT '0',
+                    PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+            return;
+        }
+
+        $this->ensureColumn('v2_payment', 'uuid', "ADD `uuid` char(32) NOT NULL DEFAULT ''" . $this->afterColumn('v2_payment', 'id'));
+        $this->ensureColumn('v2_payment', 'icon', 'ADD `icon` varchar(255) DEFAULT NULL' . $this->afterColumn('v2_payment', 'name'));
+        $this->ensureColumn('v2_payment', 'notify_domain', 'ADD `notify_domain` varchar(128) DEFAULT NULL' . $this->afterColumn('v2_payment', 'config'));
+        $this->ensureColumn('v2_payment', 'handling_fee_fixed', 'ADD `handling_fee_fixed` int(11) DEFAULT NULL' . $this->afterColumn('v2_payment', 'notify_domain'));
+        $this->ensureColumn('v2_payment', 'handling_fee_percent', 'ADD `handling_fee_percent` decimal(5,2) DEFAULT NULL' . $this->afterColumn('v2_payment', 'handling_fee_fixed'));
+
+        if (Schema::hasColumn('v2_payment', 'uuid')) {
+            DB::statement("
+                UPDATE `v2_payment`
+                SET `uuid` = SUBSTRING(REPLACE(UUID(), '-', ''), 1, 8)
+                WHERE TRIM(COALESCE(`uuid`, '')) = ''
             ");
         }
     }
@@ -439,8 +540,30 @@ class MigrateV2bZicToZicBoard extends Command
             return;
         }
 
-        $this->ensureColumn('v2_order', 'subscription_id', 'ADD `subscription_id` int(11) NULL AFTER `user_id`');
-        $this->ensureIndex('v2_order', 'idx_subscription', 'ADD INDEX `idx_subscription` (`subscription_id`)');
+        $this->ensureColumn('v2_order', 'coupon_id', 'ADD `coupon_id` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'plan_id'));
+        $this->ensureColumn('v2_order', 'payment_id', 'ADD `payment_id` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'coupon_id'));
+        $this->ensureColumn('v2_order', 'callback_no', 'ADD `callback_no` varchar(255) DEFAULT NULL' . $this->afterColumn('v2_order', 'trade_no'));
+        $this->ensureColumn('v2_order', 'handling_amount', 'ADD `handling_amount` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'total_amount'));
+        $this->ensureColumn('v2_order', 'discount_amount', 'ADD `discount_amount` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'handling_amount'));
+        $this->ensureColumn('v2_order', 'surplus_amount', 'ADD `surplus_amount` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'discount_amount'));
+        $this->ensureColumn('v2_order', 'refund_amount', 'ADD `refund_amount` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'surplus_amount'));
+        $this->ensureColumn('v2_order', 'balance_amount', 'ADD `balance_amount` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'refund_amount'));
+        $this->ensureColumn('v2_order', 'surplus_order_ids', 'ADD `surplus_order_ids` text' . $this->afterColumn('v2_order', 'balance_amount'));
+        $this->ensureColumn('v2_order', 'commission_status', "ADD `commission_status` tinyint(1) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_order', 'status'));
+        $this->ensureColumn('v2_order', 'commission_balance', "ADD `commission_balance` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_order', 'commission_status'));
+        $this->ensureColumn('v2_order', 'actual_commission_balance', 'ADD `actual_commission_balance` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'commission_balance'));
+        $this->ensureColumn('v2_order', 'paid_at', 'ADD `paid_at` int(11) DEFAULT NULL' . $this->afterColumn('v2_order', 'actual_commission_balance'));
+        $this->ensureColumn('v2_order', 'subscription_id', 'ADD `subscription_id` int(11) NULL' . $this->afterColumn('v2_order', 'user_id'));
+
+        if (Schema::hasColumn('v2_order', 'user_id')) {
+            $this->ensureIndex('v2_order', 'idx_user', 'ADD INDEX `idx_user` (`user_id`)');
+        }
+        if (Schema::hasColumn('v2_order', 'user_id') && Schema::hasColumn('v2_order', 'status')) {
+            $this->ensureIndex('v2_order', 'idx_user_status', 'ADD INDEX `idx_user_status` (`user_id`, `status`)');
+        }
+        if (Schema::hasColumn('v2_order', 'subscription_id')) {
+            $this->ensureIndex('v2_order', 'idx_subscription', 'ADD INDEX `idx_subscription` (`subscription_id`)');
+        }
 
         $conditions = ['orders.subscription_id IS NULL'];
         if (Schema::hasColumn('v2_order', 'plan_id')) {
@@ -552,6 +675,8 @@ class MigrateV2bZicToZicBoard extends Command
             WHERE devices.subscription_id IS NULL
         ");
 
+        $this->normalizeLegacyDeviceBindings();
+
         $this->abortIfDuplicateValues('v2_user_device', 'uuid');
         $this->abortIfDuplicateDeviceBindings();
 
@@ -608,6 +733,36 @@ class MigrateV2bZicToZicBoard extends Command
                 DB::statement("ALTER TABLE `v2_user_device` MODIFY `{$column}` {$definition}");
             }
         }
+    }
+
+    private function normalizeLegacyDeviceBindings()
+    {
+        if (!Schema::hasTable('v2_user_device') ||
+            !Schema::hasColumn('v2_user_device', 'hwid_hash') ||
+            !Schema::hasColumn('v2_user_device', 'status')) {
+            return;
+        }
+
+        DB::statement("
+            UPDATE `v2_user_device`
+            SET `hwid_hash` = NULL
+            WHERE TRIM(COALESCE(`hwid_hash`, '')) = ''
+        ");
+
+        DB::statement("
+            UPDATE `v2_user_device`
+            SET `status` = 'bound'
+            WHERE `hwid_hash` IS NOT NULL
+                AND TRIM(`hwid_hash`) <> ''
+                AND (`status` IS NULL OR TRIM(`status`) = '' OR `status` = 'pending')
+        ");
+
+        DB::statement("
+            UPDATE `v2_user_device`
+            SET `status` = 'pending'
+            WHERE (`hwid_hash` IS NULL OR TRIM(`hwid_hash`) = '')
+                AND (`status` IS NULL OR TRIM(`status`) = '' OR `status` <> 'pending')
+        ");
     }
 
     private function repairStatsSubscriptionSchema()
@@ -668,6 +823,8 @@ class MigrateV2bZicToZicBoard extends Command
             DB::statement('ALTER TABLE `v2_server_route` MODIFY `action_value` text DEFAULT NULL');
         }
 
+        $this->repairTrojanRuntimeSchema();
+
         if (Schema::hasTable('v2_server_vless')) {
             $this->ensureColumn('v2_server_vless', 'encryption', "ADD `encryption` varchar(64) DEFAULT NULL AFTER `network_settings`");
             $this->ensureColumn('v2_server_vless', 'encryption_settings', "ADD `encryption_settings` text AFTER `encryption`");
@@ -676,6 +833,24 @@ class MigrateV2bZicToZicBoard extends Command
         $this->ensureZicnodeTable();
         $this->copyV2nodeToZicnode();
         $this->repairZicnodeNodeCompatibility();
+    }
+
+    private function repairTrojanRuntimeSchema()
+    {
+        if (!Schema::hasTable('v2_server_trojan')) {
+            return;
+        }
+
+        $this->ensureColumn('v2_server_trojan', 'network', "ADD `network` varchar(11) DEFAULT NULL" . $this->afterColumn('v2_server_trojan', 'server_port'));
+        $this->ensureColumn('v2_server_trojan', 'network_settings', 'ADD `network_settings` text' . $this->afterColumn('v2_server_trojan', 'network'));
+
+        if (Schema::hasColumn('v2_server_trojan', 'network')) {
+            DB::statement("
+                UPDATE `v2_server_trojan`
+                SET `network` = 'tcp'
+                WHERE TRIM(COALESCE(`network`, '')) = ''
+            ");
+        }
     }
 
     private function ensureZicnodeTable()
@@ -870,6 +1045,13 @@ class MigrateV2bZicToZicBoard extends Command
         }
 
         DB::statement("ALTER TABLE `{$table}` {$definition}");
+    }
+
+    private function afterColumn($table, $column)
+    {
+        return Schema::hasTable($table) && Schema::hasColumn($table, $column)
+            ? " AFTER `{$column}`"
+            : '';
     }
 
     private function ensureIndex($table, $index, $definition)
@@ -1209,7 +1391,9 @@ class MigrateV2bZicToZicBoard extends Command
         $rows = DB::select("
             SELECT subscription_id, hwid_hash, COUNT(*) AS total
             FROM `v2_user_device`
-            WHERE subscription_id IS NOT NULL AND hwid_hash IS NOT NULL
+            WHERE subscription_id IS NOT NULL
+                AND hwid_hash IS NOT NULL
+                AND TRIM(hwid_hash) <> ''
             GROUP BY subscription_id, hwid_hash
             HAVING COUNT(*) > 1
             LIMIT 5

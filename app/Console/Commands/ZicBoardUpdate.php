@@ -425,6 +425,7 @@ class ZicBoardUpdate extends Command
         ");
 
         $this->runRepairStatement("UPDATE `v2_user_device` SET `uuid` = UUID() WHERE `uuid` IS NULL OR `uuid` = ''");
+        $this->normalizeLegacyDeviceBindings();
 
         if ($this->indexExists('v2_user_device', 'v2_user_device_user_hwid_unique')) {
             $this->runRepairStatement('ALTER TABLE `v2_user_device` DROP INDEX `v2_user_device_user_hwid_unique`');
@@ -468,6 +469,36 @@ class ZicBoardUpdate extends Command
                 $this->runRepairStatement("ALTER TABLE `v2_user_device` MODIFY `{$column}` {$definition}");
             }
         }
+    }
+
+    private function normalizeLegacyDeviceBindings()
+    {
+        if (!Schema::hasTable('v2_user_device') ||
+            !Schema::hasColumn('v2_user_device', 'hwid_hash') ||
+            !Schema::hasColumn('v2_user_device', 'status')) {
+            return;
+        }
+
+        $this->runRepairStatement("
+            UPDATE `v2_user_device`
+            SET `hwid_hash` = NULL
+            WHERE TRIM(COALESCE(`hwid_hash`, '')) = ''
+        ");
+
+        $this->runRepairStatement("
+            UPDATE `v2_user_device`
+            SET `status` = 'bound'
+            WHERE `hwid_hash` IS NOT NULL
+                AND TRIM(`hwid_hash`) <> ''
+                AND (`status` IS NULL OR TRIM(`status`) = '' OR `status` = 'pending')
+        ");
+
+        $this->runRepairStatement("
+            UPDATE `v2_user_device`
+            SET `status` = 'pending'
+            WHERE (`hwid_hash` IS NULL OR TRIM(`hwid_hash`) = '')
+                AND (`status` IS NULL OR TRIM(`status`) = '' OR `status` <> 'pending')
+        ");
     }
 
     private function repairStatsSubscriptionSchema()
