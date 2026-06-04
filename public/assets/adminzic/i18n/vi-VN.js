@@ -1147,6 +1147,8 @@
     "node.destHelp": "Để trống để dùng SNI",
     "node.proxyProtocol": "Proxy Protocol",
     "node.fingerprint": "Fingerprint",
+    "node.pinnedPeerCertSha256": "Pinned cert SHA256",
+    "node.verifyPeerCertByName": "Verify cert name",
     "node.certMode": "Chế độ chứng chỉ",
     "node.certModeSelf": "Tự ký",
     "node.certModeHttp": "Cấp qua HTTP",

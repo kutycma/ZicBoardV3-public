@@ -287,6 +287,43 @@ class Helper
         return "{$scheme}://{$auth}@{$host}:{$port}?{$query}#{$name}\r\n";
     }
 
+    private static function firstTlsSetting($settings, array $keys, $default = '')
+    {
+        if (!is_array($settings)) {
+            return $default;
+        }
+        foreach ($keys as $key) {
+            if (isset($settings[$key]) && $settings[$key] !== '') {
+                return $settings[$key];
+            }
+        }
+        return $default;
+    }
+
+    private static function boolish($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int)$value === 1;
+        }
+        return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    private static function addTlsPinParams(array &$config, array $tlsSettings): void
+    {
+        $pinned = trim((string)self::firstTlsSetting($tlsSettings, ['pinnedPeerCertSha256', 'pinned_peer_cert_sha256', 'pcs']));
+        if ($pinned !== '') {
+            $config['pinnedPeerCertSha256'] = $pinned;
+        }
+
+        $verifyName = trim((string)self::firstTlsSetting($tlsSettings, ['verifyPeerCertByName', 'verify_peer_cert_by_name', 'vcn']));
+        if ($verifyName !== '') {
+            $config['verifyPeerCertByName'] = $verifyName;
+        }
+    }
+
     public static function formatHost($host)
     {
         return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? "[$host]" : $host;
@@ -336,8 +373,11 @@ class Helper
 
         if ($server['tls']) {
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
-            $config['allowInsecure'] = (int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0);
+            if (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+                $config['allowInsecure'] = 1;
+            }
             $config['sni'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+            self::addTlsPinParams($config, $tlsSettings);
         }
         
         $network = (string)$server['network'];
@@ -401,12 +441,15 @@ class Helper
             "security" => $server['tls'] != 0 ? ($server['tls'] == 2 ? "reality" : "tls") : "",
             "flow" => $server['flow'],
             "fp" => $tlsSettings['fingerprint'] ?? 'chrome',
-            "insecure" => $tlsSettings['allow_insecure'] ?? 0,
         ];
 
         if ($server['tls']) {
             $tlsSettings = $server['tls_settings'] ?? [];
             $config['sni'] = $tlsSettings['server_name'] ?? '';
+            if (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+                $config['insecure'] = 1;
+            }
+            self::addTlsPinParams($config, $tlsSettings);
             if ($server['tls'] == 2) {
                 $config['pbk'] = $tlsSettings['public_key'] ?? '';
                 $config['sid'] = $tlsSettings['short_id'] ?? '';
@@ -433,11 +476,14 @@ class Helper
     {
         $tlsSettings = $server['tls_settings'] ?? [];
         $config = [
-            'allowInsecure' => $server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
             'peer' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
             'sni' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
             'type'=> $server['network'],
         ];
+        if (self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            $config['allowInsecure'] = 1;
+        }
+        self::addTlsPinParams($config, $tlsSettings);
 
         if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
             if($server['network'] === "grpc" && isset($server['network_settings']['serviceName'])) {

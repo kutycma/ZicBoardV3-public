@@ -1145,6 +1145,8 @@
     "node.destHelp": "留空则使用 SNI",
     "node.proxyProtocol": "Proxy Protocol",
     "node.fingerprint": "Fingerprint",
+    "node.pinnedPeerCertSha256": "Pinned cert SHA256",
+    "node.verifyPeerCertByName": "Verify cert name",
     "node.certMode": "证书模式",
     "node.certModeSelf": "自签名",
     "node.certModeHttp": "HTTP 申请",

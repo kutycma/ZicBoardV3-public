@@ -1152,6 +1152,8 @@
     "node.destHelp": "Leave empty to use SNI",
     "node.proxyProtocol": "Proxy Protocol",
     "node.fingerprint": "Fingerprint",
+    "node.pinnedPeerCertSha256": "Pinned cert SHA256",
+    "node.verifyPeerCertByName": "Verify cert name",
     "node.certMode": "Certificate Mode",
     "node.certModeSelf": "Self-signed",
     "node.certModeHttp": "HTTP issue",
