@@ -1,3 +1,4 @@
+@php($assetVersion = $version ?? config('app.version'))
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -5,7 +6,7 @@
             title: @json($title),
             theme: @json($theme),
             assets_path: @json('/theme/' . $theme),
-            version: @json($version),
+            version: @json($assetVersion),
             background_url: @json(isset($theme_config["background_url"]) ? $theme_config["background_url"] : ""),
             description: @json($description),
             i18n: [
@@ -87,14 +88,14 @@
             z-index: 5;
         }
     </style>
-  <script type="module" crossorigin src="/theme/{{$theme}}/static/index.js"></script>
-  <link rel="modulepreload" crossorigin href="/theme/{{$theme}}/static/vendor.js">
-  <link rel="modulepreload" crossorigin href="/theme/{{$theme}}/static/components.js">
-  <link rel="stylesheet" crossorigin href="/theme/{{$theme}}/static/vendor.css">
-  <link rel="stylesheet" crossorigin href="/theme/{{$theme}}/static/components.css">
+  <script type="module" crossorigin src="/theme/{{$theme}}/static/index.js?ver={{$assetVersion}}"></script>
+  <link rel="modulepreload" crossorigin href="/theme/{{$theme}}/static/vendor.js?ver={{$assetVersion}}">
+  <link rel="modulepreload" crossorigin href="/theme/{{$theme}}/static/components.js?ver={{$assetVersion}}">
+  <link rel="stylesheet" crossorigin href="/theme/{{$theme}}/static/vendor.css?ver={{$assetVersion}}">
+  <link rel="stylesheet" crossorigin href="/theme/{{$theme}}/static/components.css?ver={{$assetVersion}}">
 </head>
 <body>
 <div id="app"></div>
-<div class="app-version">v0.4.0</div>
+<div class="app-version">ZicBoard V{{ $assetVersion }}</div>
 </body>
 </html>
