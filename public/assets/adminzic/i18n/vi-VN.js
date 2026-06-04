@@ -477,6 +477,7 @@
     "plan.users": "Người dùng",
     "plan.show": "Hiển thị",
     "plan.renew": "Gia hạn",
+    "plan.allowSubscribeUrl": "Cho phép lấy link sub",
     "plan.sort": "Sắp xếp",
     "plan.transferEnable": "Lưu lượng",
     "plan.deviceLimit": "Giới hạn thiết bị",

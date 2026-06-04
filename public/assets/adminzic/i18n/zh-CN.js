@@ -475,6 +475,7 @@
     "plan.users": "用户数",
     "plan.show": "显示",
     "plan.renew": "续费",
+    "plan.allowSubscribeUrl": "允许获取订阅链接",
     "plan.sort": "排序",
     "plan.transferEnable": "流量",
     "plan.deviceLimit": "设备限制",

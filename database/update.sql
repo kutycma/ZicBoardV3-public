@@ -1062,3 +1062,6 @@ CREATE TABLE IF NOT EXISTS `v2_happ_subscribe_cache` (
   KEY `v2_happ_subscribe_cache_expires_at_index` (`expires_at`),
   KEY `v2_happ_subscribe_cache_stale_until_index` (`stale_until`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `v2_plan`
+ADD `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1' AFTER `renew`;

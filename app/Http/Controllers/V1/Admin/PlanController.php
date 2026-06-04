@@ -94,7 +94,8 @@ class PlanController extends Controller
     {
         $updateData = $request->only([
             'show',
-            'renew'
+            'renew',
+            'allow_subscribe_url'
         ]);
 
         $plan = Plan::find($request->input('id'));

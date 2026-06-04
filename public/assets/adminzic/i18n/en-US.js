@@ -477,6 +477,7 @@
     "plan.users": "Users",
     "plan.show": "Show",
     "plan.renew": "Renew",
+    "plan.allowSubscribeUrl": "Allow subscription link",
     "plan.sort": "Sort",
     "plan.transferEnable": "Traffic",
     "plan.deviceLimit": "Device limit",
