@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServerHysteria;
+use App\Services\LegacyTlsSettingsService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 
@@ -28,6 +29,7 @@ class HysteriaController extends Controller
             'obfs' => 'nullable',
             'obfs_password' => 'nullable',
             'server_name' => 'nullable',
+            'tls_settings' => 'nullable|array',
             'insecure' => 'required|in:0,1'
         ]);
 
@@ -49,6 +51,7 @@ class HysteriaController extends Controller
             if (!$server) {
                 abort(500, 'Máy chủ không tồn tại');
             }
+            $params = LegacyTlsSettingsService::prepareParamsForSave('hysteria', $params, $server);
             try {
                 $server->update($params);
             } catch (\Exception $e) {
@@ -59,6 +62,7 @@ class HysteriaController extends Controller
             ]);
         }
 
+        $params = LegacyTlsSettingsService::prepareParamsForSave('hysteria', $params);
         if (!ServerHysteria::create($params)) {
             abort(500, 'Tạo thất bại');
         }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServerAnytls;
+use App\Services\LegacyTlsSettingsService;
 use App\Services\Core\ProtectedFeatureService;
 use Illuminate\Http\Request;
 
@@ -23,6 +24,7 @@ class AnyTLSController extends Controller
             'tags' => 'nullable|array',
             'rate' => 'required|numeric',
             'server_name' => 'nullable',
+            'tls_settings' => 'nullable|array',
             'insecure' => 'required|in:0,1',
             'padding_scheme' => 'nullable',
         ]);
@@ -34,6 +36,7 @@ class AnyTLSController extends Controller
             if (!$server) {
                 abort(500, 'Máy chủ không tồn tại');
             }
+            $params = LegacyTlsSettingsService::prepareParamsForSave('anytls', $params, $server);
             try {
                 $server->update($params);
             } catch (\Exception $e) {
@@ -44,6 +47,7 @@ class AnyTLSController extends Controller
             ]);
         }
 
+        $params = LegacyTlsSettingsService::prepareParamsForSave('anytls', $params);
         if (!ServerAnytls::create($params)) {
             abort(500, 'Tạo thất bại');
         }

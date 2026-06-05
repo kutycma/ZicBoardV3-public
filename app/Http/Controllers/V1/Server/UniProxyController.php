@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Server;
 
 use App\Http\Controllers\Controller;
 use App\Services\HappSubscribeCacheService;
+use App\Services\LegacyTlsSettingsService;
 use App\Services\ServerService;
 use App\Services\Core\ProtectedFeatureService;
 use App\Services\UserDeviceService;
@@ -220,6 +221,7 @@ class UniProxyController extends Controller
                 $this->baseConfig(),
                 $this->nodeRoutes()
             );
+            $response = LegacyTlsSettingsService::attachToUniProxyResponse($this->nodeType, $this->nodeInfo, $response);
             return $this->etaggedResponse($request, $response);
         }
 
@@ -298,6 +300,7 @@ class UniProxyController extends Controller
                 }
                 break;
         }
+        $response = LegacyTlsSettingsService::attachToUniProxyResponse($this->nodeType, $this->nodeInfo, $response);
         $response['base_config'] = $this->baseConfig();
         $routes = $this->nodeRoutes();
         if ($routes !== null) {
@@ -308,8 +311,8 @@ class UniProxyController extends Controller
 
     public function certReport(Request $request)
     {
-        if ($this->nodeType !== 'zicnode') {
-            abort(500, 'Cert report only supports zicnode');
+        if (!LegacyTlsSettingsService::supportsCertReport($this->nodeType) || !LegacyTlsSettingsService::nodeUsesNormalTls($this->nodeType, $this->nodeInfo)) {
+            abort(500, 'Cert report chỉ hỗ trợ node TLS legacy: vmess, vless, trojan, hysteria, tuic, anytls hoặc zicnode TLS thường');
         }
 
         $data = $request->json()->all();
@@ -320,10 +323,7 @@ class UniProxyController extends Controller
             return response(['error' => 'Invalid cert report'], 400);
         }
 
-        $tlsSettings = $this->nodeInfo->tls_settings;
-        if (!is_array($tlsSettings)) {
-            $tlsSettings = [];
-        }
+        $tlsSettings = LegacyTlsSettingsService::settingsFromServer($this->nodeType, $this->nodeInfo);
         $previous = is_array($tlsSettings['auto_cert'] ?? null) ? $tlsSettings['auto_cert'] : [];
 
         $autoCert = [
@@ -350,7 +350,9 @@ class UniProxyController extends Controller
             $tlsSettings['auto_cert'] = array_filter($autoCert, function ($value) {
                 return $value !== null && $value !== '';
             });
-            $this->nodeInfo->update(['tls_settings' => $tlsSettings]);
+            $this->nodeInfo->update([
+                LegacyTlsSettingsService::fieldName($this->nodeType) => $tlsSettings,
+            ]);
             (new HappSubscribeCacheService())->flushAll();
         }
 

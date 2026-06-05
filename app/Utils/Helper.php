@@ -347,9 +347,9 @@ class Helper
     private static function addTlsClientTrustParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
     {
         $autoCert = self::autoCertMetadata($tlsSettings);
-        if (self::isSelfSignedAutoCert($autoCert) && !empty($autoCert['sha256'])) {
+        if (self::isTrustedAutoCert($autoCert) && !empty($autoCert['sha256'])) {
             $tlsSettings['pinnedPeerCertSha256'] = $autoCert['sha256'];
-            if (empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['vcn'])) {
+            if (self::isSelfSignedAutoCert($autoCert) && empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['vcn'])) {
                 $tlsSettings['verifyPeerCertByName'] = self::autoCertVerifyName($autoCert, $defaultVerifyName, $connectionHost);
             }
         }
@@ -382,6 +382,16 @@ class Helper
         $mode = strtolower(trim((string)($autoCert['mode'] ?? '')));
         return in_array($source, ['self', 'self_signed', 'fallback_self', 'self_fallback'], true)
             || in_array($mode, ['self', 'self_signed'], true);
+    }
+
+    private static function isTrustedAutoCert(array $autoCert): bool
+    {
+        if (!$autoCert || strtolower(trim((string)($autoCert['status'] ?? ''))) === 'error') {
+            return false;
+        }
+
+        $source = strtolower(trim((string)($autoCert['source'] ?? '')));
+        return in_array($source, ['acme_dns', 'acme_http', 'acme_ip', 'self', 'self_signed', 'fallback_self', 'self_fallback'], true);
     }
 
     private static function autoCertVerifyName(array $autoCert, string $defaultVerifyName, string $connectionHost): string

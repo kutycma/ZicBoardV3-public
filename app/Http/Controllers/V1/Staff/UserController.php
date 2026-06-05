@@ -45,10 +45,16 @@ class UserController extends Controller
             ->orderBy('id', 'DESC')
             ->get();
         foreach ($subscriptions as $item) {
-            $item->plan_name = $item->plan_id && isset($plans[$item->plan_id])
-                ? $plans[$item->plan_id]->name
-                : null;
-            $item->subscribe_url = Helper::getSubscribeUrl($item->token);
+            $plan = $item->plan_id && isset($plans[$item->plan_id]) ? $plans[$item->plan_id] : null;
+            $item->plan_name = $plan ? $plan->name : null;
+            if ($this->canExposeSubscribeUrl($item, $plans)) {
+                $item->subscribe_url = Helper::getSubscribeUrl($item->token);
+                $item->subscribe_url_hidden = false;
+            } else {
+                $item->subscribe_url = '';
+                $item->subscribe_url_error = 'subscribe_url_disabled';
+                $item->subscribe_url_hidden = true;
+            }
             $item->makeHidden(['token', 'uuid']);
         }
         $user->subscriptions = $subscriptions;
@@ -182,12 +188,30 @@ class UserController extends Controller
         }
         (new UserDeviceService())->ensureWaitingSlot($subscription);
 
+        $responseData = [
+            'success' => true
+        ];
+        if ($this->canExposeSubscribeUrl($subscription)) {
+            $responseData['new_subscribe_url'] = Helper::getSubscribeUrl($subscription->token);
+            $responseData['subscribe_url_hidden'] = false;
+        } else {
+            $responseData['subscribe_url_hidden'] = true;
+        }
+
         return response()->json([
-            'data' => [
-                'success' => true,
-                'new_subscribe_url' => Helper::getSubscribeUrl($subscription->token)
-            ]
+            'data' => $responseData
         ]);
+    }
+
+    private function canExposeSubscribeUrl(UserSubscription $subscription, $plans = null)
+    {
+        $plan = $subscription->relationLoaded('plan') ? $subscription->plan : null;
+        if (!$plan && $subscription->plan_id) {
+            $plan = $plans && isset($plans[$subscription->plan_id])
+                ? $plans[$subscription->plan_id]
+                : Plan::find($subscription->plan_id);
+        }
+        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
     }
 
     private function filter(Request $request, $builder)

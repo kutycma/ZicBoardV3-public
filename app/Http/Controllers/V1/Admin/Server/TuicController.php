@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServerTuic;
+use App\Services\LegacyTlsSettingsService;
 use Illuminate\Http\Request;
 
 class TuicController extends Controller
@@ -22,6 +23,7 @@ class TuicController extends Controller
             'tags' => 'nullable|array',
             'rate' => 'required|numeric',
             'server_name' => 'nullable',
+            'tls_settings' => 'nullable|array',
             'insecure' => 'required|in:0,1',
             'disable_sni' => 'required|in:0,1',
             'udp_relay_mode' => 'nullable',
@@ -34,6 +36,7 @@ class TuicController extends Controller
             if (!$server) {
                 abort(500, 'Máy chủ không tồn tại');
             }
+            $params = LegacyTlsSettingsService::prepareParamsForSave('tuic', $params, $server);
             try {
                 $server->update($params);
             } catch (\Exception $e) {
@@ -44,6 +47,7 @@ class TuicController extends Controller
             ]);
         }
 
+        $params = LegacyTlsSettingsService::prepareParamsForSave('tuic', $params);
         if (!ServerTuic::create($params)) {
             abort(500, 'Tạo thất bại');
         }

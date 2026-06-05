@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserSubscription;
 use App\Services\SubscriptionService;
@@ -39,10 +40,18 @@ class SubscriptionController extends Controller
             $usedTraffic = (int)$subscription->u + (int)$subscription->d;
 
             $subscription->makeHidden(['remarks', 'origin_order_id', 'last_order_id', 'token', 'uuid']);
-            $subscribeUrl = Helper::getSubscribeUrlDetail($subscription->token);
-            $subscription->subscribe_url = $subscribeUrl['url'];
-            $subscription->subscribe_url_error = $subscribeUrl['error'];
-            $subscription->subscribe_url_protected = (bool)($subscribeUrl['protected'] ?? false);
+            if ($this->canExposeSubscribeUrl($subscription)) {
+                $subscribeUrl = Helper::getSubscribeUrlDetail($subscription->token);
+                $subscription->subscribe_url = $subscribeUrl['url'];
+                $subscription->subscribe_url_error = $subscribeUrl['error'];
+                $subscription->subscribe_url_protected = (bool)($subscribeUrl['protected'] ?? false);
+                $subscription->subscribe_url_hidden = false;
+            } else {
+                $subscription->subscribe_url = '';
+                $subscription->subscribe_url_error = 'subscribe_url_disabled';
+                $subscription->subscribe_url_protected = false;
+                $subscription->subscribe_url_hidden = true;
+            }
             $subscription->alive_ip = is_array($aliveIps) ? count($aliveIps) : 0;
             $subscription->reset_day = $userService->getResetDay($serviceUser);
             $subscription->used_traffic = $usedTraffic;
@@ -59,6 +68,15 @@ class SubscriptionController extends Controller
             'data' => $subscriptions,
             'allow_new_period' => config('zicboard.allow_new_period', 0)
         ]);
+    }
+
+    private function canExposeSubscribeUrl(UserSubscription $subscription)
+    {
+        $plan = $subscription->relationLoaded('plan') ? $subscription->plan : null;
+        if (!$plan && $subscription->plan_id) {
+            $plan = Plan::find($subscription->plan_id);
+        }
+        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
     }
 
     public function updateNote(Request $request)

@@ -23,6 +23,7 @@ class ServerTrojanSave extends FormRequest
             'port' => 'required',
             'server_port' => 'required',
             'network' => 'required',
+            'tls_settings' => 'nullable|array',
             'network_settings' => 'nullable',
             'allow_insecure' => 'nullable|in:0,1',
             'server_name' => 'nullable',

@@ -1,7 +1,7 @@
 {
   "name": "EZ-Zic",
   "description": "EZ-Zic user theme for ZicBoard.",
-  "version": "3.0.11",
+  "version": "3.0.12",
   "images": "",
   "config": {
     "PANEL_TYPE": "Xiao-V2board",
@@ -22,10 +22,10 @@
     "API_MIDDLEWARE_KEY": "4c6f8e5f9467dc71",
     "API_MIDDLEWARE_PATH": "/ez/ez",
     "SITE_CONFIG": {
-      "siteName": "EZ THEME",
-      "siteDescription": "EZ UI",
+      "siteName": "ZicBoard V3",
+      "siteDescription": "ZicBoard V3",
       "logo": "",
-      "copyright": "© 2026 EZ THEME. All Rights Reserved.",
+      "copyright": "© 2026 ZicBoard V3. All Rights Reserved.",
       "showLogo": true,
       "landingText": {
         "zh-CN": "探索全球网络无限可能",
@@ -419,7 +419,7 @@
       "placeholder": "Value for SITE_CONFIG.siteName",
       "field_name": "SITE_CONFIG.siteName",
       "field_type": "input",
-      "default_value": "EZ THEME",
+      "default_value": "ZicBoard V3",
       "description": "Tên website hiển thị trong giao diện người dùng, title và các vị trí nhận diện thương hiệu."
     },
     {
@@ -427,7 +427,7 @@
       "placeholder": "Value for SITE_CONFIG.siteDescription",
       "field_name": "SITE_CONFIG.siteDescription",
       "field_type": "input",
-      "default_value": "EZ UI",
+      "default_value": "ZicBoard V3",
       "description": "Mô tả ngắn của website, dùng trên các trang giới thiệu hoặc thông tin hệ thống."
     },
     {
@@ -442,7 +442,7 @@
       "placeholder": "Value for SITE_CONFIG.copyright",
       "field_name": "SITE_CONFIG.copyright",
       "field_type": "input",
-      "default_value": "© 2026 EZ THEME. All Rights Reserved.",
+      "default_value": "© 2026 ZicBoard V3. All Rights Reserved.",
       "description": "Dòng bản quyền hiển thị ở chân trang. Có thể dùng biểu thức năm hiện tại nếu theme hỗ trợ."
     },
     {

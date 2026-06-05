@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ServerTrojanSave;
 use App\Http\Requests\Admin\ServerTrojanUpdate;
 use App\Models\ServerTrojan;
+use App\Services\LegacyTlsSettingsService;
 use App\Services\ServerService;
 use Illuminate\Http\Request;
 
@@ -19,6 +20,7 @@ class TrojanController extends Controller
             if (!$server) {
                 abort(500, 'Máy chủ không tồn tại');
             }
+            $params = LegacyTlsSettingsService::prepareParamsForSave('trojan', $params, $server);
             try {
                 $server->update($params);
             } catch (\Exception $e) {
@@ -29,6 +31,7 @@ class TrojanController extends Controller
             ]);
         }
 
+        $params = LegacyTlsSettingsService::prepareParamsForSave('trojan', $params);
         if (!ServerTrojan::create($params)) {
             abort(500, 'Tạo thất bại');
         }

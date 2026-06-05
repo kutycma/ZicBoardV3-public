@@ -57,6 +57,7 @@ class ZicBoardUpdate extends Command
             $this->info('database/update.sql has not changed; skipping database update SQL.');
             $this->repairSubscriptionMigration();
             $this->repairZicnodeNodeCompatibility();
+            $this->repairLegacyTlsSettingsSchema();
             $this->repairSingleSubscriptionMode();
             \Artisan::call('horizon:terminate');
             $this->info('Update completed. Queue workers were restarted, no further action is required.');
@@ -94,6 +95,7 @@ class ZicBoardUpdate extends Command
         }
         $this->repairSubscriptionMigration();
         $this->repairZicnodeNodeCompatibility();
+        $this->repairLegacyTlsSettingsSchema();
         $this->repairSingleSubscriptionMode();
         if ($hasSqlErrors) {
             $this->warn('Database update SQL had errors; checksum was not saved so the update can retry next time.');
@@ -575,6 +577,24 @@ class ZicBoardUpdate extends Command
                 WHERE TRIM(COALESCE(`network`, '')) = ''
                     OR `network` NOT IN ('tcp', 'ws', 'grpc', 'http', 'httpupgrade', 'xhttp', 'splithttp')
             ");
+        }
+    }
+
+    private function repairLegacyTlsSettingsSchema()
+    {
+        $columns = [
+            'v2_server_trojan' => ['network_settings', 'ADD `tls_settings` text AFTER `network_settings`'],
+            'v2_server_hysteria' => ['server_name', 'ADD `tls_settings` text AFTER `server_name`'],
+            'v2_server_tuic' => ['server_name', 'ADD `tls_settings` text AFTER `server_name`'],
+            'v2_server_anytls' => ['server_name', 'ADD `tls_settings` text AFTER `server_name`'],
+        ];
+
+        foreach ($columns as $table => $definition) {
+            if (!Schema::hasTable($table)) {
+                continue;
+            }
+            $afterColumn = Schema::hasColumn($table, $definition[0]) ? $definition[1] : 'ADD `tls_settings` text';
+            $this->ensureColumn($table, 'tls_settings', $afterColumn);
         }
     }
 

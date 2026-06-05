@@ -169,7 +169,15 @@ class HomeController extends Controller
             }
 
             $user->ips = implode(', ', $ips);
-            $user->subscribe_url = Helper::getSubscribeUrl($user->token);
+            $plan = $user->plan_id && isset($plans[$user->plan_id]) ? $plans[$user->plan_id] : null;
+            if ($this->canExposeSubscribeUrl($plan)) {
+                $user->subscribe_url = Helper::getSubscribeUrl($user->token);
+                $user->subscribe_url_hidden = false;
+            } else {
+                $user->subscribe_url = '';
+                $user->subscribe_url_error = 'subscribe_url_disabled';
+                $user->subscribe_url_hidden = true;
+            }
             $user->reset_day = $userService->getResetDay($user);
             $user->makeHidden(['token', 'uuid', 'subscription']);
         }
@@ -181,6 +189,11 @@ class HomeController extends Controller
             'current' => $current,
             'pageSize' => $pageSize,
         ]);
+    }
+
+    private function canExposeSubscribeUrl($plan)
+    {
+        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
     }
 
     private function activeStaff(Request $request)

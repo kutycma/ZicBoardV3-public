@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServerVless;
+use App\Services\LegacyTlsSettingsService;
 use App\Services\Core\ProtectedFeatureService;
 use Illuminate\Http\Request;
 
@@ -39,8 +40,12 @@ class VlessController extends Controller
                 abort(500, 'Máy chủ không tồn tại');
             }
             $params = $this->preserveTlsSecrets($params, $server);
+            $params = LegacyTlsSettingsService::prepareParamsForSave('vless', $params, $server);
         }
 
+        if (!$server) {
+            $params = LegacyTlsSettingsService::prepareParamsForSave('vless', $params);
+        }
         $params = (new ProtectedFeatureService())->prepareServerParams('vless', $params);
         if ($params['network'] != 'tcp') {
             $params['flow'] = null;

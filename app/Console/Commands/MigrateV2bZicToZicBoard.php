@@ -824,6 +824,7 @@ class MigrateV2bZicToZicBoard extends Command
         }
 
         $this->repairTrojanRuntimeSchema();
+        $this->repairLegacyTlsSettingsSchema();
 
         if (Schema::hasTable('v2_server_vless')) {
             $this->ensureColumn('v2_server_vless', 'encryption', "ADD `encryption` varchar(64) DEFAULT NULL AFTER `network_settings`");
@@ -850,6 +851,23 @@ class MigrateV2bZicToZicBoard extends Command
                 SET `network` = 'tcp'
                 WHERE TRIM(COALESCE(`network`, '')) = ''
             ");
+        }
+    }
+
+    private function repairLegacyTlsSettingsSchema()
+    {
+        $columns = [
+            'v2_server_trojan' => ['network_settings', 'ADD `tls_settings` text' . $this->afterColumn('v2_server_trojan', 'network_settings')],
+            'v2_server_hysteria' => ['server_name', 'ADD `tls_settings` text' . $this->afterColumn('v2_server_hysteria', 'server_name')],
+            'v2_server_tuic' => ['server_name', 'ADD `tls_settings` text' . $this->afterColumn('v2_server_tuic', 'server_name')],
+            'v2_server_anytls' => ['server_name', 'ADD `tls_settings` text' . $this->afterColumn('v2_server_anytls', 'server_name')],
+        ];
+
+        foreach ($columns as $table => $definition) {
+            if (!Schema::hasTable($table)) {
+                continue;
+            }
+            $this->ensureColumn($table, 'tls_settings', $definition[1]);
         }
     }
 

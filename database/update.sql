@@ -1065,3 +1065,15 @@ CREATE TABLE IF NOT EXISTS `v2_happ_subscribe_cache` (
 
 ALTER TABLE `v2_plan`
 ADD `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1' AFTER `renew`;
+
+ALTER TABLE `v2_server_trojan`
+    ADD `tls_settings` text NULL AFTER `network_settings`;
+
+ALTER TABLE `v2_server_hysteria`
+    ADD `tls_settings` text NULL AFTER `server_name`;
+
+ALTER TABLE `v2_server_tuic`
+    ADD `tls_settings` text NULL AFTER `server_name`;
+
+ALTER TABLE `v2_server_anytls`
+    ADD `tls_settings` text NULL AFTER `server_name`;

@@ -14,6 +14,7 @@ class ServerHysteria extends Model
         'updated_at' => 'timestamp',
         'group_id' => 'array',
         'route_id' => 'array',
+        'tls_settings' => 'array',
         'tags' => 'array'
     ];
 }

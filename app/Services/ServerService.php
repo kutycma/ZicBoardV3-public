@@ -63,7 +63,7 @@ class ServerService
             } else {
                 $vmess[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VMESS_LAST_CHECK_AT', $vmess[$key]['id']));
             }
-            $servers[] = $vmess[$key]->toArray();
+            $servers[] = ProtectedFeatureService::redactServerSecrets($vmess[$key]->toArray());
         }
 
 
@@ -87,7 +87,7 @@ class ServerService
             } else {
                 $trojan[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TROJAN_LAST_CHECK_AT', $trojan[$key]['id']));
             }
-            $servers[] = $trojan[$key]->toArray();
+            $servers[] = ProtectedFeatureService::redactServerSecrets($trojan[$key]->toArray());
         }
         return $servers;
     }
@@ -106,7 +106,7 @@ class ServerService
                 $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TUIC_LAST_CHECK_AT', $v['parent_id']));
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
             }
-            $availableServers[] = $servers[$key]->toArray();
+            $availableServers[] = ProtectedFeatureService::redactServerSecrets($servers[$key]->toArray());
         }
         return $availableServers;
     }
@@ -126,7 +126,7 @@ class ServerService
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
             }
             $servers[$key]['server_key'] = Helper::getServerKey($servers[$key]['created_at'], 16);
-            $availableServers[] = $servers[$key]->toArray();
+            $availableServers[] = ProtectedFeatureService::redactServerSecrets($servers[$key]->toArray());
         }
         return $availableServers;
     }
@@ -175,7 +175,7 @@ class ServerService
                 $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['parent_id']));
                 $anytls[$key]['created_at'] = $anytls[$v['parent_id']]['created_at'];
             }
-            $servers[] = $anytls[$key]->toArray();
+            $servers[] = ProtectedFeatureService::redactServerSecrets($anytls[$key]->toArray());
         }
         return $servers;
     }

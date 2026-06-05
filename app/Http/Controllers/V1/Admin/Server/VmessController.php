@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ServerVmessSave;
 use App\Http\Requests\Admin\ServerVmessUpdate;
 use App\Models\ServerVmess;
+use App\Services\LegacyTlsSettingsService;
 use Illuminate\Http\Request;
 
 class VmessController extends Controller
@@ -19,6 +20,7 @@ class VmessController extends Controller
             if (!$server) {
                 abort(500, 'Máy chủ không tồn tại');
             }
+            $params = LegacyTlsSettingsService::prepareParamsForSave('vmess', $params, $server);
             try {
                 $server->update($params);
             } catch (\Exception $e) {
@@ -29,6 +31,7 @@ class VmessController extends Controller
             ]);
         }
 
+        $params = LegacyTlsSettingsService::prepareParamsForSave('vmess', $params);
         if (!ServerVmess::create($params)) {
             abort(500, 'Tạo thất bại');
         }

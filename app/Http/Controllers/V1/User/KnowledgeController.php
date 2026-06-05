@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Knowledge;
+use App\Models\Plan;
 use App\Models\User;
 use App\Services\SubscriptionService;
 use App\Services\UserService;
@@ -34,11 +35,16 @@ class KnowledgeController extends Controller
                 $this->formatAccessData($knowledge['body']);
             }
             $subscribeTokenValue = $subscription ? $subscription->token : $user['token'];
-            $subscribeUrlDetail = Helper::getSubscribeUrlDetail((string)$subscribeTokenValue);
-            $subscribeUrl = (string)($subscribeUrlDetail['url'] ?? '');
-            $subscribeToken = Helper::isHappSubscribeEncryptEnabled()
-                ? ''
-                : $subscribeTokenValue;
+            $canExposeSubscribeUrl = $this->canExposeSubscribeUrl($subscription, $user->plan_id ?? null);
+            $subscribeUrl = '';
+            $subscribeToken = '';
+            if ($canExposeSubscribeUrl) {
+                $subscribeUrlDetail = Helper::getSubscribeUrlDetail((string)$subscribeTokenValue);
+                $subscribeUrl = (string)($subscribeUrlDetail['url'] ?? '');
+                $subscribeToken = Helper::isHappSubscribeEncryptEnabled()
+                    ? ''
+                    : $subscribeTokenValue;
+            }
             $knowledge['body'] = str_replace('{{siteName}}', config('zicboard.app_name', 'ZicBoard'), $knowledge['body']);
             $knowledge['body'] = str_replace('{{subscribeUrl}}', $subscribeUrl, $knowledge['body']);
             $knowledge['body'] = str_replace('{{urlEncodeSubscribeUrl}}', urlencode($subscribeUrl), $knowledge['body']);
@@ -89,5 +95,18 @@ class KnowledgeController extends Controller
                 $body = str_replace($accessData, '<div class="zicboard-no-access">'. __('You must have a valid subscription to view content in this area') .'</div>', $body);
             }
         }
+    }
+
+    private function canExposeSubscribeUrl($subscription, $planId)
+    {
+        $plan = null;
+        if ($subscription) {
+            $plan = $subscription->relationLoaded('plan') ? $subscription->plan : null;
+            $planId = $subscription->plan_id ?: $planId;
+        }
+        if (!$plan && $planId) {
+            $plan = Plan::find($planId);
+        }
+        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
     }
 }
