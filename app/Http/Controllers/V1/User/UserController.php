@@ -8,11 +8,13 @@ use App\Http\Requests\User\UserRedeemGiftCard;
 use App\Http\Requests\User\UserTransfer;
 use App\Http\Requests\User\UserUpdate;
 use App\Models\Giftcard;
+use App\Models\InviteCode;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\UserDevice;
+use App\Models\UserSubscription;
 use App\Services\AuthService;
 use App\Services\OrderService;
 use App\Services\SubscriptionService;
@@ -85,6 +87,58 @@ class UserController extends Controller
         }
         $authService = new AuthService($user);
         $authService->removeAllSession();
+        return response([
+            'data' => true
+        ]);
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        $email = trim((string)$request->input('email', ''));
+        if ($email === '') {
+            abort(500, __('Email is required'));
+        }
+
+        $user = User::find($request->user['id']);
+        if (!$user) {
+            abort(500, __('The user does not exist'));
+        }
+        if ((int)($request->user['is_admin'] ?? 0) === 1 || (int)($user->is_admin ?? 0) === 1) {
+            abort(500, __('Admin account cannot be deleted here'));
+        }
+        if (strtolower($email) !== strtolower((string)$user->email)) {
+            abort(500, __('Email does not match'));
+        }
+        $currentAuthData = $request->input('auth_data') ?? $request->header('authorization');
+
+        DB::beginTransaction();
+        try {
+            $authService = new AuthService($user);
+            $authService->removeAllSession();
+            if ($currentAuthData) {
+                Cache::forget($currentAuthData);
+            }
+
+            $subscriptionIds = UserSubscription::where('user_id', $user->id)->pluck('id')->all();
+            UserDevice::where('user_id', $user->id)->delete();
+            foreach ($subscriptionIds as $subscriptionId) {
+                Cache::forget('ALIVE_IP_SUBSCRIPTION_' . $subscriptionId);
+            }
+            UserSubscription::where('user_id', $user->id)->delete();
+            InviteCode::where('user_id', $user->id)->delete();
+            User::where('invite_user_id', $user->id)->update(['invite_user_id' => null]);
+            Cache::forget('ALIVE_IP_USER_' . $user->id);
+
+            if (!$user->delete()) {
+                throw new \Exception(__('Delete account failed'));
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            abort(500, $e->getMessage() ?: __('Delete account failed'));
+        }
+
         return response([
             'data' => true
         ]);
