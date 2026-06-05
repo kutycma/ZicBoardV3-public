@@ -311,17 +311,53 @@ class Helper
         return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
     }
 
-    private static function addTlsPinParams(array &$config, array $tlsSettings): void
+    private static function addTlsPinParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
     {
         $pinned = trim((string)self::firstTlsSetting($tlsSettings, ['pinnedPeerCertSha256', 'pinned_peer_cert_sha256', 'pcs']));
         if ($pinned !== '') {
             $config['pinnedPeerCertSha256'] = $pinned;
+            $config['pcs'] = $pinned;
         }
 
         $verifyName = trim((string)self::firstTlsSetting($tlsSettings, ['verifyPeerCertByName', 'verify_peer_cert_by_name', 'vcn']));
+        $defaultVerifyName = trim($defaultVerifyName);
+        $connectionHost = self::normalizeHostForCompare($connectionHost);
+        if (
+            $pinned !== ''
+            && $defaultVerifyName !== ''
+            && (
+                $verifyName === ''
+                || (
+                    $connectionHost !== ''
+                    && self::normalizeHostForCompare($verifyName) === $connectionHost
+                    && self::normalizeHostForCompare($defaultVerifyName) !== $connectionHost
+                )
+            )
+        ) {
+            $verifyName = $defaultVerifyName;
+        }
         if ($verifyName !== '') {
             $config['verifyPeerCertByName'] = $verifyName;
+            $config['vcn'] = $verifyName;
         }
+
+        return $pinned !== '';
+    }
+
+    private static function normalizeHostForCompare(string $host): string
+    {
+        $host = trim($host);
+        if ($host === '') {
+            return '';
+        }
+        if (($parsed = parse_url($host)) && !empty($parsed['host'])) {
+            $host = $parsed['host'];
+        }
+        $host = trim($host, '[]');
+        if (strpos($host, ':') !== false && substr_count($host, ':') === 1) {
+            [$host] = explode(':', $host, 2);
+        }
+        return strtolower(trim($host));
     }
 
     public static function formatHost($host)
@@ -373,11 +409,12 @@ class Helper
 
         if ($server['tls']) {
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
-            if (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
+            $config['sni'] = $sni;
+            $hasPinnedCert = self::addTlsPinParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
+            if (!$hasPinnedCert && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
                 $config['allowInsecure'] = 1;
             }
-            $config['sni'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
-            self::addTlsPinParams($config, $tlsSettings);
         }
         
         $network = (string)$server['network'];
@@ -445,11 +482,12 @@ class Helper
 
         if ($server['tls']) {
             $tlsSettings = $server['tls_settings'] ?? [];
-            $config['sni'] = $tlsSettings['server_name'] ?? '';
-            if (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
+            $config['sni'] = $sni;
+            $hasPinnedCert = self::addTlsPinParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
+            if (!$hasPinnedCert && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
                 $config['insecure'] = 1;
             }
-            self::addTlsPinParams($config, $tlsSettings);
             if ($server['tls'] == 2) {
                 $config['pbk'] = $tlsSettings['public_key'] ?? '';
                 $config['sid'] = $tlsSettings['short_id'] ?? '';
@@ -475,15 +513,25 @@ class Helper
     public static function buildTrojanUri($password, $server)
     {
         $tlsSettings = $server['tls_settings'] ?? [];
+        $sni = trim((string)($server['server_name'] ?? ''));
+        if ($sni === '') {
+            $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
+        }
+        $tlsEnabled = !array_key_exists('tls', $server) || (int)$server['tls'] !== 0;
         $config = [
-            'peer' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
-            'sni' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
             'type'=> $server['network'],
+            'peer' => $sni,
+            'sni' => $sni,
         ];
-        if (self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+        if ($tlsEnabled) {
+            $config = ['security' => 'tls'] + $config;
+        }
+        $hasPinnedCert = $tlsEnabled
+            ? self::addTlsPinParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''))
+            : false;
+        if ($tlsEnabled && !$hasPinnedCert && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
             $config['allowInsecure'] = 1;
         }
-        self::addTlsPinParams($config, $tlsSettings);
 
         if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
             if($server['network'] === "grpc" && isset($server['network_settings']['serviceName'])) {
