@@ -174,6 +174,60 @@ class ProtectedFeatureService
         return self::redactRecursive($server, $blocked);
     }
 
+    public static function sanitizeZicnodeTlsSettings(array $config, bool $emptyAsObject = false): array
+    {
+        $tlsMode = (int)($config['tls'] ?? 0);
+        $settings = self::tlsSettingsRootToArray($config['tls_settings'] ?? []);
+
+        if ($tlsMode === 0) {
+            $config['tls_settings'] = $emptyAsObject ? (object)[] : [];
+            return $config;
+        }
+
+        unset($settings['allow_insecure'], $settings['allowInsecure']);
+
+        $realityKeys = [
+            'dest',
+            'server_port',
+            'xver',
+            'private' . '_key',
+            'public' . '_key',
+            'short_id',
+            'ech',
+            'ech_server_name',
+            'ech' . '_key',
+            'ech_config',
+        ];
+        $normalTlsKeys = [
+            'cert_mode',
+            'provider',
+            'dns_env',
+            'cert_file',
+            'key_file',
+            'reject_unknown_sni',
+            'auto_cert',
+        ];
+
+        if ($tlsMode === 1) {
+            foreach ($realityKeys as $key) {
+                unset($settings[$key]);
+            }
+        } elseif ($tlsMode === 2) {
+            foreach ($normalTlsKeys as $key) {
+                unset($settings[$key]);
+            }
+        }
+
+        foreach ($settings as $key => $value) {
+            if ($value === '' || $value === null || (is_array($value) && !$value)) {
+                unset($settings[$key]);
+            }
+        }
+
+        $config['tls_settings'] = $settings ?: ($emptyAsObject ? (object)[] : []);
+        return $config;
+    }
+
     private static function zicnodeAutoTLSConfig(): array
     {
         $enabled = (int)config('zicboard.zicnode_auto_tls_enable', 1) === 1;
@@ -233,7 +287,25 @@ class ProtectedFeatureService
                 : (int)self::boolish($config['zero_rtt_handshake']);
         }
 
-        return $config;
+        return self::sanitizeZicnodeTlsSettings($config, true);
+    }
+
+    private static function tlsSettingsRootToArray($value): array
+    {
+        if ($value instanceof \stdClass) {
+            $value = json_decode(json_encode($value), true);
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+        }
+
+        if (!is_array($value) || self::isListArray($value)) {
+            return [];
+        }
+
+        return $value;
     }
 
     private static function jsonObjectRoot($value)

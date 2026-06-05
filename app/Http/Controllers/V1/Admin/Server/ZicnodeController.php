@@ -54,6 +54,7 @@ class ZicnodeController extends Controller
             $params = $this->dropStaleAutoCert($params, $server);
         }
 
+        $params = ProtectedFeatureService::sanitizeZicnodeTlsSettings($params);
         $params = (new ProtectedFeatureService())->prepareServerParams('zicnode', $params);
 
         if ($server) {
@@ -78,7 +79,8 @@ class ZicnodeController extends Controller
     private function preserveTlsSecrets(array $params, ServerZicnode $server): array
     {
         $tlsSettingsKey = 'tls' . '_settings';
-        $secretKeys = ['private' . '_key', 'ech' . '_key', 'dns' . '_env', 'auto_cert'];
+        $tlsMode = (int)($params['tls'] ?? $server->getAttribute('tls') ?? 0);
+        $secretKeys = [];
 
         $existing = $server->getAttribute($tlsSettingsKey);
         if (!is_array($existing)) {
@@ -89,15 +91,17 @@ class ZicnodeController extends Controller
             ? $params[$tlsSettingsKey]
             : [];
 
-        foreach ($secretKeys as $key) {
-            if (
-                $key === 'dns' . '_env'
-                && array_key_exists('cert_mode', $incoming)
-                && $this->normalizedCertMode($incoming['cert_mode']) === 'auto'
-            ) {
-                continue;
+        if ($tlsMode === 2) {
+            $secretKeys = ['private' . '_key', 'ech' . '_key'];
+        } elseif ($tlsMode === 1) {
+            $secretKeys = ['auto_cert'];
+            $certMode = $this->normalizedCertMode($incoming['cert_mode'] ?? $existing['cert_mode'] ?? '');
+            if ($certMode === 'dns') {
+                $secretKeys[] = 'dns' . '_env';
             }
+        }
 
+        foreach ($secretKeys as $key) {
             $incomingEmpty = !array_key_exists($key, $incoming)
                 || $incoming[$key] === ''
                 || $incoming[$key] === null
@@ -121,6 +125,12 @@ class ZicnodeController extends Controller
         $incoming = isset($params[$tlsSettingsKey]) && is_array($params[$tlsSettingsKey])
             ? $params[$tlsSettingsKey]
             : [];
+
+        if ((int)($params['tls'] ?? $server->getAttribute('tls') ?? 0) !== 1) {
+            unset($incoming['auto_cert']);
+            $params[$tlsSettingsKey] = $incoming;
+            return $params;
+        }
 
         if (!is_array($existing) || empty($incoming['auto_cert'] ?? $existing['auto_cert'] ?? null)) {
             return $params;
