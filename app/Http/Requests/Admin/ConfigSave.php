@@ -65,6 +65,10 @@ class ConfigSave extends FormRequest
         'device_limit_mode' => 'in:0,1',
         'server_node_report_min_traffic' => 'integer',
         'server_device_online_min_traffic' => 'integer',
+        'zicnode_auto_tls_enable' => 'in:0,1',
+        'zicnode_auto_tls_dns_provider' => 'nullable|string',
+        'zicnode_auto_tls_dns_env' => 'nullable|string',
+        'zicnode_auto_tls_self_fallback' => 'in:0,1',
         // frontend
         'frontend_theme' => '',
         'frontend_theme_sidebar' => 'nullable|in:dark,light',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Server;
 
 use App\Http\Controllers\Controller;
+use App\Services\HappSubscribeCacheService;
 use App\Services\ServerService;
 use App\Services\Core\ProtectedFeatureService;
 use App\Services\UserDeviceService;
@@ -305,13 +306,69 @@ class UniProxyController extends Controller
         return $this->etaggedResponse($request, $response);
     }
 
+    public function certReport(Request $request)
+    {
+        if ($this->nodeType !== 'zicnode') {
+            abort(500, 'Cert report only supports zicnode');
+        }
+
+        $data = $request->json()->all();
+        if (empty($data)) {
+            $data = $request->all();
+        }
+        if (!is_array($data)) {
+            return response(['error' => 'Invalid cert report'], 400);
+        }
+
+        $tlsSettings = $this->nodeInfo->tls_settings;
+        if (!is_array($tlsSettings)) {
+            $tlsSettings = [];
+        }
+        $previous = is_array($tlsSettings['auto_cert'] ?? null) ? $tlsSettings['auto_cert'] : [];
+
+        $autoCert = [
+            'status' => $this->limitedCertReportString($data['status'] ?? 'ok', 32),
+            'target' => $this->limitedCertReportString($data['target'] ?? '', 255),
+            'mode' => $this->limitedCertReportString($data['mode'] ?? '', 32),
+            'source' => $this->limitedCertReportString($data['source'] ?? '', 32),
+            'sha256' => $this->limitedCertReportString($data['sha256'] ?? '', 191),
+            'not_after' => (int)($data['not_after'] ?? 0),
+        ];
+        if (!empty($data['error'])) {
+            $autoCert['error'] = $this->limitedCertReportString($data['error'], 500);
+        }
+        if ($autoCert['status'] === '') {
+            $autoCert['status'] = 'ok';
+        }
+        if ($autoCert['not_after'] <= 0) {
+            unset($autoCert['not_after']);
+        }
+
+        $changed = $this->certReportChanged($previous, $autoCert);
+        if ($changed) {
+            $autoCert['updated_at'] = time();
+            $tlsSettings['auto_cert'] = array_filter($autoCert, function ($value) {
+                return $value !== null && $value !== '';
+            });
+            $this->nodeInfo->update(['tls_settings' => $tlsSettings]);
+            (new HappSubscribeCacheService())->flushAll();
+        }
+
+        return response([
+            'data' => true,
+            'changed' => $changed,
+        ]);
+    }
+
     private function baseConfig()
     {
         return [
             'panel' => 'zicboard',
             'node_type' => $this->nodeType,
             'push_interval' => (int)config('zicboard.server_push_interval', 60),
-            'pull_interval' => (int)config('zicboard.server_pull_interval', 60)
+            'pull_interval' => (int)config('zicboard.server_pull_interval', 60),
+            'node_report_min_traffic' => (int)config('zicboard.server_node_report_min_traffic', 0),
+            'device_online_min_traffic' => (int)config('zicboard.server_device_online_min_traffic', 0),
         ];
     }
 
@@ -331,5 +388,23 @@ class UniProxyController extends Controller
         }
 
         return response($response)->header('ETag', "\"{$eTag}\"");
+    }
+
+    private function limitedCertReportString($value, int $limit): string
+    {
+        $value = trim((string)$value);
+        return strlen($value) > $limit ? substr($value, 0, $limit) : $value;
+    }
+
+    private function certReportChanged(array $previous, array $next): bool
+    {
+        foreach (['status', 'target', 'mode', 'source', 'sha256', 'not_after', 'error'] as $key) {
+            $old = $previous[$key] ?? null;
+            $new = $next[$key] ?? null;
+            if ((string)$old !== (string)$new) {
+                return true;
+            }
+        }
+        return false;
     }
 }

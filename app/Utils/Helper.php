@@ -344,6 +344,59 @@ class Helper
         return $pinned !== '';
     }
 
+    private static function addTlsClientTrustParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
+    {
+        $autoCert = self::autoCertMetadata($tlsSettings);
+        if (self::isSelfSignedAutoCert($autoCert) && !empty($autoCert['sha256'])) {
+            $tlsSettings['pinnedPeerCertSha256'] = $autoCert['sha256'];
+            if (empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['vcn'])) {
+                $tlsSettings['verifyPeerCertByName'] = self::autoCertVerifyName($autoCert, $defaultVerifyName, $connectionHost);
+            }
+        }
+
+        return self::addTlsPinParams($config, $tlsSettings, $defaultVerifyName, $connectionHost);
+    }
+
+    private static function shouldSuppressLegacyInsecure(array $tlsSettings): bool
+    {
+        $autoCert = self::autoCertMetadata($tlsSettings);
+        if (!$autoCert) {
+            return false;
+        }
+        if (strtolower(trim((string)($autoCert['status'] ?? ''))) === 'error') {
+            return false;
+        }
+        $source = strtolower(trim((string)($autoCert['source'] ?? '')));
+        return in_array($source, ['acme_dns', 'acme_http', 'acme_ip', 'self', 'self_signed', 'fallback_self', 'self_fallback'], true);
+    }
+
+    private static function autoCertMetadata(array $tlsSettings): array
+    {
+        $autoCert = $tlsSettings['auto_cert'] ?? [];
+        return is_array($autoCert) ? $autoCert : [];
+    }
+
+    private static function isSelfSignedAutoCert(array $autoCert): bool
+    {
+        $source = strtolower(trim((string)($autoCert['source'] ?? '')));
+        $mode = strtolower(trim((string)($autoCert['mode'] ?? '')));
+        return in_array($source, ['self', 'self_signed', 'fallback_self', 'self_fallback'], true)
+            || in_array($mode, ['self', 'self_signed'], true);
+    }
+
+    private static function autoCertVerifyName(array $autoCert, string $defaultVerifyName, string $connectionHost): string
+    {
+        $defaultVerifyName = trim($defaultVerifyName);
+        if ($defaultVerifyName !== '') {
+            return $defaultVerifyName;
+        }
+        $target = trim((string)($autoCert['target'] ?? ''));
+        if ($target !== '') {
+            return $target;
+        }
+        return trim($connectionHost);
+    }
+
     private static function normalizeHostForCompare(string $host): string
     {
         $host = trim($host);
@@ -411,8 +464,8 @@ class Helper
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
             $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
             $config['sni'] = $sni;
-            $hasPinnedCert = self::addTlsPinParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
-            if (!$hasPinnedCert && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
+            if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
                 $config['allowInsecure'] = 1;
             }
         }
@@ -484,8 +537,8 @@ class Helper
             $tlsSettings = $server['tls_settings'] ?? [];
             $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
             $config['sni'] = $sni;
-            $hasPinnedCert = self::addTlsPinParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
-            if (!$hasPinnedCert && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
+            if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
                 $config['insecure'] = 1;
             }
             if ($server['tls'] == 2) {
@@ -527,9 +580,9 @@ class Helper
             $config = ['security' => 'tls'] + $config;
         }
         $hasPinnedCert = $tlsEnabled
-            ? self::addTlsPinParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''))
+            ? self::addTlsClientTrustParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''))
             : false;
-        if ($tlsEnabled && !$hasPinnedCert && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+        if ($tlsEnabled && !$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
             $config['allowInsecure'] = 1;
         }
 
@@ -565,19 +618,37 @@ class Helper
         $parts = explode(",", $server['port']);
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
 
-        $uri = $server['version'] == 2 ?
-            "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$server['insecure']}&sni={$server['server_name']}" :
-            "hysteria://{$remote}:{$firstPort}/?protocol=udp&auth={$password}&insecure={$server['insecure']}&peer={$server['server_name']}&upmbps={$server['down_mbps']}&downmbps={$server['up_mbps']}";
+        $tlsSettings = $server['tls_settings'] ?? [];
+        $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
+        $config = $server['version'] == 2
+            ? ['sni' => $sni]
+            : [
+                'protocol' => 'udp',
+                'auth' => $password,
+                'peer' => $sni,
+                'upmbps' => $server['down_mbps'],
+                'downmbps' => $server['up_mbps'],
+            ];
+        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
+        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            $config['insecure'] = 1;
+        }
 
         if (isset($server['obfs']) && isset($server['obfs_password'])) {
-            $obfs_password = rawurlencode($server['obfs_password']);
-            $uri .= $server['version'] == 2 ? 
-                "&obfs={$server['obfs']}&obfs-password={$obfs_password}" :
-                "&obfs={$server['obfs']}&obfsParam{$obfs_password}";
+            $config['obfs'] = $server['obfs'];
+            if ($server['version'] == 2) {
+                $config['obfs-password'] = $server['obfs_password'];
+            } else {
+                $config['obfsParam'] = $server['obfs_password'];
+            }
         }
         if (count($parts) !== 1 || strpos($parts[0], '-') !== false) {
-            $uri .= "&mport={$server['mport']}";
+            $config['mport'] = $server['mport'];
         }
+        $query = http_build_query($config);
+        $uri = $server['version'] == 2
+            ? "hysteria2://{$password}@{$remote}:{$firstPort}/?{$query}"
+            : "hysteria://{$remote}:{$firstPort}/?{$query}";
         return "{$uri}#{$name}\r\n";
     }
 
@@ -589,31 +660,40 @@ class Helper
         $parts = explode(",", $server['port']);
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
         $tlsSettings = $server['tls_settings'] ?? [];
-        $insecure = $tlsSettings['allow_insecure'] ?? 0;
-        $sni = $tlsSettings['server_name'] ?? '';
-        $uri = "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$insecure}&sni={$sni}";
+        $sni = $tlsSettings['server_name'] ?? ($server['server_name'] ?? '');
+        $config = ['sni' => $sni];
+        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
+        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($tlsSettings['allow_insecure'] ?? 0)) {
+            $config['insecure'] = 1;
+        }
 
         if (isset($server['obfs']) && isset($server['obfs_password'])) {
-            $obfs_password = rawurlencode($server['obfs_password']);
-            $uri .= "&obfs={$server['obfs']}&obfs-password={$obfs_password}";
+            $config['obfs'] = $server['obfs'];
+            $config['obfs-password'] = $server['obfs_password'];
         }
         if (count($parts) !== 1 || strpos($parts[0], '-') !== false) {
-            $uri .= "&mport={$server['mport']}";
+            $config['mport'] = $server['mport'];
         }
+        $query = http_build_query($config);
+        $uri = "hysteria2://{$password}@{$remote}:{$firstPort}/?{$query}";
         return "{$uri}#{$name}\r\n";
     }
 
     public static function buildTuicUri($password, $server)
     {
         $tlsSettings = $server['tls_settings'] ?? [];
+        $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
         $config = [
-            'sni' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
+            'sni' => $sni,
             'alpn'=> 'h3',
             'congestion_control' => $server['congestion_control'],
-            'allow_insecure' => $server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
             'disable_sni' => $server['disable_sni'],
             'udp_relay_mode' => $server['udp_relay_mode'],
         ];
+        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
+        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
+            $config['allow_insecure'] = 1;
+        }
 
         $remote = self::formatHost($server['host']);
         $port = $server['port'];
@@ -628,11 +708,16 @@ class Helper
         $tlsSettings = $server['tls_settings'] ?? [];
         $config = [
             'type' => $server['network'] ?? 'tcp',
-            'insecure' => $server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
             'fp' => $tlsSettings['fingerprint'] ?? 'chrome',
         ];
+        $sni = '';
         if (isset($server['server_name']) || isset($tlsSettings['server_name'])) {
-            $config['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
+            $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
+            $config['sni'] = $sni;
+        }
+        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
+        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
+            $config['insecure'] = 1;
         }
         if (isset($server['tls']) && $server['tls'] == 2) {
             $config['security'] = 'reality';

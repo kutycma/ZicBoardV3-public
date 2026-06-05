@@ -79,12 +79,12 @@ class ProtectedFeatureService
         if ($routes !== null) {
             $payload['routes'] = $routes;
         }
+        if ($type === 'zicnode') {
+            $payload['auto_tls'] = self::zicnodeAutoTLSConfig();
+        }
         $result = (new CoreRpcClient())->call('node.config', $payload);
         if (!is_array($result)) {
             return [];
-        }
-        if ($type === 'zicnode' && !empty($node['host'])) {
-            $result['host'] = $node['host'];
         }
         return $type === 'zicnode'
             ? self::normalizeZicnodeConfigShape($result, true)
@@ -170,8 +170,23 @@ class ProtectedFeatureService
 
     public static function redactServerSecrets(array $server)
     {
-        $blocked = ['private' . '_key', 'ech' . '_key'];
+        $blocked = ['private' . '_key', 'ech' . '_key', 'dns' . '_env'];
         return self::redactRecursive($server, $blocked);
+    }
+
+    private static function zicnodeAutoTLSConfig(): array
+    {
+        $enabled = (int)config('zicboard.zicnode_auto_tls_enable', 1) === 1;
+        if (!$enabled) {
+            return ['enable' => false];
+        }
+
+        return [
+            'enable' => true,
+            'provider' => trim((string)config('zicboard.zicnode_auto_tls_dns_provider', '')),
+            'dns_env' => trim((string)config('zicboard.zicnode_auto_tls_dns_env', '')),
+            'self_fallback' => (int)config('zicboard.zicnode_auto_tls_self_fallback', 1) === 1,
+        ];
     }
 
     private static function redactRecursive(array $value, array $blocked)

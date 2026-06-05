@@ -51,6 +51,7 @@ class ZicnodeController extends Controller
                 abort(500, 'Máy chủ không tồn tại');
             }
             $params = $this->preserveTlsSecrets($params, $server);
+            $params = $this->dropStaleAutoCert($params, $server);
         }
 
         $params = (new ProtectedFeatureService())->prepareServerParams('zicnode', $params);
@@ -77,7 +78,7 @@ class ZicnodeController extends Controller
     private function preserveTlsSecrets(array $params, ServerZicnode $server): array
     {
         $tlsSettingsKey = 'tls' . '_settings';
-        $secretKeys = ['private' . '_key', 'ech' . '_key'];
+        $secretKeys = ['private' . '_key', 'ech' . '_key', 'dns' . '_env', 'auto_cert'];
 
         $existing = $server->getAttribute($tlsSettingsKey);
         if (!is_array($existing)) {
@@ -90,8 +91,20 @@ class ZicnodeController extends Controller
 
         foreach ($secretKeys as $key) {
             if (
+                $key === 'dns' . '_env'
+                && array_key_exists('cert_mode', $incoming)
+                && $this->normalizedCertMode($incoming['cert_mode']) === 'auto'
+            ) {
+                continue;
+            }
+
+            $incomingEmpty = !array_key_exists($key, $incoming)
+                || $incoming[$key] === ''
+                || $incoming[$key] === null
+                || (is_array($incoming[$key]) && !$incoming[$key]);
+            if (
                 array_key_exists($key, $existing)
-                && (!array_key_exists($key, $incoming) || $incoming[$key] === '' || $incoming[$key] === null)
+                && $incomingEmpty
             ) {
                 $incoming[$key] = $existing[$key];
             }
@@ -99,6 +112,86 @@ class ZicnodeController extends Controller
 
         $params[$tlsSettingsKey] = $incoming;
         return $params;
+    }
+
+    private function dropStaleAutoCert(array $params, ServerZicnode $server): array
+    {
+        $tlsSettingsKey = 'tls' . '_settings';
+        $existing = $server->getAttribute($tlsSettingsKey);
+        $incoming = isset($params[$tlsSettingsKey]) && is_array($params[$tlsSettingsKey])
+            ? $params[$tlsSettingsKey]
+            : [];
+
+        if (!is_array($existing) || empty($incoming['auto_cert'] ?? $existing['auto_cert'] ?? null)) {
+            return $params;
+        }
+
+        if (!$this->autoCertContextChanged($params, $server, $incoming, $existing)) {
+            return $params;
+        }
+
+        unset($incoming['auto_cert']);
+        $params[$tlsSettingsKey] = $incoming;
+        return $params;
+    }
+
+    private function autoCertContextChanged(array $params, ServerZicnode $server, array $incoming, array $existing): bool
+    {
+        if ((int)($params['tls'] ?? $server->getAttribute('tls')) !== (int)$server->getAttribute('tls')) {
+            return true;
+        }
+
+        if ($this->effectiveCertTarget($params, $server, $incoming) !== $this->effectiveCertTarget([], $server, $existing)) {
+            return true;
+        }
+
+        if ($this->normalizedCertMode($incoming['cert_mode'] ?? '') !== $this->normalizedCertMode($existing['cert_mode'] ?? '')) {
+            return true;
+        }
+
+        foreach (['cert_file', 'key_file'] as $key) {
+            if ($this->normalizedScalar($incoming[$key] ?? '') !== $this->normalizedScalar($existing[$key] ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function effectiveCertTarget(array $params, ServerZicnode $server, array $tlsSettings): string
+    {
+        $serverName = $this->firstServerName($tlsSettings);
+        if ($serverName !== '') {
+            return strtolower($serverName);
+        }
+        return strtolower($this->normalizedScalar($params['host'] ?? $server->getAttribute('host')));
+    }
+
+    private function firstServerName(array $tlsSettings): string
+    {
+        if (!empty($tlsSettings['server_names']) && is_array($tlsSettings['server_names'])) {
+            foreach ($tlsSettings['server_names'] as $serverName) {
+                $serverName = $this->normalizedScalar($serverName);
+                if ($serverName !== '') {
+                    return $serverName;
+                }
+            }
+        }
+        return $this->normalizedScalar($tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '');
+    }
+
+    private function normalizedCertMode($value): string
+    {
+        $mode = strtolower($this->normalizedScalar($value));
+        return $mode === '' ? 'auto' : $mode;
+    }
+
+    private function normalizedScalar($value): string
+    {
+        if (is_array($value)) {
+            return trim(json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        }
+        return trim((string)$value);
     }
 
     public function drop(Request $request)

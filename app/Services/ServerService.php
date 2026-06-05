@@ -474,6 +474,8 @@ class ServerService
                 $nodeId,
                 $apiKeyArg
             );
+
+            $servers[$k] = ProtectedFeatureService::redactServerSecrets($servers[$k]);
         }
         return $servers;
     }

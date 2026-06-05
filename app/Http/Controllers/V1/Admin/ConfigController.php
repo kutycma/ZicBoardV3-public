@@ -259,7 +259,11 @@ class ConfigController extends Controller
             'server_push_interval' => config('zicboard.server_push_interval', 60),
             'server_node_report_min_traffic' => config('zicboard.server_node_report_min_traffic', 0),
             'server_device_online_min_traffic' => config('zicboard.server_device_online_min_traffic', 0),
-            'device_limit_mode' => config('zicboard.device_limit_mode', 0)
+            'device_limit_mode' => config('zicboard.device_limit_mode', 0),
+            'zicnode_auto_tls_enable' => (int)config('zicboard.zicnode_auto_tls_enable', 1),
+            'zicnode_auto_tls_dns_provider' => config('zicboard.zicnode_auto_tls_dns_provider', ''),
+            'zicnode_auto_tls_dns_env' => config('zicboard.zicnode_auto_tls_dns_env', ''),
+            'zicnode_auto_tls_self_fallback' => (int)config('zicboard.zicnode_auto_tls_self_fallback', 1),
         ];
     }
 

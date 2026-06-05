@@ -14,6 +14,7 @@ class HappSubscribeCacheService
     const TABLE = 'v2_happ_subscribe_cache';
     const CACHE_PREFIX = 'HAPP_SUBSCRIBE_URL:';
     const LOCK_PREFIX = 'HAPP_SUBSCRIBE_URL_LOCK:';
+    const VERSION_KEY = 'HAPP_SUBSCRIBE_URL_VERSION';
     const FAILURE_COOLDOWN_KEY = 'HAPP_SUBSCRIBE_URL_FAILURE_COOLDOWN';
     const FAILURE_ALERT_KEY = 'HAPP_SUBSCRIBE_URL_FAILURE_ALERT';
     const FAILURE_ACTIVE_KEY = 'HAPP_SUBSCRIBE_URL_FAILURE_ACTIVE';
@@ -48,6 +49,18 @@ class HappSubscribeCacheService
         Cache::forget($cacheKey);
         if ($this->hasTable()) {
             DB::table(self::TABLE)->where('cache_key', $cacheKey)->delete();
+        }
+    }
+
+    public function flushAll(): void
+    {
+        Cache::forever(self::VERSION_KEY, (string)time());
+        Cache::forget(self::FAILURE_COOLDOWN_KEY);
+        Cache::forget(self::FAILURE_ALERT_KEY);
+        Cache::forget(self::FAILURE_ACTIVE_KEY);
+
+        if ($this->hasTable()) {
+            DB::table(self::TABLE)->delete();
         }
     }
 
@@ -288,7 +301,16 @@ class HappSubscribeCacheService
 
     private function cacheKey(string $rawUrl): string
     {
-        return self::CACHE_PREFIX . hash('sha256', $rawUrl);
+        return self::CACHE_PREFIX . $this->cacheVersion() . ':' . hash('sha256', $rawUrl);
+    }
+
+    private function cacheVersion(): string
+    {
+        $version = Cache::get(self::VERSION_KEY, '1');
+        if (is_scalar($version)) {
+            return (string)$version;
+        }
+        return '1';
     }
 
     private function hasTable(): bool

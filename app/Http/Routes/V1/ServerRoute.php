@@ -10,6 +10,8 @@ class ServerRoute
         $router->group([
             'prefix' => 'server',
         ], function ($router) {
+            $router->post('/UniProxy/cert/report', 'V1\\Server\\UniProxyController@certReport');
+            $router->post('/uniproxy/cert/report', 'V1\\Server\\UniProxyController@certReport');
             $router->any('/{class}/{action}', function($class, $action) {
                 $controllers = [
                     'uniproxy' => ['controller' => 'UniProxyController', 'actions' => ['user', 'push', 'alivelist', 'alive', 'config']],
