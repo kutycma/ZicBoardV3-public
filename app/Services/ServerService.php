@@ -475,7 +475,7 @@ class ServerService
                 $apiKeyArg
             );
 
-            $servers[$k] = ProtectedFeatureService::redactServerSecrets($servers[$k]);
+            $servers[$k] = ProtectedFeatureService::sanitizeZicnodeTlsSettings($servers[$k]);
         }
         return $servers;
     }
