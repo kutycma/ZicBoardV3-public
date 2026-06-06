@@ -30,9 +30,7 @@ class PlanSave extends FormRequest
             'reset_traffic_method' => 'nullable|integer|in:0,1,2,3,4',
             'capacity_limit' => 'nullable|integer',
             'speed_limit' => 'nullable|integer',
-            'allow_subscribe_url' => 'in:0,1',
-            'allow_subscribe_url_ua' => 'in:0,1',
-            'subscribe_url_allowed_ua' => 'nullable|string'
+            'allow_subscribe_url' => 'in:0,1'
         ];
     }
 

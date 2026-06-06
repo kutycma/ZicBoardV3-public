@@ -302,8 +302,6 @@ class MigrateV2bZicToZicBoard extends Command
         }
 
         $this->ensureColumn('v2_plan', 'allow_subscribe_url', "ADD `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1'" . $this->afterColumn('v2_plan', 'renew'));
-        $this->ensureColumn('v2_plan', 'allow_subscribe_url_ua', "ADD `allow_subscribe_url_ua` tinyint(1) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_plan', 'allow_subscribe_url'));
-        $this->ensureColumn('v2_plan', 'subscribe_url_allowed_ua', "ADD `subscribe_url_allowed_ua` text NULL" . $this->afterColumn('v2_plan', 'allow_subscribe_url_ua'));
     }
 
     private function repairPaymentRuntimeSchema()

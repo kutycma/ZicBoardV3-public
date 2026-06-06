@@ -16,9 +16,7 @@ class PlanUpdate extends FormRequest
         return [
             'show' => 'in:0,1',
             'renew' => 'in:0,1',
-            'allow_subscribe_url' => 'in:0,1',
-            'allow_subscribe_url_ua' => 'in:0,1',
-            'subscribe_url_allowed_ua' => 'nullable|string'
+            'allow_subscribe_url' => 'in:0,1'
         ];
     }
 

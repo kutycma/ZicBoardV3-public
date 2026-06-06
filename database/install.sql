@@ -209,8 +209,6 @@ CREATE TABLE `v2_plan` (
                             `sort` int(11) DEFAULT NULL,
                             `renew` tinyint(1) NOT NULL DEFAULT '1',
                             `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1',
-                            `allow_subscribe_url_ua` tinyint(1) NOT NULL DEFAULT '0',
-                            `subscribe_url_allowed_ua` text,
                             `content` text,
                            `month_price` int(11) DEFAULT NULL,
                            `quarter_price` int(11) DEFAULT NULL,

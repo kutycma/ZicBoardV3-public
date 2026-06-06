@@ -104,7 +104,7 @@ class ConfigController extends Controller
 
         foreach ($request->validated() as $key => $value) {
             if (array_key_exists($key, ConfigSave::RULES)) {
-                $config[$key] = $value;
+                $config[$key] = $this->normalizeConfigValue($key, $value);
             }
         }
 
@@ -243,7 +243,23 @@ class ConfigController extends Controller
             'show_info_to_server_enable' => (int)config('zicboard.show_info_to_server_enable', 0),
             'show_subscribe_method' => (int)config('zicboard.show_subscribe_method', 0),
             'show_subscribe_expire' => (int)config('zicboard.show_subscribe_expire', 5),
+            'subscribe_url_ua_enable' => (int)config('zicboard.subscribe_url_ua_enable', 0),
+            'subscribe_url_allowed_ua' => config('zicboard.subscribe_url_allowed_ua', ''),
         ];
+    }
+
+    private function normalizeConfigValue($key, $value)
+    {
+        if ($key !== 'subscribe_url_allowed_ua') {
+            return $value;
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', (string)$value);
+        $lines = array_values(array_filter(array_map('trim', is_array($lines) ? $lines : []), function ($line) {
+            return $line !== '';
+        }));
+
+        return $lines ? implode("\n", $lines) : '';
     }
 
     private function frontendConfig()

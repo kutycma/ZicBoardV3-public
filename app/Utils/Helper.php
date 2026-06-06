@@ -113,7 +113,7 @@ class Helper
             return true;
         }
 
-        if ((int)($plan->allow_subscribe_url_ua ?? 0) !== 1 || !$request) {
+        if ((int)config('zicboard.subscribe_url_ua_enable', 0) !== 1 || !$request) {
             return false;
         }
 
@@ -122,7 +122,7 @@ class Helper
             return false;
         }
 
-        $allowedUserAgents = preg_split('/\r\n|\r|\n/', (string)($plan->subscribe_url_allowed_ua ?? ''));
+        $allowedUserAgents = preg_split('/\r\n|\r|\n/', (string)config('zicboard.subscribe_url_allowed_ua', ''));
         if (!is_array($allowedUserAgents)) {
             return false;
         }
