@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\UserSubscription;
 use App\Services\SubscriptionService;
+use App\Services\UserDeviceService;
 use App\Utils\Helper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -129,12 +130,16 @@ class SubscriptionController extends Controller
         }
 
         unset($validated['id']);
-        if (array_key_exists('plan_id', $validated) && $validated['plan_id']) {
-            $plan = Plan::find($validated['plan_id']);
-            if (!$plan) {
-                abort(500, 'Gói không tồn tại');
+        if (array_key_exists('plan_id', $validated)) {
+            if ($validated['plan_id']) {
+                $plan = Plan::find($validated['plan_id']);
+                if (!$plan) {
+                    abort(500, 'Gói không tồn tại');
+                }
+                $validated['group_id'] = $plan->group_id;
+            } else {
+                $validated['group_id'] = null;
             }
-            $validated['group_id'] = $validated['group_id'] ?? $plan->group_id;
         }
 
         $subscriptionService = new SubscriptionService();
@@ -150,6 +155,8 @@ class SubscriptionController extends Controller
         if ($shouldSyncUserSummary) {
             $subscriptionService->syncUserSummary($subscription);
         }
+
+        (new UserDeviceService())->ensureWaitingSlot($subscription);
 
         return response([
             'data' => true
