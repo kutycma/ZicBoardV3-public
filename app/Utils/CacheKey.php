@@ -41,6 +41,7 @@ class CacheKey
         'LAST_SEND_LOGIN_WITH_MAIL_LINK_TIMESTAMP' => 'Last mail login link send time',
         'PASSWORD_ERROR_LIMIT' => 'Password error limit',
         'USER_SESSIONS' => 'User sessions',
+        'CORE_LICENSE_LAST_GOOD_STATUS' => 'Last successful core license status for dashboard display',
         'FORGET_REQUEST_LIMIT' => 'Password reset request limit'
     ];
 

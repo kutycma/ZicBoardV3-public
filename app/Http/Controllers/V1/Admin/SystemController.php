@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Log as LogModel;
+use App\Services\Core\CoreRpcException;
 use App\Services\Core\CoreRpcClient;
 use App\Utils\CacheKey;
 use Illuminate\Http\Request;
@@ -138,13 +139,32 @@ class SystemController extends Controller
         try {
             $rpc = new CoreRpcClient();
             $status = $rpc->call($refresh ? 'license.refresh' : 'license.status');
-            return $this->normalizeCoreLicenseStatus(is_array($status) ? $status : [], true, null);
+            $normalized = $this->normalizeCoreLicenseStatus(is_array($status) ? $status : [], true, null, null);
+            if (!$normalized['requires_renewal']) {
+                Cache::put(CacheKey::get('CORE_LICENSE_LAST_GOOD_STATUS', null), $normalized + ['cached_at' => time()], 120);
+            }
+            return $normalized;
         } catch (\Throwable $e) {
-            return $this->normalizeCoreLicenseStatus([], false, $e->getMessage());
+            $cached = Cache::get(CacheKey::get('CORE_LICENSE_LAST_GOOD_STATUS', null));
+            if (is_array($cached)) {
+                $cached['last_known_good'] = true;
+                $cached['stale'] = true;
+                $cached['last_refresh_error'] = $e->getMessage();
+                $cached['error'] = $e->getMessage();
+                $cached['error_code'] = $e instanceof CoreRpcException ? $e->getCoreCode() : null;
+                $cached['message'] = 'ZicBoard license status is using the last successful core check because the latest RPC check failed.';
+                return $cached;
+            }
+            return $this->normalizeCoreLicenseStatus(
+                [],
+                false,
+                $e->getMessage(),
+                $e instanceof CoreRpcException ? $e->getCoreCode() : null
+            );
         }
     }
 
-    private function normalizeCoreLicenseStatus(array $status, bool $available, $error): array
+    private function normalizeCoreLicenseStatus(array $status, bool $available, $error, $errorCode = null): array
     {
         $state = (string)($status['status'] ?? ($available ? 'unknown' : 'unavailable'));
         $protected = !empty($status['protected_features_enabled']);
@@ -187,6 +207,9 @@ class SystemController extends Controller
             'last_refresh_at' => isset($status['last_refresh_at']) ? (int)$status['last_refresh_at'] : null,
             'blocked_at' => isset($status['blocked_at']) ? (int)$status['blocked_at'] : null,
             'error' => $error ?: ($status['error'] ?? null),
+            'error_code' => $errorCode,
+            'last_known_good' => false,
+            'stale' => false,
         ];
     }
 }

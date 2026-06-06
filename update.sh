@@ -83,10 +83,12 @@ chmod -R 775 storage bootstrap/cache config/theme public/theme bin .zicboard || 
 
 echo "Đang cập nhật zicboard-core nếu cần..."
 php scripts/core-installer.php update
+php artisan zicboard:core:sync
 
 restart_core_service_with_health() {
   local rollback_message="$1"
   if systemctl restart zicboard-core && php scripts/core-installer.php health; then
+    php artisan zicboard:core:doctor
     return 0
   fi
 
@@ -94,6 +96,7 @@ restart_core_service_with_health() {
   php scripts/core-installer.php rollback
   systemctl restart zicboard-core
   php scripts/core-installer.php health
+  php artisan zicboard:core:doctor
 }
 
 if [ "$(uname -s)" = "Linux" ] && command -v systemctl >/dev/null 2>&1; then

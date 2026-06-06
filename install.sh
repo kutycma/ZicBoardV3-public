@@ -76,6 +76,7 @@ fi
 
 echo "Đang cài zicboard-core..."
 php scripts/core-installer.php install
+php artisan zicboard:core:sync
 
 if [ "$(uname -s)" = "Linux" ] && command -v systemctl >/dev/null 2>&1 && [ "$(id -u)" -eq 0 ]; then
   cat >/etc/systemd/system/zicboard-core.service <<EOF
@@ -98,6 +99,7 @@ EOF
   systemctl enable zicboard-core
   systemctl restart zicboard-core
   php scripts/core-installer.php health
+  php artisan zicboard:core:doctor
 else
   echo "Bỏ qua cấu hình systemd. Hãy khởi động bin/zicboard-core thủ công hoặc cài dịch vụ bằng quyền root trên Linux."
 fi
