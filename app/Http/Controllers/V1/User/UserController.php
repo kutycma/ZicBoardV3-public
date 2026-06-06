@@ -538,8 +538,11 @@ class UserController extends Controller
             ]);
         }
 
+        $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscription->token);
         return response([
-            'data' => Helper::getSubscribeUrl($subscription['token']),
+            'data' => $subscribeUrl['url'],
+            'subscribe_url_error' => $subscribeUrl['error'],
+            'subscribe_url_protected' => (bool)($subscribeUrl['protected'] ?? false),
             'subscribe_url_hidden' => false
         ]);
     }
