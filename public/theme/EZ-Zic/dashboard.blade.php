@@ -1,6 +1,6 @@
 @php($assetVersion = $version ?? config('app.version'))
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="vi-VN">
 <head>
     <script>window.settings = {
             title: @json($title),
@@ -10,10 +10,10 @@
             background_url: @json(isset($theme_config["background_url"]) ? $theme_config["background_url"] : ""),
             description: @json($description),
             i18n: [
-                'zh-CN',
-                'en-US',
-                'ja-JP',
                 'vi-VN',
+                'en-US',
+                'zh-CN',
+                'ja-JP',
                 'ko-KR',
                 'zh-TW',
                 'fa-IR'

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Client;
 
 use App\Http\Controllers\Controller;
 use App\Protocols\General;
+use App\Protocols\Happ;
 use App\Protocols\Singbox\Singbox;
 use App\Protocols\Singbox\SingboxOld;
 use App\Protocols\ClashMeta;
@@ -17,9 +18,12 @@ class ClientController extends Controller
 {
     public function subscribe(Request $request)
     {
-        $flag = $request->input('flag')
-            ?? ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $requestFlag = (string)$request->input('flag', '');
+        $userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $flag = $requestFlag !== '' ? $requestFlag : $userAgent;
         $flag = strtolower($flag);
+        $requestFlag = strtolower($requestFlag);
+        $userAgent = strtolower($userAgent);
         $user = $request->user;
         $subscription = $request->input('subscription') ?: $request->subscription;
         $customSni = null;
@@ -40,6 +44,10 @@ class ClientController extends Controller
                 (new ProtectedFeatureService())->ensureEnabled();
             }
             $this->applyCustomSni($servers, $customSni);
+            if ($this->isHappClient($requestFlag, $userAgent)) {
+                $class = new Happ($user, $servers);
+                return $class->handle();
+            }
             $this->setSubscribeInfoToServers($servers, $user);
             if($flag) {
                 if (strpos($flag, 'sing') === false) {
@@ -67,6 +75,11 @@ class ClientController extends Controller
             $class = new General($user, $servers);
             return $class->handle();
         }
+    }
+
+    private function isHappClient(string $flag, string $userAgent): bool
+    {
+        return strpos($flag, 'happ') !== false || strpos($userAgent, 'happ') !== false;
     }
 
     private function usesProtectedFeature(array $servers)

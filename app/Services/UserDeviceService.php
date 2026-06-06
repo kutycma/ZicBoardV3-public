@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 class UserDeviceService
 {
     const HWID_HEADER = 'X-Hwid';
+    const HWID_HEADERS = ['X-Hwid', 'Hwid', 'HWID', 'X-Device-Hwid', 'X-Device-HWID'];
     const HWID_MAX_LENGTH = 255;
     const MODE_STRICT = 'strict';
     const MODE_MIXED = 'mixed';
@@ -471,8 +472,13 @@ class UserDeviceService
 
     private function readHwid(Request $request)
     {
-        $hwid = trim((string)$request->header(self::HWID_HEADER, ''));
-        return $hwid === '' ? null : $hwid;
+        foreach (self::HWID_HEADERS as $header) {
+            $hwid = trim((string)$request->header($header, ''));
+            if ($hwid !== '') {
+                return $hwid;
+            }
+        }
+        return null;
     }
 
     public function hwidMode(): string

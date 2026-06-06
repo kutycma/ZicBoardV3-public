@@ -287,6 +287,24 @@ class Helper
         return "{$scheme}://{$auth}@{$host}:{$port}?{$query}#{$name}\r\n";
     }
 
+    private static function cleanUriParams(array $params): array
+    {
+        $result = [];
+        foreach ($params as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
+            if (is_string($value) && $value === '') {
+                continue;
+            }
+            if (is_array($value) && $value === []) {
+                continue;
+            }
+            $result[$key] = $value;
+        }
+        return $result;
+    }
+
     private static function firstTlsSetting($settings, array $keys, $default = '')
     {
         if (!is_array($settings)) {
@@ -298,6 +316,96 @@ class Helper
             }
         }
         return $default;
+    }
+
+    private static function normalizeTlsSettingsValue($settings): array
+    {
+        if ($settings instanceof \stdClass) {
+            $settings = json_decode(json_encode($settings), true);
+        }
+        if (is_string($settings)) {
+            $decoded = json_decode($settings, true);
+            $settings = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+        }
+        return is_array($settings) ? $settings : [];
+    }
+
+    private static function firstScalarValue($value): string
+    {
+        if ($value instanceof \stdClass) {
+            $value = json_decode(json_encode($value), true);
+        }
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                $scalar = self::firstScalarValue($item);
+                if ($scalar !== '') {
+                    return $scalar;
+                }
+            }
+            return '';
+        }
+        if (!is_scalar($value)) {
+            return '';
+        }
+        return trim((string)$value);
+    }
+
+    private static function firstTlsScalar(array $settings, array $keys, string $default = ''): string
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $settings)) {
+                continue;
+            }
+            $value = self::firstScalarValue($settings[$key]);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+        return $default;
+    }
+
+    private static function connectionHostName($host): string
+    {
+        $host = trim((string)$host);
+        if ($host === '') {
+            return '';
+        }
+        if (($parsed = parse_url($host)) && !empty($parsed['host'])) {
+            $host = $parsed['host'];
+        }
+        $host = trim($host, '[]');
+        if (strpos($host, ':') !== false && substr_count($host, ':') === 1) {
+            [$host] = explode(':', $host, 2);
+        }
+        return trim($host);
+    }
+
+    private static function tlsClientNames(array $server, array $tlsSettings): array
+    {
+        $autoCert = self::autoCertMetadata($tlsSettings);
+        $sni = self::firstScalarValue($server['server_name'] ?? '');
+        if ($sni === '') {
+            $sni = self::firstTlsScalar($tlsSettings, ['server_name', 'serverName']);
+        }
+        if ($sni === '') {
+            $sni = self::firstTlsScalar($tlsSettings, ['server_names', 'serverNames']);
+        }
+        if ($sni === '' && !empty($autoCert['target'])) {
+            $sni = self::firstScalarValue($autoCert['target']);
+        }
+        if ($sni === '') {
+            $sni = self::connectionHostName($server['host'] ?? '');
+        }
+
+        $verifyName = self::firstTlsScalar($tlsSettings, ['verifyPeerCertByName', 'verify_peer_cert_by_name', 'peer', 'vcn']);
+        if ($verifyName === '') {
+            $verifyName = $sni;
+        }
+
+        return [
+            'sni' => $sni,
+            'verify_name' => $verifyName,
+        ];
     }
 
     private static function boolish($value): bool
@@ -313,13 +421,13 @@ class Helper
 
     private static function addTlsPinParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
     {
-        $pinned = trim((string)self::firstTlsSetting($tlsSettings, ['pinnedPeerCertSha256', 'pinned_peer_cert_sha256', 'pcs']));
+        $pinned = self::firstTlsScalar($tlsSettings, ['pinnedPeerCertSha256', 'pinned_peer_cert_sha256', 'certSha256', 'pcs']);
         if ($pinned !== '') {
             $config['pinnedPeerCertSha256'] = $pinned;
             $config['pcs'] = $pinned;
         }
 
-        $verifyName = trim((string)self::firstTlsSetting($tlsSettings, ['verifyPeerCertByName', 'verify_peer_cert_by_name', 'vcn']));
+        $verifyName = self::firstTlsScalar($tlsSettings, ['verifyPeerCertByName', 'verify_peer_cert_by_name', 'peer', 'vcn']);
         $defaultVerifyName = trim($defaultVerifyName);
         $connectionHost = self::normalizeHostForCompare($connectionHost);
         if (
@@ -344,12 +452,24 @@ class Helper
         return $pinned !== '';
     }
 
+    private static function addHappTlsClientTrustParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
+    {
+        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, $defaultVerifyName, $connectionHost);
+        if (!empty($config['pinnedPeerCertSha256'])) {
+            $config['certSha256'] = $config['pinnedPeerCertSha256'];
+        }
+        if (!empty($config['verifyPeerCertByName'])) {
+            $config['peer'] = $config['verifyPeerCertByName'];
+        }
+        return $hasPinnedCert;
+    }
+
     private static function addTlsClientTrustParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
     {
         $autoCert = self::autoCertMetadata($tlsSettings);
-        if (self::isTrustedAutoCert($autoCert) && !empty($autoCert['sha256'])) {
+        if (self::isTrustedAutoCert($autoCert) && self::isSelfSignedAutoCert($autoCert) && !empty($autoCert['sha256'])) {
             $tlsSettings['pinnedPeerCertSha256'] = $autoCert['sha256'];
-            if (self::isSelfSignedAutoCert($autoCert) && empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['vcn'])) {
+            if (self::isSelfSignedAutoCert($autoCert) && empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['peer']) && empty($tlsSettings['vcn'])) {
                 $tlsSettings['verifyPeerCertByName'] = self::autoCertVerifyName($autoCert, $defaultVerifyName, $connectionHost);
             }
         }
@@ -573,42 +693,105 @@ class Helper
         return self::buildUriString('vless', $uuid, $server, $name, $config);
     }
 
-    public static function buildTrojanUri($password, $server)
+    public static function buildHappVlessUri($uuid, $server)
     {
-        $tlsSettings = $server['tls_settings'] ?? [];
-        $sni = trim((string)($server['server_name'] ?? ''));
-        if ($sni === '') {
-            $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
-        }
-        $tlsEnabled = !array_key_exists('tls', $server) || (int)$server['tls'] !== 0;
-        $config = [
-            'type'=> $server['network'],
-            'peer' => $sni,
-            'sni' => $sni,
-        ];
-        if ($tlsEnabled) {
-            $config = ['security' => 'tls'] + $config;
-        }
-        $hasPinnedCert = $tlsEnabled
-            ? self::addTlsClientTrustParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''))
-            : false;
-        if ($tlsEnabled && !$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
-            $config['allowInsecure'] = 1;
+        if (in_array(($server['type'] ?? null), ['zicnode', 'v2node']) && isset($server['protocol'])) {
+            $server['type'] = $server['protocol'];
         }
 
-        if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
-            if($server['network'] === "grpc" && isset($server['network_settings']['serviceName'])) {
-                $config['serviceName'] = $server['network_settings']['serviceName'];
+        $name = self::encodeURIComponent($server['name']);
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+        $network = (string)($server['network'] ?? 'tcp');
+        $server['network'] = $network;
+        $tls = (int)($server['tls'] ?? 0);
+
+        $config = [
+            'type' => $network,
+            'encryption' => 'none',
+        ];
+
+        $protectedEncryption = (new ProtectedFeatureService())->protectedEncryption($server);
+        if ($protectedEncryption) {
+            $config['encryption'] = $protectedEncryption;
+        }
+
+        if ($tls !== 0) {
+            $config['security'] = $tls === 2 ? 'reality' : 'tls';
+            if (!empty($server['flow'])) {
+                $config['flow'] = $server['flow'];
             }
-            if($server['network'] === "ws") {
-                if(isset($server['network_settings']['path'])) {
-                    $config['path'] = $server['network_settings']['path'];
-                }
-                if(isset($server['network_settings']['headers']['Host'])) {
-                    $config['host'] = $server['network_settings']['headers']['Host'];
+            $config['fp'] = self::firstTlsSetting($tlsSettings, ['fingerprint'], 'chrome');
+
+            $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
+            if ($sni !== '') {
+                $config['sni'] = $sni;
+            }
+
+            if ($tls === 2) {
+                $config['pbk'] = self::firstTlsSetting($tlsSettings, ['public_key', 'publicKey', 'pbk'], '');
+                $config['sid'] = self::firstTlsSetting($tlsSettings, ['short_id', 'shortId', 'sid'], '');
+            } else {
+                self::addHappTlsClientTrustParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
+            }
+
+            $spiderX = self::firstTlsSetting($tlsSettings, ['spider_x', 'spiderX', 'spx'], '');
+            if ($tls === 2 && $spiderX !== '') {
+                $config['spx'] = $spiderX;
+            }
+
+            if (!empty($tlsSettings['ech'])) {
+                if ($tlsSettings['ech'] === 'cloudflare') {
+                    $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
+                } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
+                    $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
                 }
             }
         }
+
+        $networkConfig = [];
+        if ($network === 'tcp') {
+            $networkConfig['headerType'] = 'none';
+        }
+        self::configureNetworkSettings($server, $networkConfig);
+        foreach ($networkConfig as $key => $value) {
+            $config[$key] = $value;
+        }
+
+        if ($tls === 2) {
+            $config['xtls'] = 2;
+        }
+
+        $query = http_build_query(self::cleanUriParams($config), '', '&', PHP_QUERY_RFC3986);
+        return "vless://{$uuid}@" . self::formatHost($server['host']) . ":{$server['port']}?{$query}#{$name}\r\n";
+    }
+
+    public static function buildHappTrojanUri($password, $server)
+    {
+        $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+        $network = (string)($server['network'] ?? 'tcp');
+        $server['network'] = $network;
+        $names = self::tlsClientNames($server, $tlsSettings);
+        $sni = $names['sni'];
+        $verifyName = $names['verify_name'];
+        $tlsEnabled = !array_key_exists('tls', $server) || (int)$server['tls'] !== 0;
+
+        $config = [
+            'type' => $network,
+        ];
+        if ($tlsEnabled) {
+            $config['security'] = 'tls';
+            $config['sni'] = $sni;
+            $config['peer'] = $verifyName;
+            $config['fp'] = self::firstTlsScalar($tlsSettings, ['fingerprint'], 'chrome');
+            $alpn = self::firstTlsScalar($tlsSettings, ['alpn'], '');
+            if ($alpn !== '') {
+                $config['alpn'] = $alpn;
+            }
+            self::addHappTlsClientTrustParams($config, $tlsSettings, $verifyName, (string)($server['host'] ?? ''));
+        }
+
+        self::configureNetworkSettings($server, $config);
         if (!empty($tlsSettings['ech'])) {
             if ($tlsSettings['ech'] === 'cloudflare') {
                 $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
@@ -616,7 +799,49 @@ class Helper
                 $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
             }
         }
-        $query = http_build_query($config);
+
+        $query = http_build_query(self::cleanUriParams($config), '', '&', PHP_QUERY_RFC3986);
+        return "trojan://{$password}@" . self::formatHost($server['host']) . ":{$server['port']}?{$query}#" . rawurlencode($server['name']) . "\r\n";
+    }
+
+    public static function buildTrojanUri($password, $server)
+    {
+        $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+        $network = (string)($server['network'] ?? 'tcp');
+        $server['network'] = $network;
+        $names = self::tlsClientNames($server, $tlsSettings);
+        $sni = $names['sni'];
+        $verifyName = $names['verify_name'];
+        $tlsEnabled = !array_key_exists('tls', $server) || (int)$server['tls'] !== 0;
+        $config = [
+            'type'=> $network,
+        ];
+        if ($tlsEnabled) {
+            $config = ['security' => 'tls'] + $config;
+            $config['sni'] = $sni;
+            $config['peer'] = $verifyName;
+            $config['fp'] = self::firstTlsScalar($tlsSettings, ['fingerprint'], 'chrome');
+            $alpn = self::firstTlsScalar($tlsSettings, ['alpn'], '');
+            if ($alpn !== '') {
+                $config['alpn'] = $alpn;
+            }
+        }
+        $hasPinnedCert = $tlsEnabled
+            ? self::addHappTlsClientTrustParams($config, $tlsSettings, $verifyName, (string)($server['host'] ?? ''))
+            : false;
+        if ($tlsEnabled && !$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            $config['allowInsecure'] = 1;
+        }
+
+        self::configureNetworkSettings($server, $config);
+        if (!empty($tlsSettings['ech'])) {
+            if ($tlsSettings['ech'] === 'cloudflare') {
+                $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
+            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
+                $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
+            }
+        }
+        $query = http_build_query(self::cleanUriParams($config), '', '&', PHP_QUERY_RFC3986);
         return "trojan://{$password}@" . self::formatHost($server['host']) . ":{$server['port']}?{$query}#". rawurlencode($server['name']) . "\r\n";
     }
 

@@ -1342,6 +1342,24 @@
     "ticket.send": "发送",
     "ticket.closedNotice": "该工单已关闭。"
     ,"config.subscribe.happEncrypt": "Happ subscription encryption",
-    "config.subscribe.happEncryptHelp": "Encrypt generated subscription links for Happ. HWID device recognition is controlled separately."
+    "config.subscribe.happEncryptHelp": "Encrypt generated subscription links for Happ. HWID device recognition is controlled separately.",
+    "config.subscribe.happProfileTitle": "Happ profile title",
+    "config.subscribe.happProfileTitleHelp": "Leave empty to use the site name.",
+    "config.subscribe.happHideSettings": "Hide Happ settings",
+    "config.subscribe.happHideSettingsHelp": "Emit #hide-settings so Happ users cannot change protected profile settings.",
+    "config.subscribe.happAnnounce": "Happ package notice",
+    "config.subscribe.happAnnounceHelp": "Emit a profile notice with user ID, traffic usage, expiry, and reset day.",
+    "config.subscribe.happProviderId": "Happ provider ID",
+    "config.subscribe.happProviderIdHelp": "Optional. Emit #providerid only when this value is set.",
+    "config.subscribe.happColorProfile": "Happ color profile",
+    "config.subscribe.happColorProfileHelp": "Optional JSON. Invalid JSON is ignored when generating the subscription.",
+    "config.subscribe.happPingType": "Happ ping type",
+    "config.subscribe.happPingTypeHelp": "Controls how Happ checks node latency.",
+    "config.subscribe.happCheckUrl": "Happ proxy check URL",
+    "config.subscribe.happCheckUrlHelp": "Used by proxy and proxy-head ping modes.",
+    "config.happPing.proxyHead": "Proxy HEAD",
+    "config.happPing.proxy": "Proxy GET",
+    "config.happPing.tcp": "TCP",
+    "config.happPing.icmp": "ICMP"
   };
 })();
