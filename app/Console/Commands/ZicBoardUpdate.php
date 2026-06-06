@@ -14,7 +14,7 @@ class ZicBoardUpdate extends Command
      *
      * @var string
      */
-    protected $signature = 'zicboard:update {--force-sql : Force database update SQL even when database/update.sql is unchanged}';
+    protected $signature = 'zicboard:update {--force-sql : Force database update SQL even when database/update.sql is unchanged} {--skip-database : Skip database SQL and database repair steps}';
 
     /**
      * The console command description.
@@ -44,6 +44,17 @@ class ZicBoardUpdate extends Command
         \Artisan::call('route:clear');
         \Artisan::call('view:clear');
         \Artisan::call('config:cache');
+
+        if ($this->option('skip-database')) {
+            if ($this->option('force-sql')) {
+                $this->warn('--skip-database was provided; ignoring --force-sql.');
+            }
+            $this->info('Skipping database update SQL and database repair steps.');
+            \Artisan::call('horizon:terminate');
+            $this->info('Update completed. Queue workers were restarted, no further action is required.');
+            return;
+        }
+
         DB::connection()->getPdo();
         $this->configureDatabaseSession();
         $file = \File::get(base_path() . '/database/update.sql');

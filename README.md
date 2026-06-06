@@ -52,6 +52,14 @@ The script updates the PHP panel with `git pull --ff-only`, installs PHP
 dependencies, applies ZicBoard migrations, prepares the licensed runtime when
 available, and verifies the local health endpoint.
 
+`update.sh` only runs database update/repair steps when tracked files under
+`database/` changed between the installed commit and the target remote commit.
+To force database update/repair anyway, run:
+
+```bash
+ZICBOARD_UPDATE_FORCE_DB=1 bash update.sh
+```
+
 ## Commercial License
 
 Some commercial features require a valid ZicBoard license. The installer and

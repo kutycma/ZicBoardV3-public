@@ -20,6 +20,8 @@ if [ "$BRANCH" = "HEAD" ] || [ -z "$BRANCH" ]; then
   BRANCH="master"
 fi
 TARGET="${REMOTE}/${BRANCH}"
+CURRENT_HEAD="$(git rev-parse --verify HEAD)"
+DATABASE_CHANGED=0
 
 echo "Dang cap nhat ZicBoard tu ${TARGET} va xoa moi thay doi local khong nam trong .gitignore..."
 git fetch "$REMOTE" --prune
@@ -27,6 +29,17 @@ if ! git rev-parse --verify "$TARGET" >/dev/null 2>&1; then
   echo "Khong tim thay nhanh remote: ${TARGET}"
   exit 1
 fi
+
+if [ "${ZICBOARD_UPDATE_FORCE_DB:-0}" = "1" ]; then
+  DATABASE_CHANGED=1
+  echo "ZICBOARD_UPDATE_FORCE_DB=1, se chay cap nhat database."
+elif git diff --quiet "$CURRENT_HEAD" "$TARGET" -- database; then
+  echo "Khong phat hien thay doi trong database/, bo qua cap nhat database."
+else
+  DATABASE_CHANGED=1
+  echo "Phat hien thay doi trong database/, se chay cap nhat database."
+fi
+
 git reset --hard "$TARGET"
 git clean -fd
 
@@ -57,7 +70,11 @@ echo "Đang cài các thư viện PHP từ composer.lock..."
 run_composer install --no-dev --optimize-autoloader --no-interaction
 
 if [ -f "artisan" ]; then
-  php artisan zicboard:update
+  if [ "$DATABASE_CHANGED" = "1" ]; then
+    php artisan zicboard:update
+  else
+    php artisan zicboard:update --skip-database
+  fi
 fi
 
 echo "Đang chuẩn bị các thư mục vận hành..."
