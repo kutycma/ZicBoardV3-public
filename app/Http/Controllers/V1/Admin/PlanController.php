@@ -33,7 +33,7 @@ class PlanController extends Controller
 
     public function save(PlanSave $request)
     {
-        $params = $request->validated();
+        $params = $this->normalizeSubscribeUrlUa($request->validated());
         if ($request->input('id')) {
             $plan = Plan::find($request->input('id'));
             if (!$plan) {
@@ -95,8 +95,11 @@ class PlanController extends Controller
         $updateData = $request->only([
             'show',
             'renew',
-            'allow_subscribe_url'
+            'allow_subscribe_url',
+            'allow_subscribe_url_ua',
+            'subscribe_url_allowed_ua'
         ]);
+        $updateData = $this->normalizeSubscribeUrlUa($updateData);
 
         $plan = Plan::find($request->input('id'));
         if (!$plan) {
@@ -112,6 +115,27 @@ class PlanController extends Controller
         return response([
             'data' => true
         ]);
+    }
+
+    private function normalizeSubscribeUrlUa(array $data)
+    {
+        if (array_key_exists('allow_subscribe_url_ua', $data)) {
+            $data['allow_subscribe_url_ua'] = (int)$data['allow_subscribe_url_ua'] === 1 ? 1 : 0;
+        }
+
+        if (array_key_exists('subscribe_url_allowed_ua', $data)) {
+            $lines = preg_split('/\r\n|\r|\n/', (string)$data['subscribe_url_allowed_ua']);
+            $lines = array_values(array_filter(array_map('trim', is_array($lines) ? $lines : []), function ($line) {
+                return $line !== '';
+            }));
+            $data['subscribe_url_allowed_ua'] = $lines ? implode("\n", $lines) : null;
+        }
+
+        if (($data['allow_subscribe_url_ua'] ?? null) === 0) {
+            $data['subscribe_url_allowed_ua'] = null;
+        }
+
+        return $data;
     }
 
     public function sort(PlanSort $request)

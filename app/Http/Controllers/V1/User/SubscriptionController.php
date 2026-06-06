@@ -40,7 +40,7 @@ class SubscriptionController extends Controller
             $usedTraffic = (int)$subscription->u + (int)$subscription->d;
 
             $subscription->makeHidden(['remarks', 'origin_order_id', 'last_order_id', 'token', 'uuid']);
-            if ($this->canExposeSubscribeUrl($subscription)) {
+            if ($this->canExposeSubscribeUrl($subscription, $request)) {
                 $subscribeUrl = Helper::getSubscribeUrlDetail($subscription->token);
                 $subscription->subscribe_url = $subscribeUrl['url'];
                 $subscription->subscribe_url_error = $subscribeUrl['error'];
@@ -70,13 +70,13 @@ class SubscriptionController extends Controller
         ]);
     }
 
-    private function canExposeSubscribeUrl(UserSubscription $subscription)
+    private function canExposeSubscribeUrl(UserSubscription $subscription, Request $request)
     {
         $plan = $subscription->relationLoaded('plan') ? $subscription->plan : null;
         if (!$plan && $subscription->plan_id) {
             $plan = Plan::find($subscription->plan_id);
         }
-        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
+        return Helper::canExposeSubscribeUrl($plan, $request);
     }
 
     public function updateNote(Request $request)

@@ -35,7 +35,7 @@ class KnowledgeController extends Controller
                 $this->formatAccessData($knowledge['body']);
             }
             $subscribeTokenValue = $subscription ? $subscription->token : $user['token'];
-            $canExposeSubscribeUrl = $this->canExposeSubscribeUrl($subscription, $user->plan_id ?? null);
+            $canExposeSubscribeUrl = $this->canExposeSubscribeUrl($subscription, $user->plan_id ?? null, $request);
             $subscribeUrl = '';
             $subscribeToken = '';
             if ($canExposeSubscribeUrl) {
@@ -97,7 +97,7 @@ class KnowledgeController extends Controller
         }
     }
 
-    private function canExposeSubscribeUrl($subscription, $planId)
+    private function canExposeSubscribeUrl($subscription, $planId, Request $request)
     {
         $plan = null;
         if ($subscription) {
@@ -107,6 +107,6 @@ class KnowledgeController extends Controller
         if (!$plan && $planId) {
             $plan = Plan::find($planId);
         }
-        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
+        return Helper::canExposeSubscribeUrl($plan, $request);
     }
 }

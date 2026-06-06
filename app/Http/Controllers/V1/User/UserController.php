@@ -471,7 +471,7 @@ class UserController extends Controller
         }
         $user['alive_ip'] = $countalive;
 
-        if ($this->canExposeSubscribeUrl($user['plan'] ?? null)) {
+        if ($this->canExposeSubscribeUrl($user['plan'] ?? null, $request)) {
             $subscribeToken = $subscription ? $subscription->token : $user['token'];
             $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscribeToken);
             $user['subscribe_url'] = $subscribeUrl['url'];
@@ -531,7 +531,7 @@ class UserController extends Controller
         if ($isPrimarySubscription && !$subscriptionService->syncUserSummary($subscription)) {
             abort(500, __('Reset failed'));
         }
-        if (!$this->canExposeSubscriptionSubscribeUrl($subscription)) {
+        if (!$this->canExposeSubscriptionSubscribeUrl($subscription, $request)) {
             return response([
                 'data' => true,
                 'subscribe_url_hidden' => true
@@ -547,18 +547,18 @@ class UserController extends Controller
         ]);
     }
 
-    private function canExposeSubscriptionSubscribeUrl(UserSubscription $subscription)
+    private function canExposeSubscriptionSubscribeUrl(UserSubscription $subscription, Request $request)
     {
         $plan = $subscription->relationLoaded('plan') ? $subscription->plan : null;
         if (!$plan && $subscription->plan_id) {
             $plan = Plan::find($subscription->plan_id);
         }
-        return $this->canExposeSubscribeUrl($plan);
+        return $this->canExposeSubscribeUrl($plan, $request);
     }
 
-    private function canExposeSubscribeUrl($plan)
+    private function canExposeSubscribeUrl($plan, Request $request)
     {
-        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
+        return Helper::canExposeSubscribeUrl($plan, $request);
     }
 
     public function update(UserUpdate $request)

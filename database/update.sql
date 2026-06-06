@@ -1066,6 +1066,12 @@ CREATE TABLE IF NOT EXISTS `v2_happ_subscribe_cache` (
 ALTER TABLE `v2_plan`
 ADD `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1' AFTER `renew`;
 
+ALTER TABLE `v2_plan`
+ADD `allow_subscribe_url_ua` tinyint(1) NOT NULL DEFAULT '0' AFTER `allow_subscribe_url`;
+
+ALTER TABLE `v2_plan`
+ADD `subscribe_url_allowed_ua` text NULL AFTER `allow_subscribe_url_ua`;
+
 ALTER TABLE `v2_server_trojan`
     ADD `tls_settings` text NULL AFTER `network_settings`;
 

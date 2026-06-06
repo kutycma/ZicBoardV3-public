@@ -211,6 +211,8 @@ class ZicBoardUpdate extends Command
         $this->repairWebconSchema();
         $this->line('[repair] Happ subscribe cache schema');
         $this->repairHappSubscribeCacheSchema();
+        $this->line('[repair] plan runtime schema');
+        $this->repairPlanRuntimeSchema();
         if (!Schema::hasTable('v2_user_subscription')) {
             $this->warn('[repair] v2_user_subscription table not found, skipping subscription repairs.');
             return;
@@ -275,6 +277,17 @@ class ZicBoardUpdate extends Command
         $this->ensureColumn('v2_staff', 'created_at', "ADD `created_at` int(11) NOT NULL");
         $this->ensureColumn('v2_staff', 'updated_at', "ADD `updated_at` int(11) NOT NULL");
         $this->runRepairStatement('ALTER TABLE `v2_staff` MODIFY `custom_html` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL');
+    }
+
+    private function repairPlanRuntimeSchema()
+    {
+        if (!Schema::hasTable('v2_plan')) {
+            return;
+        }
+
+        $this->ensureColumn('v2_plan', 'allow_subscribe_url', "ADD `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1' AFTER `renew`");
+        $this->ensureColumn('v2_plan', 'allow_subscribe_url_ua', "ADD `allow_subscribe_url_ua` tinyint(1) NOT NULL DEFAULT '0' AFTER `allow_subscribe_url`");
+        $this->ensureColumn('v2_plan', 'subscribe_url_allowed_ua', "ADD `subscribe_url_allowed_ua` text NULL AFTER `allow_subscribe_url_ua`");
     }
 
     private function repairSubscriptionSniSchema()

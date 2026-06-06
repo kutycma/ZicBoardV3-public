@@ -107,6 +107,36 @@ class Helper
         return $result['url'];
     }
 
+    public static function canExposeSubscribeUrl($plan, $request = null)
+    {
+        if (!$plan || (int)($plan->allow_subscribe_url ?? 1) === 1) {
+            return true;
+        }
+
+        if ((int)($plan->allow_subscribe_url_ua ?? 0) !== 1 || !$request) {
+            return false;
+        }
+
+        $userAgent = trim((string)$request->header('User-Agent', ''));
+        if ($userAgent === '') {
+            return false;
+        }
+
+        $allowedUserAgents = preg_split('/\r\n|\r|\n/', (string)($plan->subscribe_url_allowed_ua ?? ''));
+        if (!is_array($allowedUserAgents)) {
+            return false;
+        }
+
+        foreach ($allowedUserAgents as $allowedUserAgent) {
+            $allowedUserAgent = trim((string)$allowedUserAgent);
+            if ($allowedUserAgent !== '' && stripos($userAgent, $allowedUserAgent) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function getSubscribeUrlDetail($token)
     {
         $token = (string)$token;
