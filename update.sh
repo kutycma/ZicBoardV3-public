@@ -43,6 +43,10 @@ CLEAN_EXCLUDES=(
   "bin/zicboard-core*"
 )
 
+REQUIRED_RELEASE_FILES=(
+  "scripts/runtime-permissions.sh"
+)
+
 ensure_update_backup_dir() {
   if [ -z "$UPDATE_BACKUP_DIR" ]; then
     UPDATE_BACKUP_DIR=".zicboard/update-backups/$(date +%Y%m%d-%H%M%S)"
@@ -123,12 +127,30 @@ clean_untracked_code_paths() {
   git "${clean_args[@]}"
 }
 
+assert_target_contains_required_files() {
+  local path
+  local missing=0
+
+  for path in "${REQUIRED_RELEASE_FILES[@]}"; do
+    if ! git cat-file -e "${TARGET}:${path}" 2>/dev/null; then
+      echo "Ban release ${TARGET} thieu file bat buoc: ${path}"
+      missing=1
+    fi
+  done
+
+  if [ "$missing" -ne 0 ]; then
+    echo "Dung update truoc khi reset code. Hay dong bo lai repo public de bao gom cac file bat buoc roi chay lai update.sh."
+    exit 1
+  fi
+}
+
 echo "Dang cap nhat ZicBoard tu ${TARGET}; file release da track se theo ban update, file user tu them trong public/ va app/Payments/ se duoc giu neu khong trung path release."
 git fetch "$REMOTE" --prune
 if ! git rev-parse --verify "$TARGET" >/dev/null 2>&1; then
   echo "Khong tim thay nhanh remote: ${TARGET}"
   exit 1
 fi
+assert_target_contains_required_files
 
 if [ "${ZICBOARD_UPDATE_FORCE_DB:-0}" = "1" ]; then
   DATABASE_CHANGED=1
