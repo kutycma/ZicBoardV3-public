@@ -63,6 +63,7 @@ class MigrateV2bZicToZicBoard extends Command
 
             $this->runStep('Tao subscription tu du lieu user v2b-zic', function () {
                 $this->insertMissingSubscriptions();
+                $this->repairLegacyUnlimitedExpiredAt();
                 $this->migrateLegacySniToSubscriptions();
             });
 
@@ -469,7 +470,7 @@ class MigrateV2bZicToZicBoard extends Command
             'COALESCE(users.`u`, 0)',
             'COALESCE(users.`d`, 0)',
             'COALESCE(users.`transfer_enable`, 0)',
-            'COALESCE(users.`expired_at`, 0)',
+            'NULLIF(COALESCE(users.`expired_at`, 0), 0)',
             'COALESCE(users.`auto_renewal`, 0)',
             'COALESCE(users.`remind_expire`, 1)',
             'COALESCE(users.`remind_traffic`, 1)',
@@ -512,6 +513,25 @@ class MigrateV2bZicToZicBoard extends Command
             )
                 AND existing_subscriptions.id IS NULL
         ");
+    }
+
+    private function repairLegacyUnlimitedExpiredAt()
+    {
+        $subscriptionRows = 0;
+        if (Schema::hasTable('v2_user_subscription') && Schema::hasColumn('v2_user_subscription', 'expired_at')) {
+            $subscriptionRows = DB::table('v2_user_subscription')
+                ->where('expired_at', 0)
+                ->update(['expired_at' => null]);
+        }
+
+        $userRows = 0;
+        if (Schema::hasTable('v2_user') && Schema::hasColumn('v2_user', 'expired_at')) {
+            $userRows = DB::table('v2_user')
+                ->where('expired_at', 0)
+                ->update(['expired_at' => null]);
+        }
+
+        $this->line("  Legacy unlimited expired_at repaired; subscriptions={$subscriptionRows}, users={$userRows}.");
     }
 
     private function migrateLegacySniToSubscriptions()

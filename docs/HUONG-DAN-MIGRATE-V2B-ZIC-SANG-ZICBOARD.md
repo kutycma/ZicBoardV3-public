@@ -40,6 +40,7 @@ Muc tieu: cai ZicBoardV3 bang database moi, import database v2b-zic cu vao datab
 - Tao/sua cac schema runtime ZicBoardV3 neu dump cu ghi de schema moi: `v2_happ_subscribe_cache`, `v2_plan.allow_subscribe_url`, cac cot phi thanh toan trong `v2_payment`, cac cot order moi trong `v2_order`.
 - Tao/sua `v2_user_subscription`.
 - Tao subscription chinh cho user tu cac cot legacy trong `v2_user`: `plan_id`, `group_id`, traffic, `expired_at`, `token`, `uuid`.
+- Chuan hoa `expired_at = 0` thanh `NULL` trong `v2_user` va `v2_user_subscription`, vi ZicBoardV3 dung `NULL` de bieu thi khong gioi han thoi han.
 - Chuyen `name_sni` va `network_settings` tu `v2_user` sang `v2_user_subscription` neu dump cu co 2 cot nay.
 - Them va gan `subscription_id` cho `v2_order`.
 - Tao/sua `v2_user_device`, gan device vao subscription, chuan hoa device cu co `hwid_hash` thanh `bound` va `hwid_hash` rong thanh `NULL`.
@@ -100,6 +101,29 @@ Cach fix tot nhat la gop du lieu trung. Neu khong can giu thong ke cu, co the ch
 
 ```bash
 php artisan zicboard:migrate-v2b-zic --skip-stats
+```
+
+### Link sub rong sau khi migrate
+
+Nguyen nhan thuong gap: database v2b-zic cu dung `expired_at = 0` de bieu thi khong gioi han thoi han. ZicBoardV3 dung `NULL` cho truong hop nay, nen `expired_at = 0` se bi coi la het han.
+
+Ban cap nhat moi se tu sua khi chay update binh thuong:
+
+```bash
+bash update.sh
+```
+
+Neu khong dung `update.sh`, chay:
+
+```bash
+php artisan zicboard:update --force-sql
+```
+
+Co the kiem tra sau update:
+
+```sql
+SELECT COUNT(*) FROM v2_user_subscription WHERE expired_at = 0;
+SELECT COUNT(*) FROM v2_user WHERE expired_at = 0;
 ```
 
 ## Sau khi migrate

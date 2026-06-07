@@ -224,6 +224,8 @@ class ZicBoardUpdate extends Command
         $this->repairHappSubscribeCacheSchema();
         $this->line('[repair] plan runtime schema');
         $this->repairPlanRuntimeSchema();
+        $this->line('[repair] legacy unlimited expired_at values');
+        $this->repairLegacyUnlimitedExpiredAt();
         if (!Schema::hasTable('v2_user_subscription')) {
             $this->warn('[repair] v2_user_subscription table not found, skipping subscription repairs.');
             return;
@@ -243,6 +245,8 @@ class ZicBoardUpdate extends Command
         $this->alignSubscriptionUserColumnCollations();
         $this->line('[repair] missing subscriptions');
         $this->insertMissingSubscriptions();
+        $this->line('[repair] legacy unlimited expired_at values after subscription sync');
+        $this->repairLegacyUnlimitedExpiredAt();
         $this->line('[repair] legacy SNI data');
         $this->migrateLegacySniToSubscriptions();
         $this->line('[repair] order subscription links');
@@ -299,6 +303,25 @@ class ZicBoardUpdate extends Command
         $this->ensureColumn('v2_plan', 'allow_subscribe_url', "ADD `allow_subscribe_url` tinyint(1) NOT NULL DEFAULT '1' AFTER `renew`");
     }
 
+    private function repairLegacyUnlimitedExpiredAt()
+    {
+        $subscriptionRows = 0;
+        if (Schema::hasTable('v2_user_subscription') && Schema::hasColumn('v2_user_subscription', 'expired_at')) {
+            $subscriptionRows = DB::table('v2_user_subscription')
+                ->where('expired_at', 0)
+                ->update(['expired_at' => null]);
+        }
+
+        $userRows = 0;
+        if (Schema::hasTable('v2_user') && Schema::hasColumn('v2_user', 'expired_at')) {
+            $userRows = DB::table('v2_user')
+                ->where('expired_at', 0)
+                ->update(['expired_at' => null]);
+        }
+
+        $this->info("Legacy unlimited expired_at repaired; subscriptions={$subscriptionRows}, users={$userRows}.");
+    }
+
     private function repairSubscriptionSniSchema()
     {
         $this->ensureColumn('v2_user_subscription', 'name_sni', "ADD `name_sni` varchar(255) DEFAULT NULL AFTER `last_order_id`");
@@ -352,7 +375,7 @@ class ZicBoardUpdate extends Command
             )
             SELECT
                 users.`id`, users.`plan_id`, users.`group_id`, users.`speed_limit`, users.`device_limit`, users.`t`, users.`u`, users.`d`,
-                users.`transfer_enable`, users.`expired_at`, COALESCE(users.`auto_renewal`, 0), COALESCE(users.`remind_expire`, 1), COALESCE(users.`remind_traffic`, 1),
+                users.`transfer_enable`, NULLIF(users.`expired_at`, 0), COALESCE(users.`auto_renewal`, 0), COALESCE(users.`remind_expire`, 1), COALESCE(users.`remind_traffic`, 1),
                 users.`token`, users.`uuid`, 'active', 'Migrated from legacy user subscription fields',
                 users.`created_at`, users.`updated_at`
             FROM `v2_user` AS users

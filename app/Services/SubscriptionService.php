@@ -276,7 +276,7 @@ class SubscriptionService
                 'u' => $lockedUser->u ?: 0,
                 'd' => $lockedUser->d ?: 0,
                 'transfer_enable' => $lockedUser->transfer_enable ?: 0,
-                'expired_at' => $lockedUser->expired_at,
+                'expired_at' => (int)$lockedUser->expired_at === 0 ? null : $lockedUser->expired_at,
                 'auto_renewal' => $lockedUser->auto_renewal ?: 0,
                 'remind_expire' => $lockedUser->remind_expire === null ? 1 : $lockedUser->remind_expire,
                 'remind_traffic' => $lockedUser->remind_traffic === null ? 1 : $lockedUser->remind_traffic,

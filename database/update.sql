@@ -1077,3 +1077,11 @@ ALTER TABLE `v2_server_tuic`
 
 ALTER TABLE `v2_server_anytls`
     ADD `tls_settings` text NULL AFTER `server_name`;
+
+UPDATE `v2_user_subscription`
+SET `expired_at` = NULL
+WHERE `expired_at` = 0;
+
+UPDATE `v2_user`
+SET `expired_at` = NULL
+WHERE `expired_at` = 0;
