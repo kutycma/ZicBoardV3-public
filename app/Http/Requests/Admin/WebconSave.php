@@ -9,7 +9,7 @@ class WebconSave extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|email',
+            'email' => 'required|string|regex:/^[^\s@]+@[^\s@]+$/',
             'domain' => 'required',
             'plan_id' => 'nullable',
             'plan_ids' => 'nullable',
@@ -25,7 +25,7 @@ class WebconSave extends FormRequest
     {
         return [
             'email.required' => 'Email admin webcon cannot be empty',
-            'email.email' => 'Email admin webcon is invalid',
+            'email.regex' => 'Email admin webcon is invalid',
             'domain.required' => 'Webcon domain cannot be empty',
             'logo.url' => 'Logo must be a valid URL',
             'background_url.url' => 'Background image must be a valid URL'

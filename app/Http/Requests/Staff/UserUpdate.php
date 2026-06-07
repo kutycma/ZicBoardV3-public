@@ -24,7 +24,7 @@ class UserUpdate extends FormRequest
     {
         return [
             'email.required' => 'Emailkhông được để trống',
-            'email.email' => 'Emailkhông đúng định dạng',
+            'email.regex' => 'Emailkhông đúng định dạng',
             'transfer_enable.numeric' => 'Dung lượngkhông đúng định dạng',
             'device_limit.integer' => 'Giới hạn thiết bịkhông đúng định dạng',
             'expired_at.integer' => 'Thời gian hết hạnkhông đúng định dạng',

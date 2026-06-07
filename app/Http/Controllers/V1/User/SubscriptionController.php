@@ -41,7 +41,7 @@ class SubscriptionController extends Controller
 
             $subscription->makeHidden(['remarks', 'origin_order_id', 'last_order_id', 'token', 'uuid']);
             if ($this->canExposeSubscribeUrl($subscription, $request)) {
-                $subscribeUrl = Helper::getSubscribeUrlDetail($subscription->token);
+                $subscribeUrl = Helper::getSubscribeUrlDetail($subscription->token, $request);
                 $subscription->subscribe_url = $subscribeUrl['url'];
                 $subscription->subscribe_url_error = $subscribeUrl['error'];
                 $subscription->subscribe_url_protected = (bool)($subscribeUrl['protected'] ?? false);

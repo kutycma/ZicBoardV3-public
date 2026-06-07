@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserSubscription;
 use App\Services\SubscriptionService;
@@ -25,18 +26,62 @@ class Client
         if (empty($token)) {
             abort(403, 'Thiếu token');
         }
+        $subscriptionService = new SubscriptionService();
+        $subscription = null;
+        $allowedUserAgent = Helper::isSubscribeUrlAllowedUserAgent($request);
+        $directSubscription = $subscriptionService->findByToken($token);
+        if ($directSubscription) {
+            if ($directSubscription->status !== SubscriptionService::STATUS_ACTIVE) {
+                abort(403, 'Gói đăng ký đã bị tắt');
+            }
+            if (!$this->canUseSubscribeUrl($directSubscription, $request)) {
+                abort(403, 'subscribe_url_disabled');
+            }
+            if ($allowedUserAgent) {
+                $subscription = $directSubscription;
+            }
+        }
+
+        if (!$subscription) {
+            $token = $this->resolveSubscriptionToken($token);
+            $subscription = $subscriptionService->findByToken($token);
+        }
+
+        if (!$subscription) {
+            abort(403, 'Token không hợp lệ');
+        }
+        if ($subscription->status !== SubscriptionService::STATUS_ACTIVE) {
+            abort(403, 'Gói đăng ký đã bị tắt');
+        }
+        if (!$this->canUseSubscribeUrl($subscription, $request)) {
+            abort(403, 'subscribe_url_disabled');
+        }
+        $user = User::find($subscription->user_id);
+        if (!$user) {
+            abort(403, 'Token không hợp lệ');
+        }
+        $subscription = (new UserDeviceService())->registerFromRequest($subscription, $request);
+        $user = $subscriptionService->applyToUser($user, $subscription);
+        $request->merge([
+            'user' => $user,
+            'subscription' => $subscription
+        ]);
+        return $next($request);
+    }
+
+    private function resolveSubscriptionToken($token)
+    {
         $submethod = (int)config('zicboard.show_subscribe_method', 0);
         switch ($submethod) {
             case 0:
-                break;
+                return $token;
             case 1:
                 if (!Cache::has("otpn_{$token}")) {
                     abort(403, 'Token không hợp lệ');
                 }
                 $usertoken = Cache::pull("otpn_{$token}");
                 Cache::forget("otp_{$usertoken}");
-                $token = $usertoken;
-                break;
+                return $usertoken;
             case 2:
                 $usertoken = Cache::get("totp_{$token}");
                 if (!$usertoken) {
@@ -44,7 +89,7 @@ class Client
                     $counter = floor(time() / $timestep);
                     $counterBytes = pack('N*', 0) . pack('N*', $counter);
                     $idhash = Helper::base64DecodeUrlSafe($token);
-                    if (strpos($idhash, ':') === false) {
+                    if ($idhash === false || strpos($idhash, ':') === false) {
                         abort(403, 'Token không hợp lệ');
                     }
                     $parts = explode(':', $idhash, 2);
@@ -63,29 +108,19 @@ class Client
                     }
                     Cache::put("totp_{$token}", $usertoken, $timestep);
                 }
-                $token = $usertoken;
-                break;
+                return $usertoken;
             default:
-                break;
+                return $token;
         }
-        $subscriptionService = new SubscriptionService();
-        $subscription = $subscriptionService->findByToken($token);
-        if (!$subscription) {
-            abort(403, 'Token không hợp lệ');
+    }
+
+    private function canUseSubscribeUrl(UserSubscription $subscription, $request): bool
+    {
+        $plan = $subscription->relationLoaded('plan') ? $subscription->plan : null;
+        if (!$plan && $subscription->plan_id) {
+            $plan = Plan::find($subscription->plan_id);
         }
-        if ($subscription->status !== SubscriptionService::STATUS_ACTIVE) {
-            abort(403, 'Gói đăng ký đã bị tắt');
-        }
-        $user = User::find($subscription->user_id);
-        if (!$user) {
-            abort(403, 'Token không hợp lệ');
-        }
-        $subscription = (new UserDeviceService())->registerFromRequest($subscription, $request);
-        $user = $subscriptionService->applyToUser($user, $subscription);
-        $request->merge([
-            'user' => $user,
-            'subscription' => $subscription
-        ]);
-        return $next($request);
+
+        return Helper::canExposeSubscribeUrl($plan, $request);
     }
 }

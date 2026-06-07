@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 class Helper
 {
@@ -101,9 +102,9 @@ class Helper
         }
     }
 
-    public static function getSubscribeUrl($token)
+    public static function getSubscribeUrl($token, $request = null)
     {
-        $result = self::getSubscribeUrlDetail($token);
+        $result = self::getSubscribeUrlDetail($token, $request);
         return $result['url'];
     }
 
@@ -113,11 +114,20 @@ class Helper
             return true;
         }
 
+        return self::isSubscribeUrlAllowedUserAgent($request);
+    }
+
+    public static function isSubscribeUrlAllowedUserAgent($request = null): bool
+    {
         if ((int)config('zicboard.subscribe_url_ua_enable', 0) !== 1 || !$request) {
             return false;
         }
 
-        $userAgent = trim((string)$request->header('User-Agent', ''));
+        if ($request instanceof Request) {
+            $userAgent = trim((string)$request->header('User-Agent', ''));
+        } else {
+            $userAgent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        }
         if ($userAgent === '') {
             return false;
         }
@@ -137,7 +147,7 @@ class Helper
         return false;
     }
 
-    public static function getSubscribeUrlDetail($token)
+    public static function getSubscribeUrlDetail($token, $request = null)
     {
         $token = (string)$token;
         if ($token === '') {
@@ -157,7 +167,7 @@ class Helper
             ];
         }
 
-        $url = self::rawSubscribeUrl($subscription->token);
+        $url = self::rawSubscribeUrl($subscription->token, self::isSubscribeUrlAllowedUserAgent($request));
         if ($url === null) {
             return [
                 'url' => null,
@@ -169,9 +179,9 @@ class Helper
         return self::happProtectedSubscribeUrl($url);
     }
 
-    private static function rawSubscribeUrl($token)
+    private static function rawSubscribeUrl($token, bool $forceDirect = false)
     {
-        $submethod = (int)config('zicboard.show_subscribe_method', 0);
+        $submethod = $forceDirect ? 0 : (int)config('zicboard.show_subscribe_method', 0);
         $path = config('zicboard.subscribe_path', '/api/v3/client/subscribe');
         if (empty($path)) {
             $path = '/api/v3/client/subscribe';
@@ -186,14 +196,30 @@ class Helper
                 break;
             case 1:
                 $newtoken = Cache::get("otp_{$token}");
-                if (!$newtoken) {
-                    $newtoken = self::base64EncodeUrlSafe(random_bytes(24));
-                    $added = Cache::add("otp_{$token}", $newtoken, 86400);
-                    if ($added) {
-                        Cache::put("otpn_{$newtoken}", $token, 86400);
-                    } else {
-                        $newtoken = Cache::get("otp_{$token}");
+                if ($newtoken && !Cache::has("otpn_{$newtoken}")) {
+                    Cache::forget("otp_{$token}");
+                    $newtoken = null;
+                }
+
+                for ($attempt = 0; !$newtoken && $attempt < 3; $attempt++) {
+                    $candidate = self::base64EncodeUrlSafe(random_bytes(24));
+                    if (Cache::add("otp_{$token}", $candidate, 86400)) {
+                        Cache::put("otpn_{$candidate}", $token, 86400);
+                        $newtoken = $candidate;
+                        break;
                     }
+
+                    $cachedToken = Cache::get("otp_{$token}");
+                    if ($cachedToken && Cache::has("otpn_{$cachedToken}")) {
+                        $newtoken = $cachedToken;
+                        break;
+                    }
+                    if ($cachedToken) {
+                        Cache::forget("otp_{$token}");
+                    }
+                }
+                if (!$newtoken) {
+                    return null;
                 }
                 $path = "{$path}?token={$newtoken}";
                 if ($subscribeUrl) return $subscribeUrl . $path;

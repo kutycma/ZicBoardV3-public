@@ -27,6 +27,9 @@ class UserDeviceService
     const STATUS_BANNED = 'banned';
     const ONLINE_STATE_TTL = 120;
     const ONLINE_NODE_STALE_SECONDS = 120;
+    const REQUEST_DEVICE_LIMIT_EXCEEDED = 'zicboard.device_limit_exceeded';
+    const REQUEST_DEVICE_ATTEMPT_NUMBER = 'zicboard.device_attempt_number';
+    const REQUEST_DEVICE_LIMIT = 'zicboard.device_limit';
 
     public function registerFromRequest(UserSubscription $subscription, Request $request)
     {
@@ -121,7 +124,7 @@ class UserDeviceService
             }
 
             if ($activeSlots >= (int)$lockedSubscription->device_limit) {
-                $this->abortHwidDecision('limit_reached');
+                return $this->deviceLimitExceededResult($lockedSubscription, $activeSlots);
             }
 
             $device = UserDevice::create(array_merge([
@@ -136,11 +139,7 @@ class UserDeviceService
             ];
         }, 3);
 
-        if (!empty($result['subscription_uuid'])) {
-            $subscription->uuid = $result['subscription_uuid'];
-        }
-
-        return $subscription;
+        return $this->applyRegistrationResult($subscription, $request, $result);
     }
 
     private function registerFromRequestViaCore(UserSubscription $subscription, Request $request, $hwid)
@@ -163,14 +162,10 @@ class UserDeviceService
                 $this->requestPayload($request)
             );
 
-            return $this->applyHwidDecision($lockedSubscription, $decision);
+            return $this->applyHwidDecision($lockedSubscription, $decision, $devices);
         }, 3);
 
-        if (!empty($result['subscription_uuid'])) {
-            $subscription->uuid = $result['subscription_uuid'];
-        }
-
-        return $subscription;
+        return $this->applyRegistrationResult($subscription, $request, $result);
     }
 
     public function ensureWaitingSlot(UserSubscription $subscription)
@@ -460,11 +455,15 @@ class UserDeviceService
         }));
     }
 
-    private function applyHwidDecision(UserSubscription $subscription, array $decision): array
+    private function applyHwidDecision(UserSubscription $subscription, array $decision, $devices = null): array
     {
         $action = (string)($decision['action'] ?? '');
         if ($action === 'reject') {
-            $this->abortHwidDecision((string)($decision['code'] ?? 'unknown'));
+            $code = (string)($decision['code'] ?? 'unknown');
+            if ($code === 'limit_reached') {
+                return $this->deviceLimitExceededResult($subscription, $this->activeDeviceSlotCount($devices));
+            }
+            $this->abortHwidDecision($code);
         }
 
         if ($action === 'use_subscription') {
@@ -509,6 +508,43 @@ class UserDeviceService
         }
 
         abort(403, 'Xu ly thiet bi that bai');
+    }
+
+    private function applyRegistrationResult(UserSubscription $subscription, Request $request, array $result)
+    {
+        if (!empty($result['subscription_uuid'])) {
+            $subscription->uuid = $result['subscription_uuid'];
+        }
+
+        if (!empty($result['device_limit_exceeded'])) {
+            $request->attributes->set(self::REQUEST_DEVICE_LIMIT_EXCEEDED, true);
+            $request->attributes->set(self::REQUEST_DEVICE_ATTEMPT_NUMBER, (int)($result['device_attempt_number'] ?? 1));
+            $request->attributes->set(self::REQUEST_DEVICE_LIMIT, (int)($result['device_limit'] ?? $subscription->device_limit));
+        }
+
+        return $subscription;
+    }
+
+    private function deviceLimitExceededResult(UserSubscription $subscription, int $activeSlots): array
+    {
+        return [
+            'subscription_uuid' => Helper::guid(true),
+            'device_limit_exceeded' => true,
+            'device_attempt_number' => max(1, $activeSlots + 1),
+            'device_limit' => max(0, (int)$subscription->device_limit)
+        ];
+    }
+
+    private function activeDeviceSlotCount($devices): int
+    {
+        $count = 0;
+        foreach ($devices ?: [] as $device) {
+            $status = is_array($device) ? ($device['status'] ?? null) : ($device->status ?? null);
+            if (in_array($status, [self::STATUS_PENDING, self::STATUS_BOUND], true)) {
+                $count++;
+            }
+        }
+        return $count;
     }
 
     private function abortHwidDecision(string $code): void

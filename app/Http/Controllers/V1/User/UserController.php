@@ -473,7 +473,7 @@ class UserController extends Controller
 
         if ($this->canExposeSubscribeUrl($user['plan'] ?? null, $request)) {
             $subscribeToken = $subscription ? $subscription->token : $user['token'];
-            $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscribeToken);
+            $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscribeToken, $request);
             $user['subscribe_url'] = $subscribeUrl['url'];
             $user['subscribe_url_error'] = $subscribeUrl['error'];
             $user['subscribe_url_protected'] = (bool)($subscribeUrl['protected'] ?? false);
@@ -539,7 +539,7 @@ class UserController extends Controller
             ]);
         }
 
-        $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscription->token);
+        $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscription->token, $request);
         return response([
             'data' => $subscribeUrl['url'],
             'subscribe_url_error' => $subscribeUrl['error'],

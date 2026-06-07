@@ -75,7 +75,7 @@ Route::get('/', function (Request $request) {
 $staffPath = config('zicboard.staff_path', 'webctv');
 $staffPanel = function ($entry) use ($staffPath) {
     return view('staff', [
-        'title' => 'Staff Panel',
+        'title' => 'Bảng nhân viên',
         'staff_path' => $staffPath,
         'entry' => $entry
     ]);

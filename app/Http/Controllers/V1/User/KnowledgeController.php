@@ -39,7 +39,7 @@ class KnowledgeController extends Controller
             $subscribeUrl = '';
             $subscribeToken = '';
             if ($canExposeSubscribeUrl) {
-                $subscribeUrlDetail = Helper::getSubscribeUrlDetail((string)$subscribeTokenValue);
+                $subscribeUrlDetail = Helper::getSubscribeUrlDetail((string)$subscribeTokenValue, $request);
                 $subscribeUrl = (string)($subscribeUrlDetail['url'] ?? '');
                 $subscribeToken = Helper::isHappSubscribeEncryptEnabled()
                     ? ''

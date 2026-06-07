@@ -10,6 +10,7 @@ use App\Protocols\Singbox\SingboxOld;
 use App\Protocols\ClashMeta;
 use App\Services\ServerService;
 use App\Services\UserService;
+use App\Services\UserDeviceService;
 use App\Services\Core\ProtectedFeatureService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
@@ -38,17 +39,24 @@ class ClientController extends Controller
         // account not expired and is not banned.
         $userService = new UserService();
         if ($userService->isAvailable($user)) {
-            $serverService = new ServerService();
-            $servers = $serverService->getAvailableServers($user);
-            if ($this->usesProtectedFeature($servers)) {
-                (new ProtectedFeatureService())->ensureEnabled();
+            $deviceLimitExceeded = $this->isDeviceLimitExceeded($request);
+            if ($deviceLimitExceeded) {
+                $servers = $this->deviceLimitExceededServers($request);
+            } else {
+                $serverService = new ServerService();
+                $servers = $serverService->getAvailableServers($user);
+                if ($this->usesProtectedFeature($servers)) {
+                    (new ProtectedFeatureService())->ensureEnabled();
+                }
+                $this->applyCustomSni($servers, $customSni);
             }
-            $this->applyCustomSni($servers, $customSni);
             if ($this->isHappClient($requestFlag, $userAgent)) {
                 $class = new Happ($user, $servers);
                 return $class->handle();
             }
-            $this->setSubscribeInfoToServers($servers, $user);
+            if (!$deviceLimitExceeded) {
+                $this->setSubscribeInfoToServers($servers, $user);
+            }
             if($flag) {
                 if (strpos($flag, 'sing') === false) {
                     foreach (array_reverse(glob(app_path('Protocols') . '/*.php')) as $file) {
@@ -75,6 +83,41 @@ class ClientController extends Controller
             $class = new General($user, $servers);
             return $class->handle();
         }
+    }
+
+    private function isDeviceLimitExceeded(Request $request): bool
+    {
+        return (bool)$request->attributes->get(UserDeviceService::REQUEST_DEVICE_LIMIT_EXCEEDED, false);
+    }
+
+    private function deviceLimitExceededServers(Request $request): array
+    {
+        $attemptNumber = max(1, (int)$request->attributes->get(UserDeviceService::REQUEST_DEVICE_ATTEMPT_NUMBER, 1));
+        $deviceLimit = max(0, (int)$request->attributes->get(UserDeviceService::REQUEST_DEVICE_LIMIT, 0));
+
+        return [
+            $this->deviceLimitExceededServer("Đây là thiết bị thứ {$attemptNumber}", 1),
+            $this->deviceLimitExceededServer("Tối đa {$deviceLimit} thiết bị", 2)
+        ];
+    }
+
+    private function deviceLimitExceededServer(string $name, int $id): array
+    {
+        return [
+            'id' => $id,
+            'name' => $name,
+            'type' => 'shadowsocks',
+            'host' => '127.0.0.1',
+            'port' => 9,
+            'cipher' => 'aes-128-gcm',
+            'network' => 'tcp',
+            'obfs' => null,
+            'network_settings' => [],
+            'tls' => 0,
+            'last_check_at' => time(),
+            'is_online' => 1,
+            'cache_key' => 'device-limit-exceeded-' . $id
+        ];
     }
 
     private function isHappClient(string $flag, string $userAgent): bool
