@@ -38,6 +38,7 @@ class ZicnodeController extends Controller
             'obfs' => 'nullable',
             'obfs_password' => 'nullable',
             'padding_scheme' => 'nullable',
+            'warp_settings' => 'nullable|array',
             'tags' => 'nullable|array',
             'rate' => 'required',
             'show' => 'nullable|in:0,1',
@@ -51,9 +52,11 @@ class ZicnodeController extends Controller
                 abort(500, 'Máy chủ không tồn tại');
             }
             $params = $this->preserveTlsSecrets($params, $server);
+            $params = $this->preserveWarpSecrets($params, $server);
             $params = $this->dropStaleAutoCert($params, $server);
         }
 
+        $params = $this->normalizeWarpSettings($params);
         $params = ProtectedFeatureService::sanitizeZicnodeTlsSettings($params);
         $params = (new ProtectedFeatureService())->prepareServerParams('zicnode', $params);
 
@@ -116,6 +119,83 @@ class ZicnodeController extends Controller
 
         $params[$tlsSettingsKey] = $incoming;
         return $params;
+    }
+
+    private function preserveWarpSecrets(array $params, ServerZicnode $server): array
+    {
+        $existing = $server->getAttribute('warp_settings');
+        if (!is_array($existing)) {
+            return $params;
+        }
+
+        $incoming = isset($params['warp_settings']) && is_array($params['warp_settings'])
+            ? $params['warp_settings']
+            : [];
+
+        foreach (['private_key', 'token', 'account_id', 'device_id'] as $key) {
+            $incomingEmpty = !array_key_exists($key, $incoming)
+                || $incoming[$key] === ''
+                || $incoming[$key] === null
+                || (is_array($incoming[$key]) && !$incoming[$key]);
+            if (array_key_exists($key, $existing) && $incomingEmpty) {
+                $incoming[$key] = $existing[$key];
+            }
+        }
+
+        $params['warp_settings'] = $incoming;
+        return $params;
+    }
+
+    private function normalizeWarpSettings(array $params): array
+    {
+        $settings = isset($params['warp_settings']) && is_array($params['warp_settings'])
+            ? $params['warp_settings']
+            : [];
+
+        $settings['enable'] = $this->boolish($settings['enable'] ?? false);
+        if (!$settings['enable']) {
+            $params['warp_settings'] = [];
+            return $params;
+        }
+
+        $mode = strtolower($this->normalizedScalar($settings['mode'] ?? 'auto'));
+        $settings['mode'] = in_array($mode, ['auto', 'manual'], true) ? $mode : 'auto';
+
+        $failPolicy = strtolower($this->normalizedScalar($settings['fail_policy'] ?? 'direct'));
+        $settings['fail_policy'] = in_array($failPolicy, ['direct', 'block'], true) ? $failPolicy : 'direct';
+
+        $mtu = (int)($settings['mtu'] ?? 1280);
+        $settings['mtu'] = $mtu > 0 ? $mtu : 1280;
+
+        $domainStrategy = $this->normalizedScalar($settings['domain_strategy'] ?? 'ForceIPv4v6');
+        $settings['domain_strategy'] = $domainStrategy !== '' ? $domainStrategy : 'ForceIPv4v6';
+
+        if (isset($settings['addresses']) && is_string($settings['addresses'])) {
+            $settings['addresses'] = array_values(array_filter(array_map('trim', explode(',', $settings['addresses']))));
+        }
+        if (isset($settings['reserved']) && is_string($settings['reserved'])) {
+            $settings['reserved'] = array_values(array_filter(array_map('trim', explode(',', $settings['reserved'])), 'strlen'));
+        }
+
+        foreach ($settings as $key => $value) {
+            if ($value === '' || $value === null || (is_array($value) && !$value)) {
+                unset($settings[$key]);
+            }
+        }
+
+        $params['warp_settings'] = $settings;
+        return $params;
+    }
+
+    private function boolish($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int)$value === 1;
+        }
+        return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
     }
 
     private function dropStaleAutoCert(array $params, ServerZicnode $server): array

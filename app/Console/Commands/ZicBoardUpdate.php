@@ -687,6 +687,7 @@ class ZicBoardUpdate extends Command
                     `obfs` varchar(64) DEFAULT NULL,
                     `obfs_password` varchar(255) DEFAULT NULL,
                     `padding_scheme` text,
+                    `warp_settings` text,
                     `created_at` int(11) NOT NULL DEFAULT '0',
                     `updated_at` int(11) NOT NULL DEFAULT '0',
                     PRIMARY KEY (`id`)
@@ -696,6 +697,7 @@ class ZicBoardUpdate extends Command
 
         foreach ($this->zicnodeColumnDefinitions() as $column => $definition) {
             $this->ensureColumn('v2_server_zicnode', $column, $definition);
+            $this->ensureColumn('v2_server_v2node', $column, $definition);
         }
     }
 
@@ -754,6 +756,7 @@ class ZicBoardUpdate extends Command
             'obfs' => "ADD `obfs` varchar(64) DEFAULT NULL AFTER `down_mbps`",
             'obfs_password' => "ADD `obfs_password` varchar(255) DEFAULT NULL AFTER `obfs`",
             'padding_scheme' => "ADD `padding_scheme` text AFTER `obfs_password`",
+            'warp_settings' => "ADD `warp_settings` text AFTER `padding_scheme`",
             'created_at' => "ADD `created_at` int(11) NOT NULL DEFAULT '0'",
             'updated_at' => "ADD `updated_at` int(11) NOT NULL DEFAULT '0'",
         ];
@@ -776,6 +779,7 @@ class ZicBoardUpdate extends Command
             'network' => "'tcp'",
             'network_settings' => "'{}'",
             'encryption_settings' => "'{}'",
+            'warp_settings' => "'{}'",
             'disable_sni' => '0',
             'zero_rtt_handshake' => '0',
             'up_mbps' => '0',

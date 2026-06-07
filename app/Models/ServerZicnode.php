@@ -22,6 +22,7 @@ class ServerZicnode extends Model
         'network_settings' => 'array',
         'encryption_settings' => 'array',
         'padding_scheme' => 'array',
+        'warp_settings' => 'array',
     ];
 
     public function getTable()

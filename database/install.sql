@@ -478,6 +478,7 @@ CREATE TABLE `v2_server_zicnode` (
                                     `obfs` varchar(64) DEFAULT NULL COMMENT 'Mật khẩu obfs Hysteria1 / kiểu obfs Hysteria2',
                                     `obfs_password` varchar(255) DEFAULT NULL COMMENT 'Mật khẩu obfs Hysteria2',
                                     `padding_scheme` text COMMENT 'Cấu hình padding AnyTLS',
+                                    `warp_settings` text COMMENT 'WARP outbound settings',
                                     `created_at` int(11) NOT NULL,
                                     `updated_at` int(11) NOT NULL,
                                     PRIMARY KEY (`id`)

@@ -885,6 +885,7 @@ CREATE TABLE IF NOT EXISTS `v2_server_zicnode` (
                                     `obfs` varchar(64) DEFAULT NULL COMMENT 'Mật khẩu obfs Hysteria1 / kiểu obfs Hysteria2',
                                     `obfs_password` varchar(255) DEFAULT NULL COMMENT 'Mật khẩu obfs Hysteria2',
                                     `padding_scheme` text COMMENT 'Cấu hình padding AnyTLS',
+                                    `warp_settings` text COMMENT 'WARP outbound settings',
                                     `created_at` int(11) NOT NULL,
                                     `updated_at` int(11) NOT NULL,
                                     PRIMARY KEY (`id`)
@@ -893,8 +894,8 @@ CREATE TABLE IF NOT EXISTS `v2_server_zicnode` (
 CREATE TABLE IF NOT EXISTS `v2_server_v2node` LIKE `v2_server_zicnode`;
 
 INSERT IGNORE INTO `v2_server_zicnode`
-(`id`, `group_id`, `route_id`, `name`, `parent_id`, `host`, `listen_ip`, `port`, `server_port`, `tags`, `rate`, `show`, `sort`, `protocol`, `tls`, `tls_settings`, `flow`, `network`, `network_settings`, `encryption`, `encryption_settings`, `disable_sni`, `udp_relay_mode`, `zero_rtt_handshake`, `congestion_control`, `cipher`, `up_mbps`, `down_mbps`, `obfs`, `obfs_password`, `padding_scheme`, `created_at`, `updated_at`)
-SELECT `id`, `group_id`, `route_id`, `name`, `parent_id`, `host`, `listen_ip`, `port`, `server_port`, `tags`, `rate`, `show`, `sort`, `protocol`, `tls`, `tls_settings`, `flow`, `network`, `network_settings`, `encryption`, `encryption_settings`, `disable_sni`, `udp_relay_mode`, `zero_rtt_handshake`, `congestion_control`, `cipher`, `up_mbps`, `down_mbps`, `obfs`, `obfs_password`, `padding_scheme`, `created_at`, `updated_at`
+(`id`, `group_id`, `route_id`, `name`, `parent_id`, `host`, `listen_ip`, `port`, `server_port`, `tags`, `rate`, `show`, `sort`, `protocol`, `tls`, `tls_settings`, `flow`, `network`, `network_settings`, `encryption`, `encryption_settings`, `disable_sni`, `udp_relay_mode`, `zero_rtt_handshake`, `congestion_control`, `cipher`, `up_mbps`, `down_mbps`, `obfs`, `obfs_password`, `padding_scheme`, `warp_settings`, `created_at`, `updated_at`)
+SELECT `id`, `group_id`, `route_id`, `name`, `parent_id`, `host`, `listen_ip`, `port`, `server_port`, `tags`, `rate`, `show`, `sort`, `protocol`, `tls`, `tls_settings`, `flow`, `network`, `network_settings`, `encryption`, `encryption_settings`, `disable_sni`, `udp_relay_mode`, `zero_rtt_handshake`, `congestion_control`, `cipher`, `up_mbps`, `down_mbps`, `obfs`, `obfs_password`, `padding_scheme`, `warp_settings`, `created_at`, `updated_at`
 FROM `v2_server_v2node`;
 
 ALTER TABLE `v2_server_route`

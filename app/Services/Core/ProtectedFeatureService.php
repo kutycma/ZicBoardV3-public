@@ -170,7 +170,7 @@ class ProtectedFeatureService
 
     public static function redactServerSecrets(array $server)
     {
-        $blocked = ['private' . '_key', 'ech' . '_key', 'dns' . '_env'];
+        $blocked = ['private' . '_key', 'ech' . '_key', 'dns' . '_env', 'token', 'account_id', 'device_id'];
         return self::redactRecursive($server, $blocked);
     }
 
@@ -259,13 +259,15 @@ class ProtectedFeatureService
 
     private static function normalizeZicnodeConfigShape(array $config, bool $forNodeResponse): array
     {
-        foreach (['network_settings', 'tls_settings', 'encryption_settings'] as $field) {
+        foreach (['network_settings', 'tls_settings', 'encryption_settings', 'warp_settings'] as $field) {
             if (array_key_exists($field, $config)) {
                 $config[$field] = self::jsonObjectRoot($config[$field]);
             } else {
                 $config[$field] = (object)[];
             }
         }
+
+        $config['warp_settings'] = self::sanitizeZicnodeWarpSettings($config['warp_settings'], true);
 
         if (empty($config['listen_ip'])) {
             $config['listen_ip'] = '0.0.0.0';
@@ -288,6 +290,41 @@ class ProtectedFeatureService
         }
 
         return self::sanitizeZicnodeTlsSettings($config, true);
+    }
+
+    private static function sanitizeZicnodeWarpSettings($value, bool $emptyAsObject = false)
+    {
+        $settings = self::tlsSettingsRootToArray($value);
+        if (!self::boolish($settings['enable'] ?? false)) {
+            return $emptyAsObject ? (object)[] : [];
+        }
+
+        $settings['enable'] = true;
+        $mode = strtolower(trim((string)($settings['mode'] ?? 'auto')));
+        $settings['mode'] = in_array($mode, ['auto', 'manual'], true) ? $mode : 'auto';
+
+        $failPolicy = strtolower(trim((string)($settings['fail_policy'] ?? 'direct')));
+        $settings['fail_policy'] = in_array($failPolicy, ['direct', 'block'], true) ? $failPolicy : 'direct';
+
+        $mtu = (int)($settings['mtu'] ?? 1280);
+        $settings['mtu'] = $mtu > 0 ? $mtu : 1280;
+
+        $domainStrategy = trim((string)($settings['domain_strategy'] ?? 'ForceIPv4v6'));
+        $settings['domain_strategy'] = $domainStrategy !== '' ? $domainStrategy : 'ForceIPv4v6';
+
+        foreach (['addresses', 'reserved'] as $key) {
+            if (isset($settings[$key]) && is_string($settings[$key])) {
+                $settings[$key] = array_values(array_filter(array_map('trim', explode(',', $settings[$key])), 'strlen'));
+            }
+        }
+
+        foreach ($settings as $key => $child) {
+            if ($child === '' || $child === null || (is_array($child) && !$child)) {
+                unset($settings[$key]);
+            }
+        }
+
+        return $settings ?: ($emptyAsObject ? (object)[] : []);
     }
 
     private static function tlsSettingsRootToArray($value): array
