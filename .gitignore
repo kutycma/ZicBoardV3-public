@@ -8,6 +8,10 @@
 /public/storage
 /public/env.example.js
 /public/favicon.ico
+/public/uploads/
+/public/upload/
+/public/clients/
+/public/assets/admin/custom.css
 /storage/*.key
 /storage/logs/*
 !/storage/logs/.gitignore

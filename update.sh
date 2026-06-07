@@ -22,8 +22,108 @@ fi
 TARGET="${REMOTE}/${BRANCH}"
 CURRENT_HEAD="$(git rev-parse --verify HEAD)"
 DATABASE_CHANGED=0
+UPDATE_BACKUP_DIR=""
+UPDATE_BACKUP_COUNT=0
+UPDATE_CONFLICT_BACKUP_COUNT=0
 
-echo "Dang cap nhat ZicBoard tu ${TARGET} va xoa moi thay doi local khong nam trong .gitignore..."
+BACKUP_WATCH_PATHS=(
+  "public"
+  "app/Payments"
+)
+
+CLEAN_EXCLUDES=(
+  "public/"
+  "app/Payments/"
+  "storage/"
+  "bootstrap/cache/"
+  "config/theme/"
+  ".zicboard/"
+  ".env"
+  ".env.backup"
+  "bin/zicboard-core*"
+)
+
+ensure_update_backup_dir() {
+  if [ -z "$UPDATE_BACKUP_DIR" ]; then
+    UPDATE_BACKUP_DIR=".zicboard/update-backups/$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$UPDATE_BACKUP_DIR"
+  fi
+}
+
+backup_existing_path() {
+  local path="$1"
+  local reason="$2"
+  local destination
+
+  path="${path#./}"
+  if [ ! -e "$path" ] && [ ! -L "$path" ]; then
+    return 0
+  fi
+
+  ensure_update_backup_dir
+  destination="${UPDATE_BACKUP_DIR}/${path}"
+  mkdir -p "$(dirname "$destination")"
+  cp -a -- "$path" "$destination"
+  UPDATE_BACKUP_COUNT=$((UPDATE_BACKUP_COUNT + 1))
+  echo "Da backup ${reason}: ${path} -> ${destination}"
+}
+
+backup_modified_tracked_preserved_paths() {
+  local path
+
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    backup_existing_path "$path" "file tracked da bi sua"
+  done < <(
+    {
+      git diff --name-only -- "${BACKUP_WATCH_PATHS[@]}"
+      git diff --cached --name-only -- "${BACKUP_WATCH_PATHS[@]}"
+    } | sort -u
+  )
+}
+
+backup_incoming_tracked_conflicts() {
+  local path
+
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    if [ ! -e "$path" ] && [ ! -L "$path" ]; then
+      continue
+    fi
+    if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
+      continue
+    fi
+
+    backup_existing_path "$path" "file user trung path voi release moi"
+    UPDATE_CONFLICT_BACKUP_COUNT=$((UPDATE_CONFLICT_BACKUP_COUNT + 1))
+    rm -rf -- "$path"
+  done < <(git ls-tree -r --name-only "$TARGET" -- "${BACKUP_WATCH_PATHS[@]}" | sort -u)
+}
+
+backup_preserved_paths_before_reset() {
+  backup_modified_tracked_preserved_paths
+  backup_incoming_tracked_conflicts
+
+  if [ "$UPDATE_BACKUP_COUNT" -gt 0 ]; then
+    echo "Da backup ${UPDATE_BACKUP_COUNT} file/thuc muc user truoc khi reset release vao: ${UPDATE_BACKUP_DIR}"
+    if [ "$UPDATE_CONFLICT_BACKUP_COUNT" -gt 0 ]; then
+      echo "Co ${UPDATE_CONFLICT_BACKUP_COUNT} file/thuc muc user trung path voi release moi; da backup va path chinh se theo ban release."
+    fi
+  fi
+}
+
+clean_untracked_code_paths() {
+  local clean_args=(clean -fd)
+  local exclude
+
+  for exclude in "${CLEAN_EXCLUDES[@]}"; do
+    clean_args+=("-e" "$exclude")
+  done
+
+  git "${clean_args[@]}"
+}
+
+echo "Dang cap nhat ZicBoard tu ${TARGET}; file release da track se theo ban update, file user tu them trong public/ va app/Payments/ se duoc giu neu khong trung path release."
 git fetch "$REMOTE" --prune
 if ! git rev-parse --verify "$TARGET" >/dev/null 2>&1; then
   echo "Khong tim thay nhanh remote: ${TARGET}"
@@ -40,8 +140,9 @@ else
   echo "Phat hien thay doi trong database/, se chay cap nhat database."
 fi
 
+backup_preserved_paths_before_reset
 git reset --hard "$TARGET"
-git clean -fd
+clean_untracked_code_paths
 
 bash scripts/runtime-permissions.sh prepare
 
