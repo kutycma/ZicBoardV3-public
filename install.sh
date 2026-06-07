@@ -38,11 +38,11 @@ if [ ! -f "composer.lock" ]; then
 fi
 
 echo "Đang cài các thư viện PHP từ composer.lock..."
+bash scripts/runtime-permissions.sh prepare
 run_composer install --no-dev --optimize-autoloader --no-interaction
 
 echo "Đang chuẩn bị các thư mục cần quyền ghi..."
-mkdir -p storage bootstrap/cache config/theme public/theme bin .zicboard/core
-chmod -R 775 storage bootstrap/cache config/theme public/theme bin .zicboard || true
+bash scripts/runtime-permissions.sh prepare
 
 if [ ! -f ".env" ]; then
   echo "Đang chạy trình cài đặt ứng dụng ZicBoard..."
@@ -100,7 +100,9 @@ EOF
   systemctl restart zicboard-core
   php scripts/core-installer.php health
   php artisan zicboard:core:doctor
+  bash scripts/runtime-permissions.sh finalize
 else
+  bash scripts/runtime-permissions.sh finalize
   echo "Bỏ qua cấu hình systemd. Hãy khởi động bin/zicboard-core thủ công hoặc cài dịch vụ bằng quyền root trên Linux."
 fi
 

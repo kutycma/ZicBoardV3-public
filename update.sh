@@ -43,6 +43,8 @@ fi
 git reset --hard "$TARGET"
 git clean -fd
 
+bash scripts/runtime-permissions.sh prepare
+
 if command -v composer >/dev/null 2>&1; then
   COMPOSER_BIN="$(command -v composer)"
 else
@@ -78,8 +80,7 @@ if [ -f "artisan" ]; then
 fi
 
 echo "Đang chuẩn bị các thư mục vận hành..."
-mkdir -p storage bootstrap/cache config/theme public/theme bin .zicboard/core
-chmod -R 775 storage bootstrap/cache config/theme public/theme bin .zicboard || true
+bash scripts/runtime-permissions.sh prepare
 
 echo "Đang cập nhật zicboard-core nếu cần..."
 php scripts/core-installer.php update
@@ -147,12 +148,6 @@ if [ -f "webman.php" ]; then
   fi
 fi
 
-if [ "$(id -u)" -eq 0 ]; then
-  if getent passwd www >/dev/null 2>&1; then
-    chown -R www:www storage bootstrap/cache config/theme public/theme .zicboard
-  elif getent passwd www-data >/dev/null 2>&1; then
-    chown -R www-data:www-data storage bootstrap/cache config/theme public/theme .zicboard
-  fi
-fi
+bash scripts/runtime-permissions.sh finalize
 
 echo "Cập nhật hoàn tất."
