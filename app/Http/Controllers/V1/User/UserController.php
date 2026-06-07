@@ -531,6 +531,7 @@ class UserController extends Controller
         if ($isPrimarySubscription && !$subscriptionService->syncUserSummary($subscription)) {
             abort(500, __('Reset failed'));
         }
+        (new UserDeviceService())->resetSubscription($subscription);
         if (!$this->canExposeSubscriptionSubscribeUrl($subscription, $request)) {
             return response([
                 'data' => true,

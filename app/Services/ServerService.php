@@ -250,7 +250,6 @@ class ServerService
             ])
             ->get();
 
-        $deviceService = new UserDeviceService();
         $limitedUserIds = $users->filter(function ($user) {
             return (int)$user->device_limit > 0;
         })->pluck('id')->all();
@@ -279,12 +278,7 @@ class ServerService
                 continue;
             }
 
-            $boundSlots = $slotsByUser->get($user->id, collect());
-            if (!$deviceService->isStrictHwidMode() && $boundSlots->count() < $deviceLimit) {
-                $nodeUsers->push($this->nodeUserWithoutDeviceLimit($user));
-            }
-
-            foreach ($boundSlots as $slot) {
+            foreach ($slotsByUser->get($user->id, collect()) as $slot) {
                 $slotUser = clone $user;
                 $slotUser->id = (int)($nodeIdMap[(string)$slot->id] ?? 0);
                 if ($slotUser->id <= 0) {

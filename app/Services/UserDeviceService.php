@@ -21,6 +21,7 @@ class UserDeviceService
     const DEVICE_NODE_USER_ID_BASE = 1000000000;
     const USER_AGENT_MAX_LENGTH = 255;
     const IP_MAX_LENGTH = 128;
+    const UA_FALLBACK_HASH_NAMESPACE = "zicboard:ua-fallback:v1\n";
     const STATUS_PENDING = 'pending';
     const STATUS_BOUND = 'bound';
     const STATUS_BANNED = 'banned';
@@ -29,21 +30,117 @@ class UserDeviceService
 
     public function registerFromRequest(UserSubscription $subscription, Request $request)
     {
+        $hwid = $this->readHwid($request);
+        if ($hwid === null && $this->isStrictHwidMode()) {
+            $this->abortHwidDecision('missing_hwid');
+        }
+
         if (!$this->hasDeviceLimit($subscription)) {
             return $subscription;
         }
 
-        $hwid = $this->readHwid($request);
         if ($hwid === null) {
-            if ($this->isStrictHwidMode()) {
-                $this->abortHwidDecision('missing_hwid');
-            }
-
-            $this->ensureSharedSubscriptionAllowed($subscription);
-            return $subscription;
+            return $this->registerFromRequestViaUserAgent($subscription, $request);
         }
 
         return $this->registerFromRequestViaCore($subscription, $request, $hwid);
+    }
+
+    private function registerFromRequestViaUserAgent(UserSubscription $subscription, Request $request)
+    {
+        $result = DB::transaction(function () use ($subscription, $request) {
+            $lockedSubscription = UserSubscription::where('id', $subscription->id)->lockForUpdate()->first();
+            if (!$lockedSubscription) {
+                abort(403, 'Token khong hop le');
+            }
+            if (!$this->hasDeviceLimit($lockedSubscription)) {
+                return [
+                    'subscription_uuid' => (string)$lockedSubscription->uuid
+                ];
+            }
+
+            $userAgent = $this->readRawUserAgent($request);
+            $userAgentHash = $this->userAgentFallbackHash($userAgent);
+            $displayUserAgent = $this->displayUserAgent($userAgent);
+            $ip = $this->readIp($request);
+            $now = time();
+
+            $devices = UserDevice::where('subscription_id', $lockedSubscription->id)
+                ->lockForUpdate()
+                ->orderBy('id', 'ASC')
+                ->get();
+
+            foreach ($devices as $device) {
+                if ($device->status !== self::STATUS_BOUND || !$this->isUserAgentFallbackDevice($device)) {
+                    continue;
+                }
+                if ((string)$device->hwid_hash !== $userAgentHash) {
+                    continue;
+                }
+
+                $device->update([
+                    'user_agent' => $displayUserAgent,
+                    'last_ip' => $ip,
+                    'last_seen_at' => $now
+                ]);
+
+                return [
+                    'subscription_uuid' => (string)$device->uuid
+                ];
+            }
+
+            $pending = null;
+            $activeSlots = 0;
+            foreach ($devices as $device) {
+                if (in_array($device->status, [self::STATUS_PENDING, self::STATUS_BOUND], true)) {
+                    $activeSlots++;
+                }
+                if ($pending === null && $device->status === self::STATUS_PENDING) {
+                    $pending = $device;
+                }
+            }
+
+            $fields = [
+                'hwid_hash' => $userAgentHash,
+                'hwid' => null,
+                'status' => self::STATUS_BOUND,
+                'user_agent' => $displayUserAgent,
+                'first_ip' => $ip,
+                'last_ip' => $ip,
+                'first_seen_at' => $now,
+                'last_seen_at' => $now
+            ];
+
+            if ($pending) {
+                $pending->update($fields);
+                $this->ensureWaitingSlotForLockedSubscription($lockedSubscription);
+
+                return [
+                    'subscription_uuid' => (string)$pending->uuid
+                ];
+            }
+
+            if ($activeSlots >= (int)$lockedSubscription->device_limit) {
+                $this->abortHwidDecision('limit_reached');
+            }
+
+            $device = UserDevice::create(array_merge([
+                'user_id' => $lockedSubscription->user_id,
+                'subscription_id' => $lockedSubscription->id,
+                'uuid' => Helper::guid(true),
+            ], $fields));
+            $this->ensureWaitingSlotForLockedSubscription($lockedSubscription);
+
+            return [
+                'subscription_uuid' => (string)$device->uuid
+            ];
+        }, 3);
+
+        if (!empty($result['subscription_uuid'])) {
+            $subscription->uuid = $result['subscription_uuid'];
+        }
+
+        return $subscription;
     }
 
     private function registerFromRequestViaCore(UserSubscription $subscription, Request $request, $hwid)
@@ -107,6 +204,9 @@ class UserDeviceService
             if (!$lockedDevice) {
                 abort(500, 'Thiết bị không tồn tại');
             }
+            if (!$this->isHwidDevice($lockedDevice)) {
+                abort(500, 'Chỉ có thể gỡ thiết bị có HWID');
+            }
 
             $deleted = $lockedDevice->delete();
             $this->ensureWaitingSlotForLockedSubscription($lockedSubscription);
@@ -127,8 +227,8 @@ class UserDeviceService
                 ->where('subscription_id', $lockedSubscription->id)
                 ->lockForUpdate()
                 ->first();
-            if (!$lockedDevice || !$lockedDevice->hwid_hash) {
-                abort(500, 'Chỉ có thể chặn thiết bị đã liên kết');
+            if (!$lockedDevice || !$this->isHwidDevice($lockedDevice)) {
+                abort(500, 'Chỉ có thể chặn thiết bị có HWID');
             }
 
             if ($lockedDevice->status !== self::STATUS_BANNED) {
@@ -154,6 +254,21 @@ class UserDeviceService
             foreach (UserSubscription::where('user_id', $lockedUser->id)->get() as $subscription) {
                 $this->ensureWaitingSlotForLockedSubscription($subscription);
             }
+
+            return true;
+        }, 3);
+    }
+
+    public function resetSubscription(UserSubscription $subscription)
+    {
+        return DB::transaction(function () use ($subscription) {
+            $lockedSubscription = UserSubscription::where('id', $subscription->id)->lockForUpdate()->first();
+            if (!$lockedSubscription) {
+                abort(500, 'Gói đăng ký không tồn tại');
+            }
+
+            UserDevice::where('subscription_id', $lockedSubscription->id)->delete();
+            $this->ensureWaitingSlotForLockedSubscription($lockedSubscription);
 
             return true;
         }, 3);
@@ -538,38 +653,38 @@ class UserDeviceService
 
     private function readUserAgent(Request $request)
     {
-        $userAgent = trim((string)$request->userAgent());
+        return $this->displayUserAgent($this->readRawUserAgent($request));
+    }
+
+    private function readRawUserAgent(Request $request): string
+    {
+        return trim((string)$request->userAgent());
+    }
+
+    private function displayUserAgent(string $userAgent)
+    {
         return $userAgent === '' ? null : substr($userAgent, 0, self::USER_AGENT_MAX_LENGTH);
+    }
+
+    private function userAgentFallbackHash(string $userAgent): string
+    {
+        return hash('sha256', self::UA_FALLBACK_HASH_NAMESPACE . $userAgent);
+    }
+
+    private function isHwidDevice(UserDevice $device): bool
+    {
+        return trim((string)$device->hwid_hash) !== '' && trim((string)$device->hwid) !== '';
+    }
+
+    private function isUserAgentFallbackDevice(UserDevice $device): bool
+    {
+        return trim((string)$device->hwid_hash) !== '' && trim((string)$device->hwid) === '';
     }
 
     private function readIp(Request $request)
     {
         $ip = trim((string)$request->ip());
         return $ip === '' ? null : substr($ip, 0, self::IP_MAX_LENGTH);
-    }
-
-    private function ensureSharedSubscriptionAllowed(UserSubscription $subscription): void
-    {
-        DB::transaction(function () use ($subscription) {
-            $lockedSubscription = UserSubscription::where('id', $subscription->id)->lockForUpdate()->first();
-            if (!$lockedSubscription) {
-                abort(403, 'Token khong hop le');
-            }
-
-            if (!$this->hasDeviceLimit($lockedSubscription)) {
-                return;
-            }
-
-            $boundSlots = UserDevice::where('subscription_id', $lockedSubscription->id)
-                ->where('status', self::STATUS_BOUND)
-                ->lockForUpdate()
-                ->get(['id'])
-                ->count();
-
-            if ($boundSlots >= (int)$lockedSubscription->device_limit) {
-                $this->abortHwidDecision('limit_reached');
-            }
-        }, 3);
     }
 
     private function hasVirtualNodeUserIds(array $nodeUserIds): bool

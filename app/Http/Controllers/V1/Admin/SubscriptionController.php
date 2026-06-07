@@ -187,6 +187,7 @@ class SubscriptionController extends Controller
         if ($shouldSyncUserSummary) {
             $subscriptionService->syncUserSummary($subscription);
         }
+        (new UserDeviceService())->resetSubscription($subscription);
 
         return response([
             'data' => true,

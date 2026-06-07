@@ -186,7 +186,7 @@ class UserController extends Controller
         if ($isPrimarySubscription) {
             $subscriptionService->syncUserSummary($subscription);
         }
-        (new UserDeviceService())->ensureWaitingSlot($subscription);
+        (new UserDeviceService())->resetSubscription($subscription);
 
         $responseData = [
             'success' => true

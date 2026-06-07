@@ -36,6 +36,7 @@ class UserController extends Controller
             $subscription->token = Helper::guid();
             $subscription->uuid = Helper::guid(true);
             $subscription->save();
+            (new UserDeviceService())->resetSubscription($subscription);
             return response([
                 'data' => $subscriptionService->syncUserSummary($subscription)
             ]);
