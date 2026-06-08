@@ -9,11 +9,13 @@ class Singbox
     private $servers;
     private $user;
     private $config;
+    private $clientVersion;
 
     public function __construct($user, $servers, array $options = null)
     {
         $this->user = $user;
         $this->servers = $servers;
+        $this->clientVersion = trim((string)($options['version'] ?? ''));
     }
 
     public function handle()
@@ -161,6 +163,7 @@ class Singbox
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
             $tlsConfig['insecure'] = ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? 0)) == 1 ? true : false;
             $tlsConfig['server_name'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+            $this->applyTlsTrust($tlsConfig, $server, $tlsSettings);
             if (!empty($tlsSettings['ech'])) {
                 if ($tlsSettings['ech'] === 'cloudflare') {
                     $tlsConfig['ech'] = [
@@ -228,6 +231,7 @@ class Singbox
                         'short_id' => $tlsSettings['short_id']
                     ];
                 }
+                $this->applyTlsTrust($tlsConfig, $server, $tlsSettings);
                 $fingerprints = $tlsSettings['fingerprint'] ?? 'chrome';
                 $tlsConfig['utls'] = [
                     "enabled" => true,
@@ -293,6 +297,7 @@ class Singbox
             'insecure' => ($server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false,
             'server_name' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? '')
         ];
+        $this->applyTlsTrust($tlsConfig, $server, $tlsSettings);
         if (!empty($tlsSettings['ech'])) {
             if ($tlsSettings['ech'] === 'cloudflare') {
                 $tlsConfig['ech'] = [
@@ -352,6 +357,7 @@ class Singbox
             'disable_sni' => $server['disable_sni'] ? true : false,
         ];
         $array['tls']['server_name'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
+        $this->applyTlsTrust($array['tls'], $server, $tlsSettings);
 
         return $array;
     }
@@ -376,6 +382,7 @@ class Singbox
             ],
             'server_name' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? '')
         ];
+        $this->applyTlsTrust($tlsConfig, $server, $tlsSettings);
         if ($server['tls_settings']) {
             if ($server['tls'] == 2) {
                 $tlsConfig['reality'] = [
@@ -434,16 +441,18 @@ class Singbox
             }
         }
 
+        $tlsSettings = $server['tls_settings'] ?? [];
         $array = [
             'tag' => $server['name'],
             'server' => $server['host'],
             'domain_resolver' => 'local',
             'tls' => [
                 'enabled' => true,
-                'insecure' => $server['insecure'] ? true : false,
-                'server_name' => $server['server_name']
+                'insecure' => ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) ? true : false,
+                'server_name' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? '')
             ]
         ];
+        $this->applyTlsTrust($array['tls'], $server, $tlsSettings);
 
         // Thiết lập cấu hình cổng
         if (isset($port)) {
@@ -501,10 +510,32 @@ class Singbox
             'tag' => $server['name'],
             'type' => 'hysteria2'
         ];
+        $this->applyTlsTrust($array['tls'], $server, $tlsSettings);
         if (isset($server['obfs'])) {
             $array['obfs']['type'] = $server['obfs'];
             $array['obfs']['password'] = $server['obfs_password'];
         }
         return $array;
+    }
+
+    private function applyTlsTrust(array &$tlsConfig, array $server, array $tlsSettings): bool
+    {
+        if (!$this->supportsCertificatePublicKeyPin() || (int)($server['tls'] ?? 1) === 2) {
+            return false;
+        }
+        $trust = Helper::resolveTlsClientTrust($server, $tlsSettings);
+        if (!empty($trust['suppress_insecure']) || $trust['public_key_sha256'] !== '') {
+            $tlsConfig['insecure'] = false;
+        }
+        if ($trust['public_key_sha256'] === '') {
+            return !empty($trust['suppress_insecure']);
+        }
+        $tlsConfig['certificate_public_key_sha256'] = [$trust['public_key_sha256']];
+        return true;
+    }
+
+    private function supportsCertificatePublicKeyPin(): bool
+    {
+        return $this->clientVersion !== '' && version_compare($this->clientVersion, '1.13.0', '>=');
     }
 }

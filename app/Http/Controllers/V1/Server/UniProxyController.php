@@ -325,13 +325,23 @@ class UniProxyController extends Controller
 
         $tlsSettings = LegacyTlsSettingsService::settingsFromServer($this->nodeType, $this->nodeInfo);
         $previous = is_array($tlsSettings['auto_cert'] ?? null) ? $tlsSettings['auto_cert'] : [];
+        $sha256Hex = $this->normalizeCertSha256Hex($data['sha256_hex'] ?? '');
+        if ($sha256Hex === '') {
+            $sha256Hex = $this->normalizeCertSha256Hex($data['sha256'] ?? '');
+        }
+        $sha256 = $this->normalizeCertSha256Colon($data['sha256'] ?? '');
+        if ($sha256 === '' && $sha256Hex !== '') {
+            $sha256 = $this->hexToColonSha256($sha256Hex);
+        }
 
         $autoCert = [
             'status' => $this->limitedCertReportString($data['status'] ?? 'ok', 32),
             'target' => $this->limitedCertReportString($data['target'] ?? '', 255),
             'mode' => $this->limitedCertReportString($data['mode'] ?? '', 32),
             'source' => $this->limitedCertReportString($data['source'] ?? '', 32),
-            'sha256' => $this->limitedCertReportString($data['sha256'] ?? '', 191),
+            'sha256' => $sha256,
+            'sha256_hex' => $sha256Hex,
+            'public_key_sha256' => $this->normalizePublicKeySha256($data['public_key_sha256'] ?? ''),
             'not_after' => (int)($data['not_after'] ?? 0),
         ];
         if (!empty($data['error'])) {
@@ -398,9 +408,41 @@ class UniProxyController extends Controller
         return strlen($value) > $limit ? substr($value, 0, $limit) : $value;
     }
 
+    private function normalizeCertSha256Hex($value): string
+    {
+        $value = strtolower(preg_replace('/[^a-fA-F0-9]/', '', (string)$value));
+        return preg_match('/^[a-f0-9]{64}$/', $value) ? $value : '';
+    }
+
+    private function normalizeCertSha256Colon($value): string
+    {
+        $hex = $this->normalizeCertSha256Hex($value);
+        return $hex === '' ? '' : $this->hexToColonSha256($hex);
+    }
+
+    private function hexToColonSha256(string $hex): string
+    {
+        return strtoupper(implode(':', str_split($hex, 2)));
+    }
+
+    private function normalizePublicKeySha256($value): string
+    {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '';
+        }
+
+        $decoded = base64_decode($value, true);
+        if ($decoded === false || strlen($decoded) !== 32) {
+            return '';
+        }
+
+        return base64_encode($decoded);
+    }
+
     private function certReportChanged(array $previous, array $next): bool
     {
-        foreach (['status', 'target', 'mode', 'source', 'sha256', 'not_after', 'error'] as $key) {
+        foreach (['status', 'target', 'mode', 'source', 'sha256', 'sha256_hex', 'public_key_sha256', 'not_after', 'error'] as $key) {
             $old = $previous[$key] ?? null;
             $new = $next[$key] ?? null;
             if ((string)$old !== (string)$new) {

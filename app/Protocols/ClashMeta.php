@@ -180,6 +180,7 @@ class ClashMeta
                     $array['skip-cert-verify'] = ($tlsSettings['allowInsecure'] ? true : false);
                 if (isset($tlsSettings['serverName']) && !empty($tlsSettings['serverName']))
                     $array['servername'] = $tlsSettings['serverName'];
+                self::applyMihomoTlsTrust($array, $server, $tlsSettings);
                 if (!empty($tlsSettings['ech'])) {
                     if ($tlsSettings['ech'] === 'cloudflare') {
                         $array['ech-opts'] = [
@@ -251,6 +252,7 @@ class ClashMeta
             if ($tlsSettings) {
                 if (isset($tlsSettings['server_name']) && !empty($tlsSettings['server_name']))
                    $array['servername'] = $tlsSettings['server_name'];
+                self::applyMihomoTlsTrust($array, $server, $tlsSettings);
                 if ($server['tls'] == 2) {
                    $array['reality-opts'] = [];
                    $array['reality-opts']['public-key'] = $tlsSettings['public_key'];
@@ -355,6 +357,7 @@ class ClashMeta
         $tlsSettings = $server['tls_settings'] ?? [];
         $array['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
         $array['skip-cert-verify'] = ($server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false;
+        self::applyMihomoTlsTrust($array, $server, $tlsSettings);
         if (!empty($tlsSettings['ech'])) {
             if ($tlsSettings['ech'] === 'cloudflare') {
                 $array['ech-opts'] = [
@@ -389,6 +392,7 @@ class ClashMeta
         $tlsSettings = $server['tls_settings'] ?? [];
         $array['skip-cert-verify'] = ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false;
         $array['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
+        self::applyMihomoTlsTrust($array, $server, $tlsSettings);
 
         return $array;
     }
@@ -411,6 +415,7 @@ class ClashMeta
         $tlsSettings = $server['tls_settings'] ?? [];
         $array['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
         $array['skip-cert-verify'] = ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false;
+        self::applyMihomoTlsTrust($array, $server, $tlsSettings);
         return $array;
     }
 
@@ -437,6 +442,7 @@ class ClashMeta
         $array['skip-cert-verify'] = $server['insecure'] == 1 ? true : false;
 
         if (isset($server['server_name'])) $array['sni'] = $server['server_name'];
+        self::applyMihomoTlsTrust($array, $server, $server['tls_settings'] ?? []);
 
         if ($server['version'] === 2) {
             $array['type'] = 'hysteria2';
@@ -472,6 +478,7 @@ class ClashMeta
             'sni' => $tlsSettings['server_name'] ?? '',
             'udp' => true,
         ];
+        self::applyMihomoTlsTrust($array, $server, $tlsSettings);
         $parts = explode(",", $server['port']);
         $firstPart = $parts[0];
         if (strpos($firstPart, '-') !== false) {
@@ -495,6 +502,22 @@ class ClashMeta
     private function isMatch($exp, $str)
     {
         return @preg_match($exp, $str);
+    }
+
+    private static function applyMihomoTlsTrust(array &$array, array $server, array $tlsSettings): bool
+    {
+        if ((int)($server['tls'] ?? 1) === 2) {
+            return false;
+        }
+        $trust = Helper::resolveTlsClientTrust($server, $tlsSettings);
+        if (!empty($trust['suppress_insecure']) || $trust['has_cert_pin']) {
+            $array['skip-cert-verify'] = false;
+        }
+        if (!$trust['has_cert_pin']) {
+            return !empty($trust['suppress_insecure']);
+        }
+        $array['fingerprint'] = $trust['cert_sha256'];
+        return true;
     }
 
     private function isRegex($exp)

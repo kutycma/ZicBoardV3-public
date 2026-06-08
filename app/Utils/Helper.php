@@ -546,9 +546,48 @@ class Helper
         return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
     }
 
+    public static function resolveTlsClientTrust(array $server, array $tlsSettings): array
+    {
+        $tlsSettings = self::normalizeTlsSettingsValue($tlsSettings);
+        $names = self::tlsClientNames($server, $tlsSettings);
+        $manualPin = self::firstTlsScalar($tlsSettings, ['pinnedPeerCertSha256', 'pinned_peer_cert_sha256', 'certSha256', 'pcs']);
+        $certSha256Hex = self::normalizeCertSha256Hex($manualPin);
+        $certSha256 = $certSha256Hex !== '' ? self::hexToColonSha256($certSha256Hex) : '';
+        $publicKeySha256 = self::normalizePublicKeySha256(self::firstTlsScalar($tlsSettings, [
+            'certificate_public_key_sha256',
+            'publicKeySha256',
+            'public_key_sha256',
+        ]));
+
+        $autoCert = self::autoCertMetadata($tlsSettings);
+        if ($certSha256 === '' && self::isTrustedAutoCert($autoCert) && self::isSelfSignedAutoCert($autoCert)) {
+            $certSha256Hex = self::normalizeCertSha256Hex($autoCert['sha256_hex'] ?? '');
+            if ($certSha256Hex === '') {
+                $certSha256Hex = self::normalizeCertSha256Hex($autoCert['sha256'] ?? '');
+            }
+            if ($certSha256Hex !== '') {
+                $certSha256 = self::hexToColonSha256($certSha256Hex);
+            }
+        }
+        if ($publicKeySha256 === '' && self::isTrustedAutoCert($autoCert) && self::isSelfSignedAutoCert($autoCert)) {
+            $publicKeySha256 = self::normalizePublicKeySha256($autoCert['public_key_sha256'] ?? '');
+        }
+
+        return [
+            'sni' => $names['sni'],
+            'verify_name' => $names['verify_name'],
+            'has_cert_pin' => $certSha256 !== '',
+            'cert_sha256' => $certSha256,
+            'cert_sha256_hex' => $certSha256Hex,
+            'public_key_sha256' => $publicKeySha256,
+            'suppress_insecure' => self::shouldSuppressLegacyInsecure($tlsSettings),
+        ];
+    }
+
     private static function addTlsPinParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
     {
-        $pinned = self::firstTlsScalar($tlsSettings, ['pinnedPeerCertSha256', 'pinned_peer_cert_sha256', 'certSha256', 'pcs']);
+        $trust = self::resolveTlsClientTrust(['host' => $connectionHost], $tlsSettings);
+        $pinned = $trust['cert_sha256'];
         if ($pinned !== '') {
             $config['pinnedPeerCertSha256'] = $pinned;
             $config['pcs'] = $pinned;
@@ -593,12 +632,10 @@ class Helper
 
     private static function addTlsClientTrustParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
     {
-        $autoCert = self::autoCertMetadata($tlsSettings);
-        if (self::isTrustedAutoCert($autoCert) && self::isSelfSignedAutoCert($autoCert) && !empty($autoCert['sha256'])) {
-            $tlsSettings['pinnedPeerCertSha256'] = $autoCert['sha256'];
-            if (self::isSelfSignedAutoCert($autoCert) && empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['peer']) && empty($tlsSettings['vcn'])) {
-                $tlsSettings['verifyPeerCertByName'] = self::autoCertVerifyName($autoCert, $defaultVerifyName, $connectionHost);
-            }
+        $trust = self::resolveTlsClientTrust(['host' => $connectionHost], $tlsSettings);
+        if ($trust['has_cert_pin'] && empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['peer']) && empty($tlsSettings['vcn'])) {
+            $autoCert = self::autoCertMetadata($tlsSettings);
+            $tlsSettings['verifyPeerCertByName'] = self::autoCertVerifyName($autoCert, $defaultVerifyName, $connectionHost);
         }
 
         return self::addTlsPinParams($config, $tlsSettings, $defaultVerifyName, $connectionHost);
@@ -614,13 +651,37 @@ class Helper
             return false;
         }
         $source = strtolower(trim((string)($autoCert['source'] ?? '')));
-        return in_array($source, ['acme_dns', 'acme_http', 'acme_ip', 'self', 'self_signed', 'fallback_self', 'self_fallback'], true);
+        return in_array($source, ['acme_dns', 'acme_http', 'acme_ip'], true);
     }
 
     private static function autoCertMetadata(array $tlsSettings): array
     {
         $autoCert = $tlsSettings['auto_cert'] ?? [];
         return is_array($autoCert) ? $autoCert : [];
+    }
+
+    private static function normalizeCertSha256Hex($value): string
+    {
+        $value = strtolower(preg_replace('/[^a-fA-F0-9]/', '', (string)$value));
+        return preg_match('/^[a-f0-9]{64}$/', $value) ? $value : '';
+    }
+
+    private static function hexToColonSha256(string $hex): string
+    {
+        return strtoupper(implode(':', str_split($hex, 2)));
+    }
+
+    private static function normalizePublicKeySha256($value): string
+    {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '';
+        }
+        $decoded = base64_decode($value, true);
+        if ($decoded === false || strlen($decoded) !== 32) {
+            return '';
+        }
+        return base64_encode($decoded);
     }
 
     private static function isSelfSignedAutoCert(array $autoCert): bool

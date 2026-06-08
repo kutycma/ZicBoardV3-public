@@ -144,6 +144,7 @@ class Clash
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
             $array['skip-cert-verify'] = ((int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0)) == 1 ? true : false;
             $array['servername'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+            self::applyClashTlsTrust($array, $server, $tlsSettings);
 
         }
         if ($server['network'] === 'tcp') {
@@ -202,7 +203,24 @@ class Clash
         };
         $array['sni'] = $server['server_name'] ?? (($server['tls_settings'] ?? [])['server_name'] ?? '');
         $array['skip-cert-verify'] = ((int)(($server['tls_settings'] ?? [])['allow_insecure'] ?? ($server['allow_insecure'] ?? 0))) == 1 ? true : false;
+        self::applyClashTlsTrust($array, $server, $server['tls_settings'] ?? []);
         return $array;
+    }
+
+    private static function applyClashTlsTrust(array &$array, array $server, array $tlsSettings): bool
+    {
+        if ((int)($server['tls'] ?? 1) === 2) {
+            return false;
+        }
+        $trust = Helper::resolveTlsClientTrust($server, $tlsSettings);
+        if (!empty($trust['suppress_insecure']) || $trust['has_cert_pin']) {
+            $array['skip-cert-verify'] = false;
+        }
+        if ($trust['has_cert_pin']) {
+            $array['fingerprint'] = $trust['cert_sha256'];
+            return true;
+        }
+        return !empty($trust['suppress_insecure']);
     }
 
     private function isMatch($exp, $str)

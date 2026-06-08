@@ -454,7 +454,8 @@ class ServerService
                 $servers[$k]['padding_scheme'] = json_encode($v['padding_scheme']);
             }
 
-            $apiHost = rtrim((string) config('zicboard.app_url'), '/');
+            $serverApiUrl = trim((string) config('zicboard.server_api_url', ''));
+            $apiHost = rtrim($serverApiUrl !== '' ? $serverApiUrl : (string) config('zicboard.app_url'), '/');
             $apiKey = config('zicboard.server_token', '');
             $installScriptUrl = config('zicboard.zicnode_install_script_url', 'https://raw.githubusercontent.com/ZicBoard/ZicNode/master/script/install.sh');
             $nodeId = (int) $v['id'];
