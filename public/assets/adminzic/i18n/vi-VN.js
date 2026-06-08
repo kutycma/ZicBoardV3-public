@@ -906,6 +906,10 @@
     "subscription.autoRenewal": "Tự động gia hạn",
     "subscription.autoRenewalOff": "Tắt",
     "subscription.autoRenewalOn": "Bật",
+    "subscription.sniName": "T\u00ean SNI",
+    "subscription.sniNamePlaceholder": "V\u00ed d\u1ee5: TikTok",
+    "subscription.sniValue": "SNI theo g\u00f3i",
+    "subscription.sniValuePlaceholder": "V\u00ed d\u1ee5: m.tiktok.com",
     "subscription.remarks": "Ghi chú",
 
     "notice.title": "Quản lý thông báo",

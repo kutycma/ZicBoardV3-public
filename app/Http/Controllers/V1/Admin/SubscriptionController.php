@@ -42,6 +42,8 @@ class SubscriptionController extends Controller
                 'v2_user_subscription.auto_renewal',
                 'v2_user_subscription.token',
                 'v2_user_subscription.uuid',
+                'v2_user_subscription.name_sni',
+                'v2_user_subscription.network_settings',
                 'v2_user_subscription.status',
                 'v2_user_subscription.remarks',
                 'v2_user_subscription.created_at',

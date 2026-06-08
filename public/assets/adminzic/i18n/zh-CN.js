@@ -886,6 +886,10 @@
     "subscription.autoRenewal": "自动续费",
     "subscription.autoRenewalOff": "关闭",
     "subscription.autoRenewalOn": "开启",
+    "subscription.sniName": "SNI \u540d\u79f0",
+    "subscription.sniNamePlaceholder": "\u4f8b\u5982\uff1aTikTok",
+    "subscription.sniValue": "\u8ba2\u9605 SNI",
+    "subscription.sniValuePlaceholder": "\u4f8b\u5982\uff1am.tiktok.com",
     "subscription.remarks": "备注",
 
     "notice.title": "公告管理",

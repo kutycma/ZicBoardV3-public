@@ -906,6 +906,10 @@
     "subscription.autoRenewal": "Auto renewal",
     "subscription.autoRenewalOff": "Off",
     "subscription.autoRenewalOn": "On",
+    "subscription.sniName": "SNI name",
+    "subscription.sniNamePlaceholder": "Example: TikTok",
+    "subscription.sniValue": "Subscription SNI",
+    "subscription.sniValuePlaceholder": "Example: m.tiktok.com",
     "subscription.remarks": "Remarks",
 
     "notice.title": "Notice Management",
