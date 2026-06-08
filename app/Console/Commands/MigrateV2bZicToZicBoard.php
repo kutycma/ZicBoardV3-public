@@ -845,6 +845,7 @@ class MigrateV2bZicToZicBoard extends Command
 
         $this->repairTrojanRuntimeSchema();
         $this->repairLegacyTlsSettingsSchema();
+        $this->repairServerRateSchema();
 
         if (Schema::hasTable('v2_server_vless')) {
             $this->ensureColumn('v2_server_vless', 'encryption', "ADD `encryption` varchar(64) DEFAULT NULL AFTER `network_settings`");
@@ -891,6 +892,36 @@ class MigrateV2bZicToZicBoard extends Command
         }
     }
 
+    private function repairServerRateSchema()
+    {
+        $tables = [
+            'v2_server',
+            'v2_server_v2ray',
+            'v2_server_vmess',
+            'v2_server_vless',
+            'v2_server_trojan',
+            'v2_server_shadowsocks',
+            'v2_server_hysteria',
+            'v2_server_tuic',
+            'v2_server_anytls',
+            'v2_server_zicnode',
+            'v2_server_v2node',
+        ];
+
+        foreach ($tables as $table) {
+            if (!Schema::hasTable($table) || !Schema::hasColumn($table, 'rate')) {
+                continue;
+            }
+
+            DB::statement("
+                UPDATE `{$table}`
+                SET `rate` = '1.00'
+                WHERE TRIM(COALESCE(CAST(`rate` AS CHAR), '')) = ''
+                    OR TRIM(COALESCE(CAST(`rate` AS CHAR), '')) NOT REGEXP '^-?[0-9]+(\\\\.[0-9]+)?\$'
+            ");
+            DB::statement("ALTER TABLE `{$table}` MODIFY `rate` decimal(10,2) NOT NULL DEFAULT '1.00'");
+        }
+    }
     private function ensureZicnodeTable()
     {
         if (!Schema::hasTable('v2_server_zicnode')) {
@@ -906,7 +937,7 @@ class MigrateV2bZicToZicBoard extends Command
                     `port` varchar(11) NOT NULL,
                     `server_port` int(11) NOT NULL,
                     `tags` varchar(255) DEFAULT NULL,
-                    `rate` varchar(11) NOT NULL,
+                    `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
                     `show` tinyint(1) NOT NULL DEFAULT '0',
                     `sort` int(11) DEFAULT NULL,
                     `protocol` varchar(24) NOT NULL,
@@ -979,7 +1010,7 @@ class MigrateV2bZicToZicBoard extends Command
             'port' => "ADD `port` varchar(11) NOT NULL DEFAULT '' AFTER `listen_ip`",
             'server_port' => "ADD `server_port` int(11) NOT NULL DEFAULT '0' AFTER `port`",
             'tags' => "ADD `tags` varchar(255) DEFAULT NULL AFTER `server_port`",
-            'rate' => "ADD `rate` varchar(11) NOT NULL DEFAULT '1' AFTER `tags`",
+            'rate' => "ADD `rate` decimal(10,2) NOT NULL DEFAULT '1.00' AFTER `tags`",
             'show' => "ADD `show` tinyint(1) NOT NULL DEFAULT '0' AFTER `rate`",
             'sort' => "ADD `sort` int(11) DEFAULT NULL AFTER `show`",
             'protocol' => "ADD `protocol` varchar(24) NOT NULL DEFAULT 'vless' AFTER `sort`",
@@ -1014,7 +1045,7 @@ class MigrateV2bZicToZicBoard extends Command
             'listen_ip' => "'0.0.0.0'",
             'port' => "''",
             'server_port' => '0',
-            'rate' => "'1'",
+            'rate' => "'1.00'",
             'show' => '0',
             'protocol' => "'vless'",
             'tls' => '0',

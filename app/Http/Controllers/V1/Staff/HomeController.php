@@ -171,7 +171,7 @@ class HomeController extends Controller
             $user->ips = implode(', ', $ips);
             $plan = $user->plan_id && isset($plans[$user->plan_id]) ? $plans[$user->plan_id] : null;
             if ($this->canExposeSubscribeUrl($plan)) {
-                $user->subscribe_url = Helper::getSubscribeUrl($user->token);
+            $user->subscribe_url = Helper::getSubscribeUrl($user->token, $request);
                 $user->subscribe_url_hidden = false;
             } else {
                 $user->subscribe_url = '';

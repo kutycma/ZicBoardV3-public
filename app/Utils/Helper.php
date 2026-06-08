@@ -1,16 +1,83 @@
 <?php
 
 namespace App\Utils;
+use App\Models\Staff;
 use App\Services\HappSubscribeCacheService;
 use App\Services\Core\ProtectedFeatureService;
 use App\Models\User;
 use App\Models\UserSubscription;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
 
 class Helper
 {
+    public static function normalizeWebconDomain($domain): string
+    {
+        $domain = trim((string)$domain);
+        if ($domain === '') {
+            return '';
+        }
+
+        $url = preg_match('/^[a-z][a-z0-9+.-]*:\/\//i', $domain) ? $domain : 'https://' . $domain;
+        $parts = parse_url($url);
+        if (is_array($parts) && !empty($parts['host'])) {
+            $host = strtolower($parts['host']);
+            return isset($parts['port']) ? $host . ':' . $parts['port'] : $host;
+        }
+
+        $domain = preg_replace('/[\/?#].*$/', '', $domain);
+        return strtolower($domain ?: '');
+    }
+
+    public static function activeWebcon(?Request $request = null)
+    {
+        if (!$request || !Schema::hasTable('v2_staff')) {
+            return null;
+        }
+
+        $hosts = array_values(array_unique(array_filter([
+            self::normalizeWebconDomain($request->getHost()),
+            self::normalizeWebconDomain($request->getHttpHost()),
+        ])));
+        if (!$hosts) {
+            return null;
+        }
+
+        return Staff::where('status', 1)->get()->first(function ($staff) use ($hosts) {
+            return in_array(self::normalizeWebconDomain($staff->domain), $hosts, true);
+        });
+    }
+
+    public static function webconSiteName($staff): string
+    {
+        $title = $staff ? trim((string)$staff->title) : '';
+        return $title !== '' ? $title : (string)config('zicboard.app_name', 'ZicBoard');
+    }
+
+    public static function requestOrigin(?Request $request = null): string
+    {
+        return $request ? rtrim($request->getSchemeAndHttpHost(), '/') : '';
+    }
+
+    public static function applyWebconRuntimeConfig(?Request $request = null): void
+    {
+        $staff = self::activeWebcon($request);
+        if (!$staff) {
+            return;
+        }
+
+        $siteName = self::webconSiteName($staff);
+        $origin = self::requestOrigin($request);
+        config([
+            'zicboard.app_name' => $siteName,
+            'zicboard.happ_profile_title' => $siteName,
+            'zicboard.app_url' => $origin ?: config('zicboard.app_url'),
+            'zicboard.subscribe_url' => $origin ?: config('zicboard.subscribe_url'),
+        ]);
+    }
+
     public static function uuidToBase64($uuid, $length)
     {
         return base64_encode(substr($uuid, 0, $length));
@@ -167,7 +234,7 @@ class Helper
             ];
         }
 
-        $url = self::rawSubscribeUrl($subscription->token, self::isSubscribeUrlAllowedUserAgent($request));
+        $url = self::rawSubscribeUrl($subscription->token, self::isSubscribeUrlAllowedUserAgent($request), $request);
         if ($url === null) {
             return [
                 'url' => null,
@@ -179,15 +246,19 @@ class Helper
         return self::happProtectedSubscribeUrl($url);
     }
 
-    private static function rawSubscribeUrl($token, bool $forceDirect = false)
+    private static function rawSubscribeUrl($token, bool $forceDirect = false, $request = null)
     {
         $submethod = $forceDirect ? 0 : (int)config('zicboard.show_subscribe_method', 0);
         $path = config('zicboard.subscribe_path', '/api/v3/client/subscribe');
         if (empty($path)) {
             $path = '/api/v3/client/subscribe';
         } 
-        $subscribeUrls = explode(',', config('zicboard.subscribe_url'));
-        $subscribeUrl = $subscribeUrls[rand(0, count($subscribeUrls) - 1)];
+        $webconOrigin = $request instanceof Request && self::activeWebcon($request)
+            ? self::requestOrigin($request)
+            : '';
+        $subscribeUrls = explode(',', (string)config('zicboard.subscribe_url'));
+        $subscribeUrl = $webconOrigin ?: $subscribeUrls[rand(0, count($subscribeUrls) - 1)];
+        $subscribeUrl = rtrim(trim((string)$subscribeUrl), '/');
         switch ($submethod) {
             case 0:
                 $path = "{$path}?token={$token}";

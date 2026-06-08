@@ -1,9 +1,8 @@
 <?php
 
-use App\Models\Staff;
 use App\Services\ThemeService;
+use App\Utils\Helper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,9 +16,8 @@ use Illuminate\Support\Facades\Schema;
 
 Route::get('/', function (Request $request) {
     $host = $request->getHost();
-    $staff = Schema::hasTable('v2_staff')
-        ? Staff::where('domain', $host)->where('status', 1)->first()
-        : null;
+    $httpHost = $request->getHttpHost();
+    $staff = Helper::activeWebcon($request);
 
     if (config('zicboard.app_url') && config('zicboard.safe_mode_enable', 0)) {
         if ($host !== parse_url(config('zicboard.app_url'))['host'] && !$staff) {
@@ -42,10 +40,10 @@ Route::get('/', function (Request $request) {
 
     $themeConfig = $themeService->savedConfig();
     if ($staff) {
-        if ($staff->title) {
-            $renderParams['title'] = $staff->title;
-            $themeConfig['SITE_CONFIG.siteName'] = $staff->title;
-        }
+        $siteName = Helper::webconSiteName($staff);
+        $renderParams['title'] = $siteName;
+        $themeConfig['SITE_CONFIG.siteName'] = $siteName;
+        $themeConfig['title'] = $siteName;
         if ($staff->logo) {
             $renderParams['logo'] = $staff->logo;
             $themeConfig['SITE_CONFIG.logo'] = $staff->logo;
@@ -53,6 +51,7 @@ Route::get('/', function (Request $request) {
         if ($staff->description) {
             $renderParams['description'] = $staff->description;
             $themeConfig['SITE_CONFIG.siteDescription'] = $staff->description;
+            $themeConfig['description'] = $staff->description;
         }
         if ($staff->background_url) {
             $themeConfig['background_url'] = $staff->background_url;
@@ -61,10 +60,16 @@ Route::get('/', function (Request $request) {
         if ($staff->custom_html) {
             $themeConfig['custom_html'] = $staff->custom_html;
             $themeConfig['CUSTOMER_SERVICE_CONFIG.customHtml'] = $staff->custom_html;
-            $themeConfig['CUSTOMER_SERVICE_CONFIG.enabled'] = 'true';
+            $themeConfig['CUSTOMER_SERVICE_CONFIG.enabled'] = true;
             $themeConfig['CUSTOMER_SERVICE_CONFIG.type'] = 'other';
             $themeConfig['CUSTOMER_SERVICE_CONFIG.embedMode'] = 'page';
+            $renderParams['custom_html'] = $staff->custom_html;
         }
+        $renderParams['is_webcon'] = true;
+        $renderParams['webcon_domain'] = $httpHost;
+    } else {
+        $renderParams['is_webcon'] = false;
+        $renderParams['webcon_domain'] = $httpHost;
     }
 
     $renderParams['theme_config'] = $themeConfig;

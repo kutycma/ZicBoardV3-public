@@ -133,7 +133,7 @@ class UserController extends Controller
             $alive = $this->aliveSummary($aliveCacheKey ? ($aliveCache[$aliveCacheKey] ?? null) : null);
             $user->alive_ip = $alive['alive_ip'];
             $user->ips = $alive['ips'];
-            $user->subscribe_url = Helper::getSubscribeUrl($user->token);
+            $user->subscribe_url = Helper::getSubscribeUrl($user->token, $request);
             $user->makeHidden(['subscription']);
         }
         return response([
@@ -361,7 +361,7 @@ class UserController extends Controller
             $deviceLimit = $user['devce_limit'] ? $user['devce_limit'] : NULL;
             $notUseFlow = (($user['transfer_enable'] - ($user['u'] + $user['d'])) / 1073741824) ?? 0;
             $planName = $user['plan_name'] ?? 'Chưa có gói';
-            $subscribeUrl =  Helper::getSubscribeUrl($user['token']);
+            $subscribeUrl =  Helper::getSubscribeUrl($user['token'], $request);
             $data .= "{$user['email']},{$balance},{$commissionBalance},{$transferEnable}, {$deviceLimit}, {$notUseFlow},{$expireDate},{$planName},{$subscribeUrl}\r\n";
 
         }
@@ -449,7 +449,7 @@ class UserController extends Controller
             if ($subscription) {
                 (new UserDeviceService())->ensureWaitingSlot($subscription);
             }
-            $subscribeUrl = Helper::getSubscribeUrl($subscription ? $subscription->token : $user['token']);
+            $subscribeUrl = Helper::getSubscribeUrl($subscription ? $subscription->token : $user['token'], $request);
             $data .= "{$user['email']},{$password},{$expireDate},{$user['uuid']},{$createDate},{$subscribeUrl}\r\n";
         }
         echo $data;

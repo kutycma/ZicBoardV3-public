@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\V1\Guest;
 
 use App\Http\Controllers\Controller;
-use App\Models\Staff;
 use App\Utils\Dict;
+use App\Utils\Helper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class CommController extends Controller
 {
     public function config(Request $request)
     {
-        $staff = $this->activeWebcon($request);
+        $staff = Helper::activeWebcon($request);
 
         return response([
             'data' => [
@@ -40,14 +39,4 @@ class CommController extends Controller
         return $suffix;
     }
 
-    private function activeWebcon(Request $request)
-    {
-        if (!Schema::hasTable('v2_staff')) {
-            return null;
-        }
-
-        return Staff::where('domain', $request->getHost())
-            ->where('status', 1)
-            ->first();
-    }
 }

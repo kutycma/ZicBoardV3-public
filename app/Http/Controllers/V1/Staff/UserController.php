@@ -48,7 +48,7 @@ class UserController extends Controller
             $plan = $item->plan_id && isset($plans[$item->plan_id]) ? $plans[$item->plan_id] : null;
             $item->plan_name = $plan ? $plan->name : null;
             if ($this->canExposeSubscribeUrl($item, $plans)) {
-                $item->subscribe_url = Helper::getSubscribeUrl($item->token);
+                $item->subscribe_url = Helper::getSubscribeUrl($item->token, $request);
                 $item->subscribe_url_hidden = false;
             } else {
                 $item->subscribe_url = '';
@@ -192,7 +192,7 @@ class UserController extends Controller
             'success' => true
         ];
         if ($this->canExposeSubscribeUrl($subscription)) {
-            $responseData['new_subscribe_url'] = Helper::getSubscribeUrl($subscription->token);
+            $responseData['new_subscribe_url'] = Helper::getSubscribeUrl($subscription->token, $request);
             $responseData['subscribe_url_hidden'] = false;
         } else {
             $responseData['subscribe_url_hidden'] = true;

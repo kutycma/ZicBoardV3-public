@@ -9,7 +9,6 @@ use App\Http\Requests\Passport\AuthRegister;
 use App\Jobs\SendEmailJob;
 use App\Models\InviteCode;
 use App\Models\Plan;
-use App\Models\Staff;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\SubscriptionService;
@@ -19,7 +18,6 @@ use App\Utils\Dict;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
 use ReCaptcha\ReCaptcha;
 
 class AuthController extends Controller
@@ -82,13 +80,9 @@ class AuthController extends Controller
         $user->password = password_hash($password, PASSWORD_DEFAULT);
         $user->uuid = Helper::guid(true);
         $user->token = Helper::guid();
-        if (Schema::hasTable('v2_staff')) {
-            $staff = Staff::where('domain', $request->getHost())
-                ->where('status', 1)
-                ->first();
-            if ($staff) {
-                $user->invite_user_id = $staff->user_id;
-            }
+        $staff = Helper::activeWebcon($request);
+        if ($staff) {
+            $user->invite_user_id = $staff->user_id;
         }
         if (!$user->invite_user_id && $request->input('invite_code')) {
             $inviteCode = InviteCode::where('code', $request->input('invite_code'))

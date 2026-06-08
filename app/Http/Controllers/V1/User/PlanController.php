@@ -4,19 +4,18 @@ namespace App\Http\Controllers\V1\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
-use App\Models\Staff;
 use App\Models\User;
 use App\Services\PlanService;
 use App\Services\SubscriptionService;
+use App\Utils\Helper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class PlanController extends Controller
 {
     public function fetch(Request $request)
     {
         $user = User::find($request->user['id']);
-        $staff = $this->activeWebcon($request);
+        $staff = Helper::activeWebcon($request);
         $staffPlanIds = $staff ? ($staff->plan_id ?: []) : [];
         $isWebcon = $staff && !empty($staffPlanIds);
 
@@ -66,14 +65,4 @@ class PlanController extends Controller
         ]);
     }
 
-    private function activeWebcon(Request $request)
-    {
-        if (!Schema::hasTable('v2_staff')) {
-            return null;
-        }
-
-        return Staff::where('domain', $request->getHost())
-            ->where('status', 1)
-            ->first();
-    }
 }

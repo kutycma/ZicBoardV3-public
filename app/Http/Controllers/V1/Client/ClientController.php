@@ -19,6 +19,8 @@ class ClientController extends Controller
 {
     public function subscribe(Request $request)
     {
+        Helper::applyWebconRuntimeConfig($request);
+
         $requestFlag = (string)$request->input('flag', '');
         $userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
         $flag = $requestFlag !== '' ? $requestFlag : $userAgent;

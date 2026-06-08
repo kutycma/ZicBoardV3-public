@@ -7,7 +7,6 @@ use App\Http\Requests\User\OrderSave;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Plan;
-use App\Models\Staff;
 use App\Models\User;
 use App\Services\CouponService;
 use App\Services\OrderService;
@@ -18,7 +17,6 @@ use App\Services\UserService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class OrderController extends Controller
 {
@@ -142,7 +140,7 @@ class OrderController extends Controller
             abort(500, __('Subscription does not exist'));
         }
 
-        $staff = $this->activeWebcon($request);
+        $staff = Helper::activeWebcon($request);
         $staffPlanIds = $staff ? ($staff->plan_id ?: []) : [];
         $isWebcon = $staff && !empty($staffPlanIds);
         $isWebconPlan = $isWebcon && in_array((int)$plan->id, $staffPlanIds);
@@ -352,14 +350,4 @@ class OrderController extends Controller
         return $add;
     }
 
-    private function activeWebcon(Request $request)
-    {
-        if (!Schema::hasTable('v2_staff')) {
-            return null;
-        }
-
-        return Staff::where('domain', $request->getHost())
-            ->where('status', 1)
-            ->first();
-    }
 }

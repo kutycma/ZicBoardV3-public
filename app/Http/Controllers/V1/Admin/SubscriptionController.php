@@ -77,7 +77,7 @@ class SubscriptionController extends Controller
 
         if ($includeSubscribeUrl) {
             foreach ($subscriptions as $subscription) {
-                $subscription->subscribe_url = Helper::getSubscribeUrl($subscription->token);
+                $subscription->subscribe_url = Helper::getSubscribeUrl($subscription->token, $request);
             }
         }
 
@@ -101,7 +101,7 @@ class SubscriptionController extends Controller
         }
 
         return response([
-            'data' => Helper::getSubscribeUrl($subscription->token)
+            'data' => Helper::getSubscribeUrl($subscription->token, $request)
         ]);
     }
 
@@ -193,7 +193,7 @@ class SubscriptionController extends Controller
 
         return response([
             'data' => true,
-            'subscribe_url' => Helper::getSubscribeUrl($subscription->token)
+            'subscribe_url' => Helper::getSubscribeUrl($subscription->token, $request)
         ]);
     }
 
