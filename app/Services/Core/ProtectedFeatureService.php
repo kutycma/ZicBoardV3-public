@@ -169,7 +169,14 @@ class ProtectedFeatureService
             return $config;
         }
 
-        unset($settings['allow_insecure'], $settings['allowInsecure'], $settings['cert_email'], $settings['acme_email']);
+        unset($settings['cert_email'], $settings['acme_email']);
+        if (array_key_exists('allowInsecure', $settings) && !array_key_exists('allow_insecure', $settings)) {
+            $settings['allow_insecure'] = $settings['allowInsecure'];
+        }
+        unset($settings['allowInsecure']);
+        if (array_key_exists('allow_insecure', $settings)) {
+            $settings['allow_insecure'] = self::boolish($settings['allow_insecure']) ? 1 : 0;
+        }
 
         $realityKeys = [
             'dest',
@@ -191,6 +198,7 @@ class ProtectedFeatureService
             'key_file',
             'reject_unknown_sni',
             'auto_cert',
+            'allow_insecure',
         ];
 
         if ($tlsMode === 1) {

@@ -55,7 +55,7 @@ class Shadowrocket
         if ($server['tls']) {
             $config['tls'] = 1;
             $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
-            $config['allowInsecure'] = (int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0);
+            $config['allowInsecure'] = ((int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0) === 1 || Helper::needsLegacyInsecureForUri($tlsSettings)) ? 1 : 0;
             $config['peer'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
         }
         if ($server['network'] === 'tcp') {

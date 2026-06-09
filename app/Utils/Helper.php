@@ -622,6 +622,7 @@ class Helper
             $publicKeySha256 = self::normalizePublicKeySha256($autoCert['public_key_sha256'] ?? '');
         }
 
+        $needsLegacyInsecureAutoCert = $trustedAutoCert && self::autoCertNeedsLegacyInsecure($autoCert);
         $isSelfSignedAutoCert = $trustedAutoCert && self::isSelfSignedAutoCert($autoCert);
         $isAcmeAutoCert = $trustedAutoCert && self::isAcmeAutoCert($autoCert);
 
@@ -636,9 +637,10 @@ class Helper
             'is_auto_cert' => $autoCert !== [],
             'is_self_signed_auto_cert' => $isSelfSignedAutoCert,
             'is_acme_auto_cert' => $isAcmeAutoCert,
-            'allow_legacy_insecure_fallback' => $isSelfSignedAutoCert && $certSha256 === '' && $publicKeySha256 === '',
-            'requires_modern_pin' => $isSelfSignedAutoCert,
+            'allow_legacy_insecure_fallback' => $needsLegacyInsecureAutoCert && $certSha256 === '' && $publicKeySha256 === '',
+            'requires_modern_pin' => $needsLegacyInsecureAutoCert,
             'suppress_insecure' => self::shouldSuppressLegacyInsecure($tlsSettings),
+            'needs_legacy_insecure' => $needsLegacyInsecureAutoCert,
         ];
     }
 
@@ -717,7 +719,30 @@ class Helper
             return false;
         }
         $source = strtolower(trim((string)($autoCert['source'] ?? '')));
-        return in_array($source, ['acme_dns', 'acme_http', 'acme_ip'], true);
+        return in_array($source, ['acme_dns', 'acme_http', 'acme_ip'], true) && !self::isSuspiciousAcmeAutoCert($autoCert);
+    }
+
+    private static function autoCertNeedsLegacyInsecure(array $autoCert): bool
+    {
+        return self::isSelfSignedAutoCert($autoCert) || self::isSuspiciousAcmeAutoCert($autoCert);
+    }
+
+    private static function isSuspiciousAcmeAutoCert(array $autoCert): bool
+    {
+        if (!self::isAcmeAutoCert($autoCert)) {
+            return false;
+        }
+        $notAfter = (int)($autoCert['not_after'] ?? 0);
+        return $notAfter > 0 && $notAfter > time() + 400 * 86400;
+    }
+
+    public static function needsLegacyInsecureForUri(array $tlsSettings): bool
+    {
+        $autoCert = self::autoCertMetadata($tlsSettings);
+        if (!$autoCert || strtolower(trim((string)($autoCert['status'] ?? ''))) === 'error') {
+            return false;
+        }
+        return self::autoCertNeedsLegacyInsecure($autoCert);
     }
 
     private static function autoCertMetadata(array $tlsSettings): array
@@ -854,7 +879,7 @@ class Helper
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
             $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
             $config['sni'] = $sni;
-            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            if (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings)) {
                 $config['allowInsecure'] = 1;
             }
         }
@@ -926,7 +951,7 @@ class Helper
             $tlsSettings = $server['tls_settings'] ?? [];
             $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
             $config['sni'] = $sni;
-            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            if ((int)($server['tls'] ?? 0) !== 2 && (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings))) {
                 $config['insecure'] = 1;
             }
             if ($server['tls'] == 2) {
@@ -1086,7 +1111,8 @@ class Helper
             if ($alpn !== '') {
                 $config['alpn'] = $alpn;
             }
-            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? ($server['allowInsecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)))) {
+            $allowInsecure = self::boolish($server['allow_insecure'] ?? ($server['allowInsecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)));
+            if ($allowInsecure || self::needsLegacyInsecureForUri($tlsSettings)) {
                 $config['allowInsecure'] = 1;
             }
         }
@@ -1118,7 +1144,7 @@ class Helper
                 $config['alpn'] = $alpn;
             }
         }
-        if ($tlsEnabled && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+        if ($tlsEnabled && (self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings))) {
             $config['allowInsecure'] = 1;
         }
 
@@ -1153,7 +1179,7 @@ class Helper
                 'upmbps' => $server['down_mbps'],
                 'downmbps' => $server['up_mbps'],
             ];
-        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+        if (self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
             $config['insecure'] = 1;
         }
 
@@ -1185,7 +1211,7 @@ class Helper
         $tlsSettings = $server['tls_settings'] ?? [];
         $sni = $tlsSettings['server_name'] ?? ($server['server_name'] ?? '');
         $config = ['sni' => $sni];
-        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($tlsSettings['allow_insecure'] ?? 0)) {
+        if (self::boolish($tlsSettings['allow_insecure'] ?? 0)) {
             $config['insecure'] = 1;
         }
 
@@ -1212,7 +1238,7 @@ class Helper
             'disable_sni' => $server['disable_sni'],
             'udp_relay_mode' => $server['udp_relay_mode'],
         ];
-        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
+        if (self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
             $config['allow_insecure'] = 1;
         }
 
@@ -1236,7 +1262,7 @@ class Helper
             $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
             $config['sni'] = $sni;
         }
-        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
+        if (self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
             $config['insecure'] = 1;
         }
         if (isset($server['tls']) && $server['tls'] == 2) {
