@@ -31,6 +31,9 @@ class ServerService
             if (!$v['show']) continue;
             $server[$key]['type'] = 'vless';
             if (!in_array($user->group_id, $server[$key]['group_id'])) continue;
+            if (strpos($server[$key]['port'], '-') !== false) {
+                $server[$key]['port'] = Helper::randomPort($server[$key]['port']);
+            }
             if ($server[$key]['parent_id']) {
                 $server[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VLESS_LAST_CHECK_AT', $server[$key]['parent_id']));
             } else {
@@ -52,6 +55,9 @@ class ServerService
             if (!$v['show']) continue;
             $vmess[$key]['type'] = 'vmess';
             if (!in_array($user->group_id, $vmess[$key]['group_id'])) continue;
+            if (strpos($vmess[$key]['port'], '-') !== false) {
+                $vmess[$key]['port'] = Helper::randomPort($vmess[$key]['port']);
+            }
             if ($vmess[$key]['parent_id']) {
                 $vmess[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VMESS_LAST_CHECK_AT', $vmess[$key]['parent_id']));
             } else {
@@ -73,6 +79,9 @@ class ServerService
             if (!$v['show']) continue;
             $trojan[$key]['type'] = 'trojan';
             if (!in_array($user->group_id, $trojan[$key]['group_id'])) continue;
+            if (strpos($trojan[$key]['port'], '-') !== false) {
+                $trojan[$key]['port'] = Helper::randomPort($trojan[$key]['port']);
+            }
             if ($trojan[$key]['parent_id']) {
                 $trojan[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TROJAN_LAST_CHECK_AT', $trojan[$key]['parent_id']));
             } else {
@@ -132,6 +141,9 @@ class ServerService
             $shadowsocks[$key]['type'] = 'shadowsocks';
             $shadowsocks[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v['id']));
             if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (strpos($v['port'], '-') !== false) {
+                $shadowsocks[$key]['port'] = Helper::randomPort($v['port']);
+            }
             if (isset($shadowsocks[$v['parent_id']])) {
                 $shadowsocks[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v['parent_id']));
                 $shadowsocks[$key]['created_at'] = $shadowsocks[$v['parent_id']]['created_at'];
@@ -156,6 +168,9 @@ class ServerService
             $anytls[$key]['type'] = 'anytls';
             $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['id']));
             if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (strpos($v['port'], '-') !== false) {
+                $anytls[$key]['port'] = Helper::randomPort($v['port']);
+            }
             if (isset($anytls[$v['parent_id']])) {
                 $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['parent_id']));
                 $anytls[$key]['created_at'] = $anytls[$v['parent_id']]['created_at'];
