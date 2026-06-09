@@ -9,6 +9,7 @@
             version: @json($assetVersion),
             is_webcon: @json($is_webcon ?? false),
             webcon_domain: @json($webcon_domain ?? ''),
+            webcon_shared_subscribe_url_enable: @json((int)($webcon_shared_subscribe_url_enable ?? 0)),
             background_url: @json(isset($theme_config["background_url"]) ? $theme_config["background_url"] : ""),
             description: @json($description),
             custom_html: @json($custom_html ?? ''),

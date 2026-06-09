@@ -45,6 +45,8 @@ class ZicnodeController extends Controller
             'sort' => 'nullable'
         ]);
 
+        $params = $this->normalizeImplicitTlsMode($params);
+
         $server = null;
         if ($request->input('id')) {
             $server = ServerZicnode::find($request->input('id'));
@@ -79,10 +81,47 @@ class ZicnodeController extends Controller
         ]);
     }
 
+    private function normalizeImplicitTlsMode(array $params): array
+    {
+        $params['tls'] = $this->normalizeTlsModeForProtocol($params['protocol'] ?? '', (int)($params['tls'] ?? 0));
+        return $params;
+    }
+
+    private function effectiveTlsMode(array $params, ServerZicnode $server): int
+    {
+        return $this->normalizeTlsModeForProtocol(
+            $params['protocol'] ?? $server->getAttribute('protocol') ?? '',
+            (int)($params['tls'] ?? $server->getAttribute('tls') ?? 0)
+        );
+    }
+
+    private function normalizeTlsModeForProtocol($protocol, int $tlsMode): int
+    {
+        $protocol = strtolower(trim((string)$protocol));
+        if ($protocol === '') {
+            return $tlsMode;
+        }
+        if ($protocol === 'shadowsocks') {
+            return 0;
+        }
+        if ($tlsMode === 2) {
+            return in_array($protocol, ['vless', 'anytls'], true) ? 2 : 1;
+        }
+        if ($this->zicnodeProtocolUsesNormalTls($protocol)) {
+            return 1;
+        }
+        return $tlsMode;
+    }
+
+    private function zicnodeProtocolUsesNormalTls($protocol): bool
+    {
+        return in_array(strtolower(trim((string)$protocol)), ['trojan', 'hysteria', 'hysteria2', 'tuic', 'anytls'], true);
+    }
+
     private function preserveTlsSecrets(array $params, ServerZicnode $server): array
     {
         $tlsSettingsKey = 'tls' . '_settings';
-        $tlsMode = (int)($params['tls'] ?? $server->getAttribute('tls') ?? 0);
+        $tlsMode = $this->effectiveTlsMode($params, $server);
         $secretKeys = [];
 
         $existing = $server->getAttribute($tlsSettingsKey);
@@ -206,7 +245,7 @@ class ZicnodeController extends Controller
             ? $params[$tlsSettingsKey]
             : [];
 
-        if ((int)($params['tls'] ?? $server->getAttribute('tls') ?? 0) !== 1) {
+        if ($this->effectiveTlsMode($params, $server) !== 1) {
             unset($incoming['auto_cert']);
             $params[$tlsSettingsKey] = $incoming;
             return $params;
@@ -227,7 +266,7 @@ class ZicnodeController extends Controller
 
     private function autoCertContextChanged(array $params, ServerZicnode $server, array $incoming, array $existing): bool
     {
-        if ((int)($params['tls'] ?? $server->getAttribute('tls')) !== (int)$server->getAttribute('tls')) {
+        if ($this->effectiveTlsMode($params, $server) !== $this->effectiveTlsMode([], $server)) {
             return true;
         }
 

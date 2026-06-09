@@ -6,6 +6,9 @@ class LegacyTlsSettingsService
 {
     private const TLS_NODE_TYPES = ['zicnode', 'vmess', 'vless', 'trojan', 'hysteria', 'tuic', 'anytls'];
     private const ALWAYS_TLS_NODE_TYPES = ['trojan', 'hysteria', 'tuic', 'anytls'];
+    private const ZICNODE_IMPLICIT_TLS_PROTOCOLS = ['trojan', 'hysteria', 'hysteria2', 'tuic', 'anytls'];
+    private const ZICNODE_CONNECTION_SECURITY_PROTOCOLS = ['vmess', 'vless', 'trojan', 'hysteria', 'hysteria2', 'tuic', 'anytls'];
+    private const ZICNODE_REALITY_PROTOCOLS = ['vless', 'anytls'];
 
     public static function normalizeType($type): string
     {
@@ -28,12 +31,33 @@ class LegacyTlsSettingsService
 
     public static function nodeUsesNormalTls($type, $server): bool
     {
+        return self::normalTlsEnabled($type, [], $server);
+    }
+
+    private static function normalTlsEnabled($type, array $params, $server): bool
+    {
         $type = self::normalizeType($type);
+        if ($type === 'zicnode') {
+            $tls = (int)($params['tls'] ?? self::value($server, 'tls', 0));
+            $protocol = strtolower(trim((string)($params['protocol'] ?? self::value($server, 'protocol', ''))));
+            if ($protocol === 'shadowsocks') {
+                return false;
+            }
+            if ($tls === 2) {
+                return in_array($protocol, self::ZICNODE_CONNECTION_SECURITY_PROTOCOLS, true)
+                    && !in_array($protocol, self::ZICNODE_REALITY_PROTOCOLS, true);
+            }
+            if (in_array($protocol, self::ZICNODE_IMPLICIT_TLS_PROTOCOLS, true)) {
+                return true;
+            }
+            return $tls === 1;
+        }
+
         if (in_array($type, self::ALWAYS_TLS_NODE_TYPES, true)) {
             return true;
         }
-        if (in_array($type, ['zicnode', 'vmess', 'vless'], true)) {
-            return (int)self::value($server, 'tls', 0) === 1;
+        if (in_array($type, ['vmess', 'vless'], true)) {
+            return (int)($params['tls'] ?? self::value($server, 'tls', 0)) === 1;
         }
         return false;
     }
@@ -114,20 +138,24 @@ class LegacyTlsSettingsService
         }
 
         $certMode = strtolower(trim((string)($settings['cert_mode'] ?? '')));
-        if ($certMode !== '') {
+        if ($certMode !== '' && $certMode !== 'auto') {
             return $settings;
         }
 
-        $settings['cert_mode'] = 'auto';
+        if ($certMode === '') {
+            $settings['cert_mode'] = 'auto';
+        }
         $provider = trim((string)config('zicboard.zicnode_auto_tls_dns_provider', ''));
         $dnsEnv = trim((string)config('zicboard.zicnode_auto_tls_dns_env', ''));
-        if ($provider !== '') {
+        if ($provider !== '' && empty($settings['provider'])) {
             $settings['provider'] = $provider;
         }
-        if ($dnsEnv !== '') {
+        if ($dnsEnv !== '' && empty($settings['dns_env'])) {
             $settings['dns_env'] = $dnsEnv;
         }
-        $settings['self_fallback'] = (int)config('zicboard.zicnode_auto_tls_self_fallback', 1) === 1;
+        if (!array_key_exists('self_fallback', $settings)) {
+            $settings['self_fallback'] = (int)config('zicboard.zicnode_auto_tls_self_fallback', 1) === 1;
+        }
 
         return $settings;
     }
@@ -200,12 +228,9 @@ class LegacyTlsSettingsService
     private static function autoCertContextChanged($type, array $params, $server, array $incoming, array $existing): bool
     {
         $type = self::normalizeType($type);
-        if (in_array($type, ['zicnode', 'vmess', 'vless'], true)) {
-            if ((int)($params['tls'] ?? self::value($server, 'tls', 0)) !== 1) {
-                return true;
-            }
+        if (in_array($type, ['zicnode', 'vmess', 'vless'], true) && !self::normalTlsEnabled($type, $params, $server)) {
+            return true;
         }
-
         if (self::effectiveCertTarget($params, $server, $incoming) !== self::effectiveCertTarget([], $server, $existing)) {
             return true;
         }

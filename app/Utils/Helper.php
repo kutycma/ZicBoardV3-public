@@ -74,6 +74,19 @@ class Helper
         return trim((string)config('zicboard.subscribe_url', ''));
     }
 
+    private static function sourceAppUrl(): string
+    {
+        $configPath = config_path('zicboard.php');
+        if (is_string($configPath) && is_file($configPath)) {
+            $sourceConfig = include $configPath;
+            if (is_array($sourceConfig) && array_key_exists('app_url', $sourceConfig)) {
+                return trim((string)$sourceConfig['app_url']);
+            }
+        }
+
+        return trim((string)config('zicboard.app_url', ''));
+    }
+
     private static function useSharedWebconSubscribeUrl(): bool
     {
         return (int)config('zicboard.webcon_shared_subscribe_url_enable', 0) === 1;
@@ -94,9 +107,14 @@ class Helper
             'zicboard.app_url' => $origin ?: config('zicboard.app_url'),
         ];
 
+        $sourceSubscribeUrl = self::sourceSubscribeUrl();
+        if (self::useSharedWebconSubscribeUrl() && $sourceSubscribeUrl === '') {
+            $sourceSubscribeUrl = self::sourceAppUrl();
+        }
+
         $runtimeConfig['zicboard.subscribe_url'] = self::useSharedWebconSubscribeUrl()
-            ? self::sourceSubscribeUrl()
-            : ($origin ?: self::sourceSubscribeUrl());
+            ? $sourceSubscribeUrl
+            : ($origin ?: $sourceSubscribeUrl);
 
         config($runtimeConfig);
     }
@@ -279,7 +297,12 @@ class Helper
         $webconOrigin = !self::useSharedWebconSubscribeUrl() && $request instanceof Request && self::activeWebcon($request)
             ? self::requestOrigin($request)
             : '';
-        $subscribeUrls = array_values(array_filter(array_map('trim', explode(',', self::sourceSubscribeUrl())), function ($url) {
+        $sourceSubscribeUrl = self::sourceSubscribeUrl();
+        if (self::useSharedWebconSubscribeUrl() && $sourceSubscribeUrl === '') {
+            $sourceSubscribeUrl = self::sourceAppUrl();
+        }
+
+        $subscribeUrls = array_values(array_filter(array_map('trim', explode(',', $sourceSubscribeUrl)), function ($url) {
             return $url !== '';
         }));
         $subscribeUrl = $webconOrigin ?: ($subscribeUrls ? $subscribeUrls[rand(0, count($subscribeUrls) - 1)] : '');

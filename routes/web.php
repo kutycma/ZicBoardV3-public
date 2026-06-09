@@ -30,7 +30,8 @@ Route::get('/', function (Request $request) {
         'theme' => config('zicboard.frontend_theme', 'EZ-Zic'),
         'version' => config('app.version'),
         'description' => config('zicboard.app_description', 'Nền tảng quản lý dịch vụ'),
-        'logo' => config('zicboard.logo')
+        'logo' => config('zicboard.logo'),
+        'webcon_shared_subscribe_url_enable' => (int)config('zicboard.webcon_shared_subscribe_url_enable', 0)
     ];
 
     $themeService = new ThemeService($renderParams['theme']);

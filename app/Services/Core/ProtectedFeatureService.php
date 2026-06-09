@@ -158,15 +158,18 @@ class ProtectedFeatureService
 
     public static function sanitizeZicnodeTlsSettings(array $config, bool $emptyAsObject = false): array
     {
-        $tlsMode = (int)($config['tls'] ?? 0);
+        $tlsMode = self::effectiveZicnodeTlsMode($config);
         $settings = self::tlsSettingsRootToArray($config['tls_settings'] ?? []);
+        if ($tlsMode !== (int)($config['tls'] ?? 0)) {
+            $config['tls'] = $tlsMode;
+        }
 
         if ($tlsMode === 0) {
             $config['tls_settings'] = $emptyAsObject ? (object)[] : [];
             return $config;
         }
 
-        unset($settings['allow_insecure'], $settings['allowInsecure']);
+        unset($settings['allow_insecure'], $settings['allowInsecure'], $settings['cert_email'], $settings['acme_email']);
 
         $realityKeys = [
             'dest',
@@ -208,6 +211,34 @@ class ProtectedFeatureService
 
         $config['tls_settings'] = $settings ?: ($emptyAsObject ? (object)[] : []);
         return $config;
+    }
+
+    private static function effectiveZicnodeTlsMode(array $config): int
+    {
+        return self::normalizeZicnodeTlsModeForProtocol($config['protocol'] ?? '', (int)($config['tls'] ?? 0));
+    }
+
+    private static function normalizeZicnodeTlsModeForProtocol($protocol, int $tlsMode): int
+    {
+        $protocol = strtolower(trim((string)$protocol));
+        if ($protocol === '') {
+            return $tlsMode;
+        }
+        if ($protocol === 'shadowsocks') {
+            return 0;
+        }
+        if ($tlsMode === 2) {
+            return in_array($protocol, ['vless', 'anytls'], true) ? 2 : 1;
+        }
+        if (self::zicnodeProtocolUsesNormalTls($protocol)) {
+            return 1;
+        }
+        return $tlsMode;
+    }
+
+    private static function zicnodeProtocolUsesNormalTls($protocol): bool
+    {
+        return in_array(strtolower(trim((string)$protocol)), ['trojan', 'hysteria', 'hysteria2', 'tuic', 'anytls'], true);
     }
 
     private static function zicnodeAutoTLSConfig(): array
