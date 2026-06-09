@@ -64,8 +64,10 @@ class ClientController extends Controller
                     foreach (array_reverse(glob(app_path('Protocols') . '/*.php')) as $file) {
                         $file = 'App\\Protocols\\' . basename($file, '.php');
                         $class = new $file($user, $servers);
-                        if (strpos($flag, $class->flag) !== false) {
-                            return $class->handle();
+                        foreach ($this->protocolFlags($class) as $protocolFlag) {
+                            if (strpos($flag, $protocolFlag) !== false) {
+                                return $class->handle();
+                            }
                         }
                     }
                 }
@@ -90,6 +92,21 @@ class ClientController extends Controller
     private function isDeviceLimitExceeded(Request $request): bool
     {
         return (bool)$request->attributes->get(UserDeviceService::REQUEST_DEVICE_LIMIT_EXCEEDED, false);
+    }
+
+    private function protocolFlags($protocol): array
+    {
+        $flags = [];
+        if (isset($protocol->flags) && is_array($protocol->flags)) {
+            $flags = $protocol->flags;
+        } elseif (isset($protocol->flag)) {
+            $flags = [$protocol->flag];
+        }
+
+        return array_values(array_filter(array_map(function ($flag) {
+            $flag = strtolower(trim((string)$flag));
+            return $flag === '' ? null : $flag;
+        }, $flags)));
     }
 
     private function deviceLimitExceededServers(Request $request): array

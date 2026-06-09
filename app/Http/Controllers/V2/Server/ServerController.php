@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V2\Server;
 use App\Http\Controllers\Controller;
 use App\Services\ServerService;
 use App\Services\Core\ProtectedFeatureService;
+use App\Services\Server\NodeConfigBuilder;
 use Illuminate\Http\Request;
 
 class ServerController extends Controller
@@ -35,7 +36,6 @@ class ServerController extends Controller
             exit;
         }
 
-        (new ProtectedFeatureService())->ensureEnabled();
         $this->nodeId = $request->input('node_id');
         $this->serverService = new ServerService();
         $this->nodeInfo = $this->serverService->getServer($this->nodeId, "zicnode");
@@ -56,19 +56,27 @@ class ServerController extends Controller
         $routes = $this->nodeInfo['route_id']
             ? $this->serverService->getRoutes($this->nodeInfo['route_id'])->toArray()
             : null;
-        $response = (new ProtectedFeatureService())->nodeConfig(
-            'zicnode',
-            $this->nodeInfo->toArray(),
-            [
-                'panel' => 'zicboard',
-                'node_type' => 'zicnode',
-                'push_interval' => (int)config('zicboard.server_push_interval', 60),
-                'pull_interval' => (int)config('zicboard.server_pull_interval', 60),
-                'node_report_min_traffic' => (int)config('zicboard.server_node_report_min_traffic', 0),
-                'device_online_min_traffic' => (int)config('zicboard.server_device_online_min_traffic', 0)
-            ],
-            $routes
-        );
+        $baseConfig = [
+            'panel' => 'zicboard',
+            'node_type' => 'zicnode',
+            'push_interval' => (int)config('zicboard.server_push_interval', 60),
+            'pull_interval' => (int)config('zicboard.server_pull_interval', 60),
+            'node_report_min_traffic' => (int)config('zicboard.server_node_report_min_traffic', 0),
+            'device_online_min_traffic' => (int)config('zicboard.server_device_online_min_traffic', 0)
+        ];
+
+        $server = $this->nodeInfo->toArray();
+        $server['type'] = 'zicnode';
+        if (ProtectedFeatureService::serverUsesProtected($server)) {
+            $response = (new ProtectedFeatureService())->nodeConfig(
+                'zicnode',
+                $this->nodeInfo->toArray(),
+                $baseConfig,
+                $routes
+            );
+        } else {
+            $response = (new NodeConfigBuilder())->build('zicnode', $this->nodeInfo, $baseConfig, $routes);
+        }
 
         $rsp = json_encode($response);
         $eTag = sha1($rsp);

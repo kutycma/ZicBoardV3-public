@@ -5,6 +5,7 @@ namespace App\Services\Core;
 class ProtectedLicenseGate
 {
     private static ?int $lastIntegrityCheck = null;
+    private static bool $requestAllowed = false;
     private const INTEGRITY_CHECK_INTERVAL = 300; // 5 minutes
 
     public function assertEnabled()
@@ -19,6 +20,10 @@ class ProtectedLicenseGate
 
     private function assertAllowed(string $scope)
     {
+        if (self::$requestAllowed) {
+            return;
+        }
+
         try {
             $rpc = new CoreRpcClient();
             $status = $rpc->call('license.status');
@@ -40,6 +45,8 @@ class ProtectedLicenseGate
         if (!$this->licenseAllowsProtected($status)) {
             abort(403, 'ZicBoard license is not active. Please renew your license for ' . $scope);
         }
+
+        self::$requestAllowed = true;
 
         // Periodic runtime verification.
         $now = time();

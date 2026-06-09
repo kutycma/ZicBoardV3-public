@@ -61,6 +61,24 @@ class Helper
         return $request ? rtrim($request->getSchemeAndHttpHost(), '/') : '';
     }
 
+    private static function sourceSubscribeUrl(): string
+    {
+        $configPath = config_path('zicboard.php');
+        if (is_string($configPath) && is_file($configPath)) {
+            $sourceConfig = include $configPath;
+            if (is_array($sourceConfig) && array_key_exists('subscribe_url', $sourceConfig)) {
+                return trim((string)$sourceConfig['subscribe_url']);
+            }
+        }
+
+        return trim((string)config('zicboard.subscribe_url', ''));
+    }
+
+    private static function useSharedWebconSubscribeUrl(): bool
+    {
+        return (int)config('zicboard.webcon_shared_subscribe_url_enable', 0) === 1;
+    }
+
     public static function applyWebconRuntimeConfig(?Request $request = null): void
     {
         $staff = self::activeWebcon($request);
@@ -70,12 +88,17 @@ class Helper
 
         $siteName = self::webconSiteName($staff);
         $origin = self::requestOrigin($request);
-        config([
+        $runtimeConfig = [
             'zicboard.app_name' => $siteName,
             'zicboard.happ_profile_title' => $siteName,
             'zicboard.app_url' => $origin ?: config('zicboard.app_url'),
-            'zicboard.subscribe_url' => $origin ?: config('zicboard.subscribe_url'),
-        ]);
+        ];
+
+        $runtimeConfig['zicboard.subscribe_url'] = self::useSharedWebconSubscribeUrl()
+            ? self::sourceSubscribeUrl()
+            : ($origin ?: self::sourceSubscribeUrl());
+
+        config($runtimeConfig);
     }
 
     public static function uuidToBase64($uuid, $length)
@@ -253,11 +276,13 @@ class Helper
         if (empty($path)) {
             $path = '/api/v3/client/subscribe';
         } 
-        $webconOrigin = $request instanceof Request && self::activeWebcon($request)
+        $webconOrigin = !self::useSharedWebconSubscribeUrl() && $request instanceof Request && self::activeWebcon($request)
             ? self::requestOrigin($request)
             : '';
-        $subscribeUrls = explode(',', (string)config('zicboard.subscribe_url'));
-        $subscribeUrl = $webconOrigin ?: $subscribeUrls[rand(0, count($subscribeUrls) - 1)];
+        $subscribeUrls = array_values(array_filter(array_map('trim', explode(',', self::sourceSubscribeUrl())), function ($url) {
+            return $url !== '';
+        }));
+        $subscribeUrl = $webconOrigin ?: ($subscribeUrls ? $subscribeUrls[rand(0, count($subscribeUrls) - 1)] : '');
         $subscribeUrl = rtrim(trim((string)$subscribeUrl), '/');
         switch ($submethod) {
             case 0:
@@ -560,7 +585,8 @@ class Helper
         ]));
 
         $autoCert = self::autoCertMetadata($tlsSettings);
-        if ($certSha256 === '' && self::isTrustedAutoCert($autoCert) && self::isSelfSignedAutoCert($autoCert)) {
+        $trustedAutoCert = self::isTrustedAutoCert($autoCert);
+        if ($certSha256 === '' && $trustedAutoCert) {
             $certSha256Hex = self::normalizeCertSha256Hex($autoCert['sha256_hex'] ?? '');
             if ($certSha256Hex === '') {
                 $certSha256Hex = self::normalizeCertSha256Hex($autoCert['sha256'] ?? '');
@@ -569,17 +595,26 @@ class Helper
                 $certSha256 = self::hexToColonSha256($certSha256Hex);
             }
         }
-        if ($publicKeySha256 === '' && self::isTrustedAutoCert($autoCert) && self::isSelfSignedAutoCert($autoCert)) {
+        if ($publicKeySha256 === '' && $trustedAutoCert) {
             $publicKeySha256 = self::normalizePublicKeySha256($autoCert['public_key_sha256'] ?? '');
         }
+
+        $isSelfSignedAutoCert = $trustedAutoCert && self::isSelfSignedAutoCert($autoCert);
+        $isAcmeAutoCert = $trustedAutoCert && self::isAcmeAutoCert($autoCert);
 
         return [
             'sni' => $names['sni'],
             'verify_name' => $names['verify_name'],
             'has_cert_pin' => $certSha256 !== '',
+            'has_public_key_pin' => $publicKeySha256 !== '',
             'cert_sha256' => $certSha256,
             'cert_sha256_hex' => $certSha256Hex,
             'public_key_sha256' => $publicKeySha256,
+            'is_auto_cert' => $autoCert !== [],
+            'is_self_signed_auto_cert' => $isSelfSignedAutoCert,
+            'is_acme_auto_cert' => $isAcmeAutoCert,
+            'allow_legacy_insecure_fallback' => $isSelfSignedAutoCert && $certSha256 === '' && $publicKeySha256 === '',
+            'requires_modern_pin' => $isSelfSignedAutoCert,
             'suppress_insecure' => self::shouldSuppressLegacyInsecure($tlsSettings),
         ];
     }
@@ -588,6 +623,11 @@ class Helper
     {
         $trust = self::resolveTlsClientTrust(['host' => $connectionHost], $tlsSettings);
         $pinned = $trust['cert_sha256'];
+        if ($trust['public_key_sha256'] !== '') {
+            $config['certificate_public_key_sha256'] = $trust['public_key_sha256'];
+            $config['publicKeySha256'] = $trust['public_key_sha256'];
+            $config['pks'] = $trust['public_key_sha256'];
+        }
         if ($pinned !== '') {
             $config['pinnedPeerCertSha256'] = $pinned;
             $config['pcs'] = $pinned;
@@ -615,7 +655,7 @@ class Helper
             $config['vcn'] = $verifyName;
         }
 
-        return $pinned !== '';
+        return $pinned !== '' || $trust['public_key_sha256'] !== '';
     }
 
     private static function addHappTlsClientTrustParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
@@ -623,6 +663,9 @@ class Helper
         $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, $defaultVerifyName, $connectionHost);
         if (!empty($config['pinnedPeerCertSha256'])) {
             $config['certSha256'] = $config['pinnedPeerCertSha256'];
+        }
+        if (!empty($config['certificate_public_key_sha256'])) {
+            $config['publicKeySha256'] = $config['certificate_public_key_sha256'];
         }
         if (!empty($config['verifyPeerCertByName'])) {
             $config['peer'] = $config['verifyPeerCertByName'];
@@ -633,7 +676,7 @@ class Helper
     private static function addTlsClientTrustParams(array &$config, array $tlsSettings, string $defaultVerifyName = '', string $connectionHost = ''): bool
     {
         $trust = self::resolveTlsClientTrust(['host' => $connectionHost], $tlsSettings);
-        if ($trust['has_cert_pin'] && empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['peer']) && empty($tlsSettings['vcn'])) {
+        if (($trust['has_cert_pin'] || $trust['has_public_key_pin']) && empty($tlsSettings['verifyPeerCertByName']) && empty($tlsSettings['verify_peer_cert_by_name']) && empty($tlsSettings['peer']) && empty($tlsSettings['vcn'])) {
             $autoCert = self::autoCertMetadata($tlsSettings);
             $tlsSettings['verifyPeerCertByName'] = self::autoCertVerifyName($autoCert, $defaultVerifyName, $connectionHost);
         }
@@ -690,6 +733,12 @@ class Helper
         $mode = strtolower(trim((string)($autoCert['mode'] ?? '')));
         return in_array($source, ['self', 'self_signed', 'fallback_self', 'self_fallback'], true)
             || in_array($mode, ['self', 'self_signed'], true);
+    }
+
+    private static function isAcmeAutoCert(array $autoCert): bool
+    {
+        $source = strtolower(trim((string)($autoCert['source'] ?? '')));
+        return in_array($source, ['acme_dns', 'acme_http', 'acme_ip'], true);
     }
 
     private static function isTrustedAutoCert(array $autoCert): bool

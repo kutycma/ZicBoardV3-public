@@ -9,6 +9,7 @@ use RuntimeException;
 class Tnetz
 {
     public $flag = 'ove';
+    public $flags = ['ove', 'tnetz'];
     private $servers;
     private $user;
 

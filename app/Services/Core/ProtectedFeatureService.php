@@ -11,39 +11,12 @@ class ProtectedFeatureService
 
     public static function serverUsesProtected($server)
     {
-        $type = is_array($server) ? ($server['type'] ?? null) : ($server->type ?? null);
-        if (in_array($type, ['zicnode', 'anytls'], true)) {
-            return true;
-        }
-        if ($type !== 'vless') {
-            return false;
-        }
-
-        $network = is_array($server) ? ($server['network'] ?? null) : ($server->network ?? null);
-        $encryption = is_array($server) ? ($server['encryption'] ?? null) : ($server->encryption ?? null);
-        $tlsMode = is_array($server) ? ($server['tls'] ?? 0) : ($server->tls ?? 0);
-        $tls = is_array($server) ? ($server['tls_settings'] ?? []) : ($server->tls_settings ?? []);
-        $tls = is_array($tls) ? $tls : [];
-
-        return (int)$tlsMode === 2
-            || $network === 'xhttp'
-            || !empty($encryption)
-            || !empty($tls['ech']);
+        return ProtectedFeaturePolicy::serverUsesProtected($server);
     }
 
     public static function paramsUseProtected(string $type, array $params)
     {
-        if (in_array($type, ['zicnode', 'anytls'], true)) {
-            return true;
-        }
-        if ($type !== 'vless') {
-            return false;
-        }
-        $tls = is_array($params['tls_settings'] ?? null) ? $params['tls_settings'] : [];
-        return (int)($params['tls'] ?? 0) === 2
-            || ($params['network'] ?? null) === 'xhttp'
-            || !empty($params['encryption'])
-            || !empty($tls['ech']);
+        return ProtectedFeaturePolicy::paramsUseProtected($type, $params);
     }
 
     public function prepareServerParams(string $type, array $params)
@@ -54,6 +27,7 @@ class ProtectedFeatureService
         if (!self::paramsUseProtected($type, $params)) {
             return $params;
         }
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('server.prepare', [
             'type' => $type,
             'params' => $params,
@@ -68,6 +42,7 @@ class ProtectedFeatureService
 
     public function nodeConfig(string $type, array $node, array $baseConfig, array $routes = null)
     {
+        $this->ensureEnabled();
         if ($type === 'zicnode') {
             $node = self::normalizeZicnodeConfigShape($node, false);
         }
@@ -96,6 +71,7 @@ class ProtectedFeatureService
         if (empty($server['encryption']) || empty($server['encryption_settings']) || !is_array($server['encryption_settings'])) {
             return null;
         }
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('subscription.encryption', [
             'server' => $server,
         ]);
@@ -114,6 +90,7 @@ class ProtectedFeatureService
 
     public function registerHwidDevice(array $subscription, $hwid, array $devices, array $request): array
     {
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('device.hwid_register', [
             'subscription' => $subscription,
             'hwid' => $hwid,
@@ -125,6 +102,7 @@ class ProtectedFeatureService
 
     public function nodeIdsForDeviceSlots(array $deviceIds)
     {
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('device.node_ids', [
             'device_ids' => array_values(array_map('intval', $deviceIds)),
         ]);
@@ -133,6 +111,7 @@ class ProtectedFeatureService
 
     public function resolveVirtualDeviceIds(array $nodeUserIds)
     {
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('device.resolve_virtual_ids', [
             'node_user_ids' => array_values($nodeUserIds),
         ]);
@@ -141,6 +120,7 @@ class ProtectedFeatureService
 
     public function translateTraffic(array $data, array $virtualSubscriptionIdMap)
     {
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('device.map_traffic', [
             'data' => $data,
             'virtual_subscription_id_map' => $virtualSubscriptionIdMap,
@@ -150,6 +130,7 @@ class ProtectedFeatureService
 
     public function translateAlive(array $data, array $virtualSubscriptionIdMap)
     {
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('device.map_alive', [
             'data' => $data,
             'virtual_subscription_id_map' => $virtualSubscriptionIdMap,
@@ -159,6 +140,7 @@ class ProtectedFeatureService
 
     public function mapOnlineDevices(array $data, string $nodeType, int $nodeId): array
     {
+        $this->ensureEnabled();
         $result = (new CoreRpcClient())->call('device.map_online_devices', [
             'data' => $data,
             'node_type' => $nodeType,

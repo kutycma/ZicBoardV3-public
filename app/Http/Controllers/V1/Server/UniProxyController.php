@@ -7,10 +7,10 @@ use App\Services\HappSubscribeCacheService;
 use App\Services\LegacyTlsSettingsService;
 use App\Services\ServerService;
 use App\Services\Core\ProtectedFeatureService;
+use App\Services\Server\NodeConfigBuilder;
 use App\Services\UserDeviceService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
-use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use MessagePack\Packer;
@@ -225,87 +225,12 @@ class UniProxyController extends Controller
             return $this->etaggedResponse($request, $response);
         }
 
-        switch ($this->nodeType) {
-            case 'shadowsocks':
-                $response = [
-                    'server_port' => $this->nodeInfo->server_port,
-                    'cipher' => $this->nodeInfo->cipher,
-                    'obfs' => $this->nodeInfo->obfs,
-                    'obfs_settings' => $this->nodeInfo->obfs_settings
-                ];
-
-                if ($this->nodeInfo->cipher === '2022-blake3-aes-128-gcm') {
-                    $response['server_key'] = Helper::getServerKey($this->nodeInfo->created_at, 16);
-                }
-                if ($this->nodeInfo->cipher === '2022-blake3-aes-256-gcm') {
-                    $response['server_key'] = Helper::getServerKey($this->nodeInfo->created_at, 32);
-                }
-                break;
-            case 'vmess':
-                $response = [
-                    'server_port' => $this->nodeInfo->server_port,
-                    'network' => $this->nodeInfo->network,
-                    'networkSettings' => $this->nodeInfo->networkSettings,
-                    'tls' => $this->nodeInfo->tls
-                ];
-                break;
-            case 'vless':
-                $response = [
-                    'server_port' => $this->nodeInfo->server_port,
-                    'network' => $this->nodeInfo->network,
-                    'networkSettings' => $this->nodeInfo->network_settings,
-                    'tls' => $this->nodeInfo->tls,
-                    'flow' => $this->nodeInfo->flow
-                ];
-                if ((int)$this->nodeInfo->tls === 1) {
-                    $response['tls_settings'] = $this->nodeInfo->tls_settings;
-                }
-                break;
-            case 'trojan':
-                $response = [
-                    'host' => $this->nodeInfo->host,
-                    'network' => $this->nodeInfo->network,
-                    'networkSettings' => $this->nodeInfo->network_settings,
-                    'server_port' => $this->nodeInfo->server_port,
-                    'server_name' => $this->nodeInfo->server_name,
-                ];
-                break;
-            case 'tuic':
-                $response = [
-                    'server_port' => $this->nodeInfo->server_port,
-                    'server_name' => $this->nodeInfo->server_name,
-                    'congestion_control' => $this->nodeInfo->congestion_control,
-                    'zero_rtt_handshake' => $this->nodeInfo->zero_rtt_handshake ? true : false,
-                ];
-                break;
-            case 'hysteria':
-                $response = [
-                    'version' => $this->nodeInfo->version,
-                    'host' => $this->nodeInfo->host,
-                    'server_port' => $this->nodeInfo->server_port,
-                    'server_name' => $this->nodeInfo->server_name,
-                    'up_mbps' => $this->nodeInfo->up_mbps,
-                    'down_mbps' => $this->nodeInfo->down_mbps
-                ];
-                if ($this->nodeInfo->version == 1) {
-                    $response['obfs'] = $this->nodeInfo->obfs_password ?? null;
-                } elseif ($this->nodeInfo->version == 2) {
-                    if ($this->nodeInfo->up_mbps == 0 && $this->nodeInfo->down_mbps == 0) {
-                        $response['ignore_client_bandwidth'] = true;
-                    } else {
-                        $response['ignore_client_bandwidth'] = false;
-                    }
-                    $response['obfs'] = $this->nodeInfo->obfs ?? null;
-                    $response['obfs-password'] = $this->nodeInfo->obfs_password ?? null;
-                }
-                break;
-        }
-        $response = LegacyTlsSettingsService::attachToUniProxyResponse($this->nodeType, $this->nodeInfo, $response);
-        $response['base_config'] = $this->baseConfig();
-        $routes = $this->nodeRoutes();
-        if ($routes !== null) {
-            $response['routes'] = $routes;
-        }
+        $response = (new NodeConfigBuilder())->build(
+            $this->nodeType,
+            $this->nodeInfo,
+            $this->baseConfig(),
+            $this->nodeRoutes()
+        );
         return $this->etaggedResponse($request, $response);
     }
 

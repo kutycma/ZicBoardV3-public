@@ -208,6 +208,7 @@ class ConfigController extends Controller
             'app_description' => config('zicboard.app_description', 'Nền tảng quản lý dịch vụ'),
             'app_url' => config('zicboard.app_url'),
             'subscribe_url' => config('zicboard.subscribe_url'),
+            'webcon_shared_subscribe_url_enable' => (int)config('zicboard.webcon_shared_subscribe_url_enable', 0),
             'subscribe_path' => config('zicboard.subscribe_path'),
             'try_out_plan_id' => (int)config('zicboard.try_out_plan_id', 0),
             'try_out_hour' => (int)config('zicboard.try_out_hour', 1),

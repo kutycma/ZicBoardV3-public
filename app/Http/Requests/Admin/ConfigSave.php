@@ -35,6 +35,7 @@ class ConfigSave extends FormRequest
         'app_description' => '',
         'app_url' => 'nullable|url',
         'subscribe_url' => 'nullable',
+        'webcon_shared_subscribe_url_enable' => 'in:0,1',
         'subscribe_path' => 'nullable|regex:/^\\//',
         'try_out_enable' => 'in:0,1',
         'try_out_plan_id' => 'integer',
