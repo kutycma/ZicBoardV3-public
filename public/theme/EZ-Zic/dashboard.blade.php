@@ -1,4 +1,4 @@
-@php($assetVersion = $version ?? config('app.version'))
+@php($assetVersion = config('app.version'))
 <!DOCTYPE html>
 <html lang="vi-VN">
 <head>

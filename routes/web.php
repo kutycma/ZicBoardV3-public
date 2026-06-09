@@ -28,7 +28,6 @@ Route::get('/', function (Request $request) {
     $renderParams = [
         'title' => config('zicboard.app_name', 'ZicBoard'),
         'theme' => config('zicboard.frontend_theme', 'EZ-Zic'),
-        'version' => config('app.version'),
         'description' => config('zicboard.app_description', 'Nền tảng quản lý dịch vụ'),
         'logo' => config('zicboard.logo'),
         'webcon_shared_subscribe_url_enable' => (int)config('zicboard.webcon_shared_subscribe_url_enable', 0)
@@ -108,7 +107,6 @@ Route::get('/' . $securePath, function () use ($securePath) {
         'theme_header' => config('zicboard.frontend_theme_header', 'dark'),
         'theme_color' => config('zicboard.frontend_theme_color', 'default'),
         'background_url' => config('zicboard.frontend_background_url'),
-        'version' => config('app.version'),
         'logo' => config('zicboard.logo'),
         'secure_path' => $securePath
     ]);
