@@ -1064,6 +1064,40 @@ class Helper
         return "trojan://{$password}@" . self::formatHost($server['host']) . ":{$server['port']}?{$query}#" . rawurlencode($server['name']) . "\r\n";
     }
 
+    public static function buildShadowrocketTrojanUri($password, $server)
+    {
+        $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+        $network = (string)($server['network'] ?? 'tcp');
+        $server['network'] = $network;
+        $names = self::tlsClientNames($server, $tlsSettings);
+        $sni = $names['sni'];
+        $verifyName = $names['verify_name'];
+        $tlsEnabled = !array_key_exists('tls', $server) || (int)$server['tls'] !== 0;
+        $config = [
+            'type' => $network,
+        ];
+        if ($tlsEnabled) {
+            $config = ['security' => 'tls'] + $config;
+            $config['sni'] = $sni;
+            $config['peer'] = $verifyName;
+            $fingerprint = self::firstTlsScalar($tlsSettings, ['fingerprint'], '');
+            if ($fingerprint !== '') {
+                $config['fp'] = $fingerprint;
+            }
+            $alpn = self::firstTlsScalar($tlsSettings, ['alpn'], '');
+            if ($alpn !== '') {
+                $config['alpn'] = $alpn;
+            }
+            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+                $config['allowInsecure'] = 1;
+            }
+        }
+
+        self::configureNetworkSettings($server, $config);
+        $query = http_build_query(self::cleanUriParams($config), '', '&', PHP_QUERY_RFC3986);
+        return "trojan://{$password}@" . self::formatHost($server['host']) . ":{$server['port']}?{$query}#". rawurlencode($server['name']) . "\r\n";
+    }
+
     public static function buildTrojanUri($password, $server)
     {
         $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));

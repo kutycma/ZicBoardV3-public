@@ -29,8 +29,14 @@ class Shadowrocket
         $uri .= "STATUS=🚀↑:{$upload}GB,↓:{$download}GB,TOT:{$totalTraffic}GB💡Expires:{$expiredDate}\r\n";
 
         foreach ($this->servers as $server) {
-            if ($server['type'] === 'vmess' || (in_array($server['type'], ['zicnode', 'v2node']) && $server['protocol'] === 'vmess')) {
+            $type = $server['type'];
+            if (in_array($type, ['zicnode', 'v2node']) && isset($server['protocol'])) {
+                $type = $server['protocol'];
+            }
+            if ($type === 'vmess') {
                 $uri .= self::buildVmess($user['uuid'], $server);
+            } elseif ($type === 'trojan') {
+                $uri .= Helper::buildShadowrocketTrojanUri($this->user['uuid'], $server);
             } else {
                 $uri .= Helper::buildUri($this->user['uuid'], $server);
             }
