@@ -854,8 +854,7 @@ class Helper
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
             $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
             $config['sni'] = $sni;
-            $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
-            if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
                 $config['allowInsecure'] = 1;
             }
         }
@@ -927,8 +926,7 @@ class Helper
             $tlsSettings = $server['tls_settings'] ?? [];
             $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
             $config['sni'] = $sni;
-            $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, $sni, (string)($server['host'] ?? ''));
-            if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
                 $config['insecure'] = 1;
             }
             if ($server['tls'] == 2) {
@@ -1088,7 +1086,7 @@ class Helper
             if ($alpn !== '') {
                 $config['alpn'] = $alpn;
             }
-            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+            if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? ($server['allowInsecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)))) {
                 $config['allowInsecure'] = 1;
             }
         }
@@ -1120,10 +1118,7 @@ class Helper
                 $config['alpn'] = $alpn;
             }
         }
-        $hasPinnedCert = $tlsEnabled
-            ? self::addHappTlsClientTrustParams($config, $tlsSettings, $verifyName, (string)($server['host'] ?? ''))
-            : false;
-        if ($tlsEnabled && !$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+        if ($tlsEnabled && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['allow_insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
             $config['allowInsecure'] = 1;
         }
 
@@ -1158,8 +1153,7 @@ class Helper
                 'upmbps' => $server['down_mbps'],
                 'downmbps' => $server['up_mbps'],
             ];
-        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
-        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
             $config['insecure'] = 1;
         }
 
@@ -1191,8 +1185,7 @@ class Helper
         $tlsSettings = $server['tls_settings'] ?? [];
         $sni = $tlsSettings['server_name'] ?? ($server['server_name'] ?? '');
         $config = ['sni' => $sni];
-        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
-        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($tlsSettings['allow_insecure'] ?? 0)) {
+        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($tlsSettings['allow_insecure'] ?? 0)) {
             $config['insecure'] = 1;
         }
 
@@ -1219,8 +1212,7 @@ class Helper
             'disable_sni' => $server['disable_sni'],
             'udp_relay_mode' => $server['udp_relay_mode'],
         ];
-        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
-        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
+        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
             $config['allow_insecure'] = 1;
         }
 
@@ -1244,8 +1236,7 @@ class Helper
             $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
             $config['sni'] = $sni;
         }
-        $hasPinnedCert = self::addTlsClientTrustParams($config, $tlsSettings, (string)$sni, (string)($server['host'] ?? ''));
-        if (!$hasPinnedCert && !self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
+        if (!self::shouldSuppressLegacyInsecure($tlsSettings) && self::boolish($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0))) {
             $config['insecure'] = 1;
         }
         if (isset($server['tls']) && $server['tls'] == 2) {
