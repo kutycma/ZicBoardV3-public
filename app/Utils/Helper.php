@@ -557,13 +557,17 @@ class Helper
 
     private static function tlsClientNames(array $server, array $tlsSettings): array
     {
+        $tlsSettings = self::normalizeTlsSettingsValue($tlsSettings);
         $autoCert = self::autoCertMetadata($tlsSettings);
-        $sni = self::firstScalarValue($server['server_name'] ?? '');
+        $sni = self::firstTlsScalar($tlsSettings, ['server_names', 'serverNames']);
+        if ($sni === '') {
+            $sni = self::firstScalarValue($server['server_names'] ?? ($server['serverNames'] ?? ''));
+        }
         if ($sni === '') {
             $sni = self::firstTlsScalar($tlsSettings, ['server_name', 'serverName']);
         }
         if ($sni === '') {
-            $sni = self::firstTlsScalar($tlsSettings, ['server_names', 'serverNames']);
+            $sni = self::firstScalarValue($server['server_name'] ?? ($server['serverName'] ?? ''));
         }
         if ($sni === '' && !empty($autoCert['target'])) {
             $sni = self::firstScalarValue($autoCert['target']);
@@ -581,6 +585,11 @@ class Helper
             'sni' => $sni,
             'verify_name' => $verifyName,
         ];
+    }
+
+    public static function resolveTlsClientNames(array $server, array $tlsSettings): array
+    {
+        return self::tlsClientNames($server, $tlsSettings);
     }
 
     private static function boolish($value): bool
@@ -876,9 +885,9 @@ class Helper
         ];
 
         if ($server['tls']) {
-            $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
-            $sni = trim((string)self::firstTlsSetting($tlsSettings, ['server_name', 'serverName'], ''));
-            $config['sni'] = $sni;
+            $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+            $names = self::tlsClientNames($server, $tlsSettings);
+            $config['sni'] = $names['sni'];
             if (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings)) {
                 $config['allowInsecure'] = 1;
             }
@@ -928,6 +937,80 @@ class Helper
 
         return "vmess://" . base64_encode(json_encode($config)) . "\r\n";
     }
+    public static function buildHappVmessUri($uuid, $server)
+    {
+        $config = [
+            "v" => "2",
+            "ps" => $server['name'],
+            "add" => self::formatHost($server['host']),
+            "port" => (string)$server['port'],
+            "id" => $uuid,
+            "aid" => '0',
+            "scy" => 'auto',
+            "net" => $server['network'],
+            "type" => 'none',
+            "host" => '',
+            "path" => '',
+            "tls" => $server['tls'] ? "tls" : "",
+            "fp" => 'chrome',
+        ];
+
+        if ($server['tls']) {
+            $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+            $names = self::tlsClientNames($server, $tlsSettings);
+            $config['sni'] = $names['sni'];
+            $config['peer'] = $names['verify_name'];
+            $hasPin = self::addHappTlsClientTrustParams($config, $tlsSettings, $names['verify_name'], (string)($server['host'] ?? ''));
+            if (!$hasPin && (self::boolish(self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings))) {
+                $config['allowInsecure'] = 1;
+            }
+        }
+
+        $network = (string)$server['network'];
+        $networkSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
+
+        switch ($network) {
+            case 'tcp':
+                if (!empty($networkSettings['header']['type']) && $networkSettings['header']['type'] === 'http') {
+                    $config['type'] = $networkSettings['header']['type'];
+                    $config['host'] = $networkSettings['header']['request']['headers']['Host'][0] ?? null;
+                    $config['path'] = $networkSettings['header']['request']['path'][0] ?? null;
+                }
+                break;
+
+            case 'ws':
+                $config['path'] = $networkSettings['path'] ?? null;
+                $config['host'] = $networkSettings['headers']['Host'] ?? null;
+                isset($networkSettings['security']) && $config['scy'] = $networkSettings['security'];
+                break;
+
+            case 'grpc':
+                $config['path'] = $networkSettings['serviceName'] ?? null;
+                break;
+
+            case 'kcp':
+                if (isset($networkSettings['seed'])) {
+                    $config['path'] = $networkSettings['seed'];
+                }
+                $config['type'] = $networkSettings['header']['type'] ?? 'none';
+                break;
+
+            case 'httpupgrade':
+                $config['path'] = $networkSettings['path'] ?? null;
+                $config['host'] = $networkSettings['host'] ?? null;
+                break;
+
+            case 'xhttp':
+                $config['path'] = $networkSettings['path'] ?? null;
+                $config['host'] = $networkSettings['host'] ?? null;
+                $config['mode'] = $networkSettings['mode'] ?? 'auto';
+                $config['extra'] = isset($networkSettings['extra']) ? json_encode($networkSettings['extra'], JSON_UNESCAPED_SLASHES) : null;
+                break;
+        }
+
+        return "vmess://" . base64_encode(json_encode($config, JSON_UNESCAPED_SLASHES)) . "\r\n";
+    }
+
 
     public static function buildVlessUri($uuid, $server)
     {
@@ -1168,34 +1251,34 @@ class Helper
         $parts = explode(",", $server['port']);
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
 
-        $tlsSettings = $server['tls_settings'] ?? [];
-        $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
-        $config = $server['version'] == 2
-            ? ['sni' => $sni]
+        $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+        $names = self::tlsClientNames($server, $tlsSettings);
+        $config = ($server['version'] ?? null) == 2
+            ? ['sni' => $names['sni']]
             : [
                 'protocol' => 'udp',
                 'auth' => $password,
-                'peer' => $sni,
+                'peer' => $names['verify_name'],
                 'upmbps' => $server['down_mbps'],
                 'downmbps' => $server['up_mbps'],
             ];
-        if (self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0))) {
+        if (self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings)) {
             $config['insecure'] = 1;
         }
 
         if (isset($server['obfs']) && isset($server['obfs_password'])) {
             $config['obfs'] = $server['obfs'];
-            if ($server['version'] == 2) {
+            if (($server['version'] ?? null) == 2) {
                 $config['obfs-password'] = $server['obfs_password'];
             } else {
                 $config['obfsParam'] = $server['obfs_password'];
             }
         }
         if (count($parts) !== 1 || strpos($parts[0], '-') !== false) {
-            $config['mport'] = $server['mport'];
+            $config['mport'] = $server['mport'] ?? $server['port'];
         }
-        $query = http_build_query($config);
-        $uri = $server['version'] == 2
+        $query = http_build_query(self::cleanUriParams($config), '', '&', PHP_QUERY_RFC3986);
+        $uri = ($server['version'] ?? null) == 2
             ? "hysteria2://{$password}@{$remote}:{$firstPort}/?{$query}"
             : "hysteria://{$remote}:{$firstPort}/?{$query}";
         return "{$uri}#{$name}\r\n";
@@ -1208,10 +1291,10 @@ class Helper
 
         $parts = explode(",", $server['port']);
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
-        $tlsSettings = $server['tls_settings'] ?? [];
-        $sni = $tlsSettings['server_name'] ?? ($server['server_name'] ?? '');
-        $config = ['sni' => $sni];
-        if (self::boolish($tlsSettings['allow_insecure'] ?? 0)) {
+        $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+        $names = self::tlsClientNames($server, $tlsSettings);
+        $config = ['sni' => $names['sni']];
+        if (self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings)) {
             $config['insecure'] = 1;
         }
 
@@ -1220,10 +1303,40 @@ class Helper
             $config['obfs-password'] = $server['obfs_password'];
         }
         if (count($parts) !== 1 || strpos($parts[0], '-') !== false) {
-            $config['mport'] = $server['mport'];
+            $config['mport'] = $server['mport'] ?? $server['port'];
         }
-        $query = http_build_query($config);
+        $query = http_build_query(self::cleanUriParams($config), '', '&', PHP_QUERY_RFC3986);
         $uri = "hysteria2://{$password}@{$remote}:{$firstPort}/?{$query}";
+        return "{$uri}#{$name}\r\n";
+    }
+
+    public static function buildHappHysteria2Uri($password, $server)
+    {
+        $remote = self::formatHost($server['host']);
+        $name = self::encodeURIComponent($server['name']);
+
+        $parts = explode(",", $server['port']);
+        $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
+        $tlsSettings = self::normalizeTlsSettingsValue($server['tls_settings'] ?? ($server['tlsSettings'] ?? []));
+        $names = self::tlsClientNames($server, $tlsSettings);
+        $config = [
+            'sni' => $names['sni'],
+            'peer' => $names['verify_name'],
+        ];
+        $hasPin = self::addHappTlsClientTrustParams($config, $tlsSettings, $names['verify_name'], (string)($server['host'] ?? ''));
+        if (!$hasPin && (self::boolish($server['insecure'] ?? self::firstTlsSetting($tlsSettings, ['allow_insecure', 'allowInsecure'], 0)) || self::needsLegacyInsecureForUri($tlsSettings))) {
+            $config['insecure'] = 1;
+        }
+
+        if (isset($server['obfs']) && isset($server['obfs_password'])) {
+            $config['obfs'] = $server['obfs'];
+            $config['obfs-password'] = $server['obfs_password'];
+        }
+        if (count($parts) !== 1 || strpos($parts[0], '-') !== false) {
+            $config['mport'] = $server['mport'] ?? $server['port'];
+        }
+        $query = http_build_query(self::cleanUriParams($config), '', '&', PHP_QUERY_RFC3986);
+        $uri = "hy2://{$password}@{$remote}:{$firstPort}/?{$query}";
         return "{$uri}#{$name}\r\n";
     }
 

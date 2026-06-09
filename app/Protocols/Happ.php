@@ -59,6 +59,10 @@ class Happ
                 $uri = Helper::buildHappVlessUri($this->user['uuid'], $server);
             } elseif ($type === 'trojan') {
                 $uri = Helper::buildHappTrojanUri($this->user['uuid'], $server);
+            } elseif ($type === 'vmess') {
+                $uri = Helper::buildHappVmessUri($this->user['uuid'], $server);
+            } elseif ($type === 'hysteria2' || ($type === 'hysteria' && (int)($server['version'] ?? 0) === 2)) {
+                $uri = Helper::buildHappHysteria2Uri($this->user['uuid'], $server);
             } else {
                 $uri = Helper::buildUri($this->user['uuid'], $server);
             }

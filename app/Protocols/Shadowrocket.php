@@ -55,8 +55,10 @@ class Shadowrocket
         if ($server['tls']) {
             $config['tls'] = 1;
             $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
-            $config['allowInsecure'] = ((int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0) === 1 || Helper::needsLegacyInsecureForUri($tlsSettings)) ? 1 : 0;
-            $config['peer'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+            $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+            $names = Helper::resolveTlsClientNames($server, $tlsSettings);
+            $config['allowInsecure'] = (filter_var($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false), FILTER_VALIDATE_BOOLEAN) || Helper::needsLegacyInsecureForUri($tlsSettings)) ? 1 : 0;
+            $config['peer'] = $names['verify_name'] ?: $names['sni'];
         }
         if ($server['network'] === 'tcp') {
             $tcpSettings = $server['network_settings'] ?? ($server['networkSettings'] ?? []);
@@ -83,7 +85,8 @@ class Shadowrocket
             if (isset($grpcSettings['serviceName']) && !empty($grpcSettings['serviceName']))
                 $config['path'] = $grpcSettings['serviceName'];
             if (isset($tlsSettings)) {
-                $config['host'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+                $names = Helper::resolveTlsClientNames($server, is_array($tlsSettings) ? $tlsSettings : []);
+                $config['host'] = $names['sni'];
             } else {
                 $config['host'] = $server['host'];
             }

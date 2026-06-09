@@ -151,8 +151,11 @@ class SingboxOld
             $tlsConfig = [];
             $tlsConfig['enabled'] = true;
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
-            $tlsConfig['insecure'] = $config['allowInsecure'] = ((int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0)) == 1 ? true : false;
-            $tlsConfig['server_name'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+            $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+            $names = Helper::resolveTlsClientNames($server, $tlsSettings);
+            $tlsConfig['insecure'] = filter_var($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false), FILTER_VALIDATE_BOOLEAN)
+                || Helper::needsLegacyInsecureForUri($tlsSettings);
+            $tlsConfig['server_name'] = $names['sni'];
             $array['tls'] = $tlsConfig;
         }
         if ($server['network'] === 'tcp') {
@@ -189,16 +192,18 @@ class SingboxOld
             "packet_encoding" => "xudp"
         ];
 
-        $tlsSettings = $server['tls_settings'] ?? [];
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
 
         if ($server['tls']) {
             $tlsConfig = [];
             $tlsConfig['enabled'] = true;
             $array['flow'] = !empty($server['flow']) ? $server['flow'] : "";
-            $tlsSettings = $server['tls_settings'] ?? [];
-            if ($server['tls_settings']) {
-                $tlsConfig['insecure'] = ($tlsSettings['allow_insecure'] ?? 0) == 1 ? true : false;
-                $tlsConfig['server_name'] = $tlsSettings['server_name'] ?? null;
+            if ($tlsSettings) {
+                $names = Helper::resolveTlsClientNames($server, $tlsSettings);
+                $tlsConfig['insecure'] = filter_var($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false), FILTER_VALIDATE_BOOLEAN)
+                    || ((int)($server['tls'] ?? 0) !== 2 && Helper::needsLegacyInsecureForUri($tlsSettings));
+                $tlsConfig['server_name'] = $names['sni'];
                 if ($server['tls'] == 2) {
                     $tlsConfig['reality'] = [
                         'enabled' => true,
@@ -251,11 +256,14 @@ class SingboxOld
         $array['server_port'] = $server['port'];
         $array['password'] = $password;
 
-        $tlsSettings = $server['tls_settings'] ?? [];
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+        $names = Helper::resolveTlsClientNames($server, $tlsSettings);
         $array['tls'] = [
             'enabled' => true,
-            'insecure' => ($server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false,
-            'server_name' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? '')
+            'insecure' => filter_var($server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false)), FILTER_VALIDATE_BOOLEAN)
+                || Helper::needsLegacyInsecureForUri($tlsSettings),
+            'server_name' => $names['sni']
         ];
 
         if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
@@ -291,14 +299,17 @@ class SingboxOld
         $array['udp_relay_mode'] = $server['udp_relay_mode'] ?? 'native';
         $array['zero_rtt_handshake'] = $server['zero_rtt_handshake'] ? true : false;
 
-        $tlsSettings = $server['tls_settings'] ?? [];
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+        $names = Helper::resolveTlsClientNames($server, $tlsSettings);
         $array['tls'] = [
             'enabled' => true,
-            'insecure' => ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false,
+            'insecure' => filter_var($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false)), FILTER_VALIDATE_BOOLEAN)
+                || Helper::needsLegacyInsecureForUri($tlsSettings),
             'alpn' => ['h3'],
-            'disable_sni' => $server['disable_sni'] ? true : false,
+            'disable_sni' => !empty($server['disable_sni']),
         ];
-        $array['tls']['server_name'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
+        $array['tls']['server_name'] = $names['sni'];
 
         return $array;
     }
@@ -314,13 +325,17 @@ class SingboxOld
             $firstPort = $firstPart;
         }
 
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+        $names = Helper::resolveTlsClientNames($server, $tlsSettings);
         $array = [
             'server' => $server['host'],
             'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
-                'insecure' => $server['insecure'] ? true : false,
-                'server_name' => $server['server_name']
+                'insecure' => filter_var($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false)), FILTER_VALIDATE_BOOLEAN)
+                    || Helper::needsLegacyInsecureForUri($tlsSettings),
+                'server_name' => $names['sni']
             ]
         ];
 
@@ -360,14 +375,17 @@ class SingboxOld
         } else {
             $firstPort = $firstPart;
         }
-        $tlsSettings = $server['tls_settings'] ?? [];
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+        $names = Helper::resolveTlsClientNames($server, $tlsSettings);
         $array = [
             'server' => $server['host'],
             'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
-                'insecure' => ($tlsSettings['allow_insecure'] ?? 0) == 1 ? true : false,
-                'server_name' => $tlsSettings['server_name'] ?? ''
+                'insecure' => filter_var($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false), FILTER_VALIDATE_BOOLEAN)
+                    || Helper::needsLegacyInsecureForUri($tlsSettings),
+                'server_name' => $names['sni']
             ],
             'password' => $password,
             'tag' => $server['name'],

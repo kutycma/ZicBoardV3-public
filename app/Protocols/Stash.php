@@ -151,19 +151,23 @@ class Stash
         $array['cipher'] = 'auto';
         $array['udp'] = true;
 
+        $networkSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
+        $networkSettings = is_array($networkSettings) ? $networkSettings : [];
+
         if ($server['tls']) {
             $array['tls'] = true;
             $tlsSettings = $server['tlsSettings'] ?? ($server['tls_settings'] ?? []);
-            if ($tlsSettings) {
-                if (isset($tlsSettings['allowInsecure']) && !empty($tlsSettings['allowInsecure']))
-                    $array['skip-cert-verify'] = ($tlsSettings['allowInsecure'] ? true : false);
-                if (isset($tlsSettings['serverName']) && !empty($tlsSettings['serverName']))
-                    $array['servername'] = $tlsSettings['serverName'];
-                self::applyStashTlsTrust($array, $server, $tlsSettings);
+            $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+            $names = Helper::resolveTlsClientNames($server, $tlsSettings);
+            $allowInsecure = filter_var($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false), FILTER_VALIDATE_BOOLEAN);
+            $array['skip-cert-verify'] = $allowInsecure;
+            if ($names['sni'] !== '') {
+                $array['servername'] = $names['sni'];
             }
+            self::applyStashTlsTrust($array, $server, $tlsSettings);
         }
         if ($server['network'] === 'tcp') {
-            $tcpSettings = $server['networkSettings'];
+            $tcpSettings = $networkSettings;
             if (isset($tcpSettings['header']['type']) && $tcpSettings['header']['type'] == 'http') {
                 $array['network'] = $tcpSettings['header']['type'];
                 if (isset($tcpSettings['header']['request']['headers']['Host'])) $array['http-opts']['headers']['Host'] = $tcpSettings['header']['request']['headers']['Host'];
@@ -171,8 +175,8 @@ class Stash
         }
         if ($server['network'] === 'ws') {
             $array['network'] = 'ws';
-            if ($server['networkSettings']) {
-                $wsSettings = $server['networkSettings'];
+            if ($networkSettings) {
+                $wsSettings = $networkSettings;
                 $array['ws-opts'] = [];
                 if (isset($wsSettings['path']) && !empty($wsSettings['path']))
                     $array['ws-opts']['path'] = $wsSettings['path'];
@@ -189,8 +193,8 @@ class Stash
         }
         if ($server['network'] === 'grpc') {
             $array['network'] = 'grpc';
-            if ($server['networkSettings']) {
-                $grpcSettings = $server['networkSettings'];
+            if ($networkSettings) {
+                $grpcSettings = $networkSettings;
                 $array['grpc-opts'] = [];
                 if (isset($grpcSettings['serviceName']))  $array['grpc-opts']['grpc-service-name'] = $grpcSettings['serviceName'];
             }
@@ -198,7 +202,6 @@ class Stash
 
         return $array;
     }
-
     public static function buildVless($uuid, $server)
     {
         $array = [];
@@ -368,14 +371,18 @@ class Stash
     
     public static function buildHysteria2($password, $server)
     {
-        $tlsSettings = $server['tls_settings'] ?? [];
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+        $names = Helper::resolveTlsClientNames($server, $tlsSettings);
+        $allowInsecure = filter_var($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false)), FILTER_VALIDATE_BOOLEAN)
+            || Helper::needsLegacyInsecureForUri($tlsSettings);
         $array = [
             'name' => $server['name'],
             'type' => 'hysteria2',
             'server' => $server['host'],
             'password' => $password,
-            'skip-cert-verify' => ($tlsSettings['allow_insecure'] ?? 0) == 1 ? true : false,
-            'sni' => $tlsSettings['server_name'] ?? '',
+            'skip-cert-verify' => $allowInsecure,
+            'sni' => $names['sni'],
             'udp' => true,
         ];
         self::applyStashTlsTrust($array, $server, $tlsSettings);
@@ -429,6 +436,9 @@ class Stash
             $array['skip-cert-verify'] = false;
         }
         if ($trust['cert_sha256_hex'] === '') {
+            if (empty($trust['suppress_insecure']) && !empty($trust['needs_legacy_insecure'])) {
+                $array['skip-cert-verify'] = true;
+            }
             return !empty($trust['suppress_insecure']);
         }
         $array['server-cert-fingerprint'] = $trust['cert_sha256_hex'];

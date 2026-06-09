@@ -161,8 +161,10 @@ class Singbox
             $tlsConfig = [];
             $tlsConfig['enabled'] = true;
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
-            $tlsConfig['insecure'] = ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? 0)) == 1 ? true : false;
-            $tlsConfig['server_name'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+            $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+            $names = Helper::resolveTlsClientNames($server, $tlsSettings);
+            $tlsConfig['insecure'] = filter_var($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false), FILTER_VALIDATE_BOOLEAN);
+            $tlsConfig['server_name'] = $names['sni'];
             $this->applyTlsTrust($tlsConfig, $server, $tlsSettings);
             if (!empty($tlsSettings['ech'])) {
                 if ($tlsSettings['ech'] === 'cloudflare') {
@@ -496,14 +498,16 @@ class Singbox
         } else {
             $firstPort = $firstPart;
         }
-        $tlsSettings = $server['tls_settings'] ?? [];
+        $tlsSettings = $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+        $tlsSettings = is_array($tlsSettings) ? $tlsSettings : [];
+        $names = Helper::resolveTlsClientNames($server, $tlsSettings);
         $array = [
             'server' => $server['host'],
             'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
-                'insecure' => ($tlsSettings['allow_insecure'] ?? 0) == 1 ? true : false,
-                'server_name' => $tlsSettings['server_name'] ?? ''
+                'insecure' => filter_var($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? false), FILTER_VALIDATE_BOOLEAN),
+                'server_name' => $names['sni']
             ],
             'domain_resolver' => 'local',
             'password' => $password,
@@ -520,14 +524,30 @@ class Singbox
 
     private function applyTlsTrust(array &$tlsConfig, array $server, array $tlsSettings): bool
     {
-        if (!$this->supportsCertificatePublicKeyPin() || (int)($server['tls'] ?? 1) === 2) {
+        if ((int)($server['tls'] ?? 1) === 2) {
             return false;
         }
         $trust = Helper::resolveTlsClientTrust($server, $tlsSettings);
+        if (($tlsConfig['server_name'] ?? '') === '' && $trust['sni'] !== '') {
+            $tlsConfig['server_name'] = $trust['sni'];
+        }
+        if (!$this->supportsCertificatePublicKeyPin()) {
+            if (!empty($trust['suppress_insecure'])) {
+                $tlsConfig['insecure'] = false;
+                return true;
+            }
+            if (!empty($trust['needs_legacy_insecure'])) {
+                $tlsConfig['insecure'] = true;
+            }
+            return false;
+        }
         if (!empty($trust['suppress_insecure']) || $trust['public_key_sha256'] !== '') {
             $tlsConfig['insecure'] = false;
         }
         if ($trust['public_key_sha256'] === '') {
+            if (empty($trust['suppress_insecure']) && !empty($trust['needs_legacy_insecure'])) {
+                $tlsConfig['insecure'] = true;
+            }
             return !empty($trust['suppress_insecure']);
         }
         $tlsConfig['certificate_public_key_sha256'] = [$trust['public_key_sha256']];
