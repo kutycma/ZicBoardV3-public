@@ -14,6 +14,7 @@ use App\Models\ServerVless;
 use App\Models\ServerAnytls;
 use App\Models\ServerZicnode;
 use App\Models\Stat;
+use App\Models\StatOnlineUser;
 use App\Models\StatServer;
 use App\Models\StatUser;
 use App\Models\Ticket;
@@ -359,6 +360,260 @@ class StatController extends Controller
             'data' => $records,
             'total' => $total
         ];
+    }
+
+    public function getUserBandwidthSeries(Request $request)
+    {
+        $range = $this->dashboardRange($request);
+        [$startAt, $endAt] = $this->rangeBounds($range);
+        $points = $this->emptyBandwidthPoints($range, $startAt, $endAt);
+        $format = $range === 'today' ? '%Y-%m-%d %H:00:00' : '%Y-%m-%d';
+        $records = StatUser::select([
+            DB::raw("FROM_UNIXTIME(record_at, '{$format}') as bucket"),
+            DB::raw('sum(u * server_rate) as upload'),
+            DB::raw('sum(d * server_rate) as download'),
+            DB::raw('sum((u + d) * server_rate) as total')
+        ])
+            ->where('record_at', '>=', $startAt)
+            ->where('record_at', '<', $endAt)
+            ->groupBy('bucket')
+            ->get();
+
+        foreach ($records as $record) {
+            $key = (string)$record['bucket'];
+            if (!isset($points[$key])) continue;
+            $points[$key]['upload'] = (float)$record['upload'];
+            $points[$key]['download'] = (float)$record['download'];
+            $points[$key]['total'] = (float)$record['total'];
+        }
+
+        return [
+            'data' => [
+                'range' => $range,
+                'unit' => 'bytes',
+                'points' => array_values($points)
+            ]
+        ];
+    }
+
+    public function getServerBandwidthSeries(Request $request)
+    {
+        $range = $this->dashboardRange($request);
+        [$startAt, $endAt] = $this->rangeBounds($range);
+        $points = $this->emptyBandwidthPoints($range, $startAt, $endAt);
+        $format = $range === 'today' ? '%Y-%m-%d %H:00:00' : '%Y-%m-%d';
+        $builder = StatServer::where('record_at', '>=', $startAt)
+            ->where('record_at', '<', $endAt);
+        if ($request->input('server_id')) {
+            $builder->where('server_id', (int)$request->input('server_id'));
+        }
+
+        $records = (clone $builder)->select([
+            DB::raw("FROM_UNIXTIME(record_at, '{$format}') as bucket"),
+            DB::raw('sum(u) as upload'),
+            DB::raw('sum(d) as download'),
+            DB::raw('sum(u + d) as total')
+        ])
+            ->groupBy('bucket')
+            ->get();
+
+        foreach ($records as $record) {
+            $key = (string)$record['bucket'];
+            if (!isset($points[$key])) continue;
+            $points[$key]['upload'] = (float)$record['upload'];
+            $points[$key]['download'] = (float)$record['download'];
+            $points[$key]['total'] = (float)$record['total'];
+        }
+
+        $servers = (clone $builder)->select([
+            'server_id',
+            'server_type',
+            DB::raw('sum(u) as upload'),
+            DB::raw('sum(d) as download'),
+            DB::raw('sum(u + d) as total')
+        ])
+            ->groupBy('server_id', 'server_type')
+            ->orderBy('total', 'DESC')
+            ->limit(10)
+            ->get()
+            ->toArray();
+        $serverNames = $this->serverNameMap();
+        foreach ($servers as $k => $server) {
+            $nameKey = $server['server_type'] . ':' . $server['server_id'];
+            $servers[$k]['server_name'] = $serverNames[$nameKey] ?? null;
+        }
+
+        return [
+            'data' => [
+                'range' => $range,
+                'unit' => 'bytes',
+                'points' => array_values($points),
+                'servers' => $servers
+            ]
+        ];
+    }
+
+    public function getOnlineUserSeries(Request $request)
+    {
+        $range = $this->dashboardRange($request);
+        [$startAt, $endAt] = $this->rangeBounds($range);
+
+        if ($range === 'today') {
+            $points = [];
+            for ($cursor = $startAt; $cursor < $endAt; $cursor = strtotime('+1 hour', $cursor)) {
+                $points[date('Y-m-d H:00:00', $cursor)] = [
+                    'time' => $cursor,
+                    'label' => date('H:00', $cursor),
+                    'online_user' => 0,
+                    'sample_count' => 0
+                ];
+            }
+            $records = StatOnlineUser::where('record_at', '>=', $startAt)
+                ->where('record_at', '<', $endAt)
+                ->get();
+            foreach ($records as $record) {
+                $key = date('Y-m-d H:00:00', $record['record_at']);
+                if (!isset($points[$key])) continue;
+                $points[$key]['online_user'] = (int)$record['online_user'];
+                $points[$key]['sample_count'] = 1;
+            }
+            $hourKey = date('Y-m-d H:00:00', strtotime(date('Y-m-d H:00:00')));
+            if (isset($points[$hourKey]) && !$points[$hourKey]['sample_count']) {
+                $points[$hourKey]['online_user'] = User::where('t', '>=', time() - 600)->count();
+            }
+        } else {
+            $points = [];
+            for ($cursor = $startAt; $cursor < $endAt; $cursor = strtotime('+1 day', $cursor)) {
+                $points[date('Y-m-d', $cursor)] = [
+                    'time' => $cursor,
+                    'label' => date('m-d', $cursor),
+                    'online_user' => 0,
+                    'online_user_avg' => 0,
+                    'sample_count' => 0
+                ];
+            }
+            $records = StatOnlineUser::select([
+                DB::raw("FROM_UNIXTIME(record_at, '%Y-%m-%d') as bucket"),
+                DB::raw('avg(online_user) as online_user_avg'),
+                DB::raw('count(*) as sample_count')
+            ])
+                ->where('record_at', '>=', $startAt)
+                ->where('record_at', '<', $endAt)
+                ->groupBy('bucket')
+                ->get();
+            foreach ($records as $record) {
+                $key = (string)$record['bucket'];
+                if (!isset($points[$key])) continue;
+                $avg = round((float)$record['online_user_avg'], 2);
+                $points[$key]['online_user'] = $avg;
+                $points[$key]['online_user_avg'] = $avg;
+                $points[$key]['sample_count'] = (int)$record['sample_count'];
+            }
+        }
+
+        return [
+            'data' => [
+                'range' => $range,
+                'points' => array_values($points)
+            ]
+        ];
+    }
+
+    public function getCollaboratorCommissionRank(Request $request)
+    {
+        $range = $this->dashboardRange($request);
+        [$startAt, $endAt] = $this->rangeBounds($range);
+        $limit = min(max((int)$request->input('limit', 10), 1), 50);
+        $records = CommissionLog::select([
+            'invite_user_id',
+            DB::raw('sum(get_amount) as commission_amount'),
+            DB::raw('count(*) as commission_count')
+        ])
+            ->where('created_at', '>=', $startAt)
+            ->where('created_at', '<', $endAt)
+            ->whereNotNull('invite_user_id')
+            ->where('get_amount', '>', 0)
+            ->groupBy('invite_user_id')
+            ->orderBy('commission_amount', 'DESC')
+            ->limit($limit)
+            ->get();
+
+        $users = User::whereIn('id', $records->pluck('invite_user_id')->toArray())->get()->keyBy('id');
+        $items = [];
+        foreach ($records as $record) {
+            $userId = (int)$record['invite_user_id'];
+            $items[] = [
+                'user_id' => $userId,
+                'email' => isset($users[$userId]) ? $users[$userId]['email'] : null,
+                'commission_amount' => (float)$record['commission_amount'],
+                'commission_count' => (int)$record['commission_count']
+            ];
+        }
+
+        return [
+            'data' => [
+                'range' => $range,
+                'currency' => 'VND',
+                'items' => $items
+            ]
+        ];
+    }
+
+    private function dashboardRange(Request $request)
+    {
+        $range = $request->input('range', 'today');
+        if (!in_array($range, ['today', 'month'], true)) {
+            abort(422, 'Invalid range');
+        }
+        return $range;
+    }
+
+    private function rangeBounds($range)
+    {
+        if ($range === 'today') {
+            return [strtotime(date('Y-m-d')), strtotime('+1 day', strtotime(date('Y-m-d')))];
+        }
+        return [strtotime(date('Y-m-1')), strtotime('+1 day', strtotime(date('Y-m-t')))];
+    }
+
+    private function emptyBandwidthPoints($range, $startAt, $endAt)
+    {
+        $points = [];
+        $step = $range === 'today' ? '+1 hour' : '+1 day';
+        for ($cursor = $startAt; $cursor < $endAt; $cursor = strtotime($step, $cursor)) {
+            $key = $range === 'today' ? date('Y-m-d H:00:00', $cursor) : date('Y-m-d', $cursor);
+            $points[$key] = [
+                'time' => $cursor,
+                'label' => $range === 'today' ? date('H:00', $cursor) : date('m-d', $cursor),
+                'upload' => 0,
+                'download' => 0,
+                'total' => 0
+            ];
+        }
+        return $points;
+    }
+
+    private function serverNameMap()
+    {
+        $servers = [
+            'shadowsocks' => ServerShadowsocks::where('parent_id', null)->get()->toArray(),
+            'v2ray' => ServerVmess::where('parent_id', null)->get()->toArray(),
+            'trojan' => ServerTrojan::where('parent_id', null)->get()->toArray(),
+            'vmess' => ServerVmess::where('parent_id', null)->get()->toArray(),
+            'vless' => ServerVless::where('parent_id', null)->get()->toArray(),
+            'tuic' => ServerTuic::where('parent_id', null)->get()->toArray(),
+            'hysteria'=> ServerHysteria::where('parent_id', null)->get()->toArray(),
+            'anytls' => ServerAnytls::where('parent_id', null)->get()->toArray(),
+            'zicnode' => ServerZicnode::where('parent_id', null)->get()->toArray(),
+            'v2node' => ServerZicnode::where('parent_id', null)->get()->toArray()
+        ];
+        $map = [];
+        foreach ($servers as $type => $items) {
+            foreach ($items as $server) {
+                $map[$type . ':' . $server['id']] = $server['name'];
+            }
+        }
+        return $map;
     }
 
 }

@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\StatOnlineUser;
 use App\Models\StatServer;
 use App\Models\StatUser;
+use App\Models\User;
 use App\Services\StatisticalService;
 use Illuminate\Console\Command;
 use App\Models\Stat;
@@ -16,7 +18,7 @@ class ZicBoardStatistics extends Command
      *
      * @var string
      */
-    protected $signature = 'zicboard:statistics';
+    protected $signature = 'zicboard:statistics {--online : Record hourly online user statistics only}';
 
     /**
      * The console command description.
@@ -44,9 +46,14 @@ class ZicBoardStatistics extends Command
     {
         $startAt = microtime(true);
         ini_set('memory_limit', -1);
+        if ($this->option('online')) {
+            $this->statOnlineUser();
+            return;
+        }
         //$this->statUser();
         //$this->statServer();
         $this->stat();
+        $this->pruneDashboardStats();
         info('Tác vụ thống kê hoàn tất. Thời gian:' . (microtime(true) - $startAt) / 1000);
     }
 
@@ -136,5 +143,31 @@ class ZicBoardStatistics extends Command
         } catch (\Exception $e) {
             \Log::error($e->getMessage(), ['exception' => $e]);
         }
+    }
+
+    private function statOnlineUser()
+    {
+        try {
+            $hourStart = strtotime(date('Y-m-d H:00:00'));
+            $now = time();
+            StatOnlineUser::updateOrCreate([
+                'record_at' => $hourStart
+            ], [
+                'online_user' => User::where('t', '>=', $now - 600)->count(),
+                'updated_at' => $now,
+                'created_at' => $now
+            ]);
+            $this->pruneDashboardStats();
+        } catch (\Exception $e) {
+            \Log::error($e->getMessage(), ['exception' => $e]);
+        }
+    }
+
+    private function pruneDashboardStats()
+    {
+        $retentionStart = strtotime('-60 days', strtotime(date('Y-m-d 00:00:00')));
+        StatOnlineUser::where('record_at', '<', $retentionStart)->delete();
+        Stat::where('record_at', '<', $retentionStart)->delete();
+        StatServer::where('record_at', '<', $retentionStart)->delete();
     }
 }

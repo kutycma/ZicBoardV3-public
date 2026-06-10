@@ -143,6 +143,10 @@ class AdminRoute
             $router->get ('/stat/getUserTodayRank', 'V1\\Admin\\StatController@getUserTodayRank');
             $router->get ('/stat/getOrder', 'V1\\Admin\\StatController@getOrder');
             $router->get ('/stat/getStatUser', 'V1\\Admin\\StatController@getStatUser');
+            $router->get ('/stat/getUserBandwidthSeries', 'V1\\Admin\\StatController@getUserBandwidthSeries');
+            $router->get ('/stat/getServerBandwidthSeries', 'V1\\Admin\\StatController@getServerBandwidthSeries');
+            $router->get ('/stat/getOnlineUserSeries', 'V1\\Admin\\StatController@getOnlineUserSeries');
+            $router->get ('/stat/getCollaboratorCommissionRank', 'V1\\Admin\\StatController@getCollaboratorCommissionRank');
             $router->get ('/stat/getRanking', 'V1\\Admin\\StatController@getRanking');
             $router->get ('/stat/getStatRecord', 'V1\\Admin\\StatController@getStatRecord');
             // Notice

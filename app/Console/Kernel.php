@@ -31,6 +31,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('traffic:update')->everyMinute()->withoutOverlapping();
         // zicboard
         $schedule->command('zicboard:statistics')->dailyAt('0:10');
+        $schedule->command('zicboard:statistics --online')->hourly()->withoutOverlapping();
         // check
         $schedule->command('check:order')->everyMinute()->withoutOverlapping();
         $schedule->command('check:commission')->everyFifteenMinutes();
