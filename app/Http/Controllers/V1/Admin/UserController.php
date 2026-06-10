@@ -133,7 +133,8 @@ class UserController extends Controller
             $alive = $this->aliveSummary($aliveCacheKey ? ($aliveCache[$aliveCacheKey] ?? null) : null);
             $user->alive_ip = $alive['alive_ip'];
             $user->ips = $alive['ips'];
-            $user->subscribe_url = Helper::getSubscribeUrl($user->token, $request);
+            $subscribeToken = $subscription ? $subscription->token : $user->token;
+            $user->subscribe_url = Helper::getSubscribeUrl($subscribeToken, $request);
             $user->makeHidden(['subscription']);
         }
         return response([
