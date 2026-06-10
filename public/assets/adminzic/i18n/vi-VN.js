@@ -514,7 +514,7 @@
     "plan.transferEnable": "Lưu lượng",
     "plan.deviceLimit": "Giới hạn thiết bị",
     "plan.speedLimit": "Giới hạn tốc độ",
-    "plan.capacityLimit": "Giới hạn dung lượng",
+    "plan.capacityLimit": "Giới hạn gói active",
     "plan.resetTrafficMethod": "Phương thức đặt lại lưu lượng",
     "plan.unlimited": "Không giới hạn",
     "plan.monthPrice": "Hàng tháng",

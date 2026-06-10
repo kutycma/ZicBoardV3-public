@@ -494,7 +494,7 @@
     "plan.transferEnable": "流量",
     "plan.deviceLimit": "设备限制",
     "plan.speedLimit": "速度限制",
-    "plan.capacityLimit": "容量限制",
+    "plan.capacityLimit": "有效订阅数量限制",
     "plan.resetTrafficMethod": "流量重置方式",
     "plan.unlimited": "不限",
     "plan.monthPrice": "月付",

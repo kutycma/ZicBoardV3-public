@@ -514,7 +514,7 @@
     "plan.transferEnable": "Traffic",
     "plan.deviceLimit": "Device limit",
     "plan.speedLimit": "Speed limit",
-    "plan.capacityLimit": "Capacity limit",
+    "plan.capacityLimit": "Active subscription limit",
     "plan.resetTrafficMethod": "Traffic reset method",
     "plan.unlimited": "Unlimited",
     "plan.monthPrice": "Monthly",

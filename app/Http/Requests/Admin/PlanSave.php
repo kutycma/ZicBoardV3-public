@@ -53,7 +53,7 @@ class PlanSave extends FormRequest
             'reset_price.integer' => 'Số tiền gói reset dung lượngkhông hợp lệ',
             'reset_traffic_method.integer' => 'Cách reset dung lượngsai định dạng',
             'reset_traffic_method.in' => 'Cách reset dung lượngsai định dạng',
-            'capacity_limit.integer' => 'Giới hạn số người dùngsai định dạng',
+            'capacity_limit.integer' => 'Giới hạn gói active sai định dạng',
             'speed_limit.integer' => 'Giới hạn tốc độsai định dạng'
         ];
     }
