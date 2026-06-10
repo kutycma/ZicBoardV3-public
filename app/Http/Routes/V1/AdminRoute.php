@@ -159,6 +159,7 @@ class AdminRoute
             $router->get ('/ticket/fetch', 'V1\\Admin\\TicketController@fetch');
             $router->post('/ticket/reply', 'V1\\Admin\\TicketController@reply');
             $router->post('/ticket/close', 'V1\\Admin\\TicketController@close');
+            $router->post('/ticket/confirmCommission', 'V1\\Admin\\TicketController@confirmCommission');
             // Coupon
             $router->get ('/coupon/fetch', 'V1\\Admin\\CouponController@fetch');
             $router->post('/coupon/generate', 'V1\\Admin\\CouponController@generate');

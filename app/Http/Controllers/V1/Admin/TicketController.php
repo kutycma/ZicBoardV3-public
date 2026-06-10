@@ -92,4 +92,59 @@ class TicketController extends Controller
             'data' => true
         ]);
     }
+
+    public function confirmCommission(Request $request)
+    {
+        if (empty($request->input('id'))) {
+            abort(500, 'tham số lỗi');
+        }
+
+        $adminUserId = $request->user['id'] ?? 0;
+        $result = DB::transaction(function () use ($request, $adminUserId) {
+            $ticket = Ticket::where('id', $request->input('id'))
+                ->lockForUpdate()
+                ->first();
+            if (!$ticket) {
+                abort(500, 'Ticket không tồn tại');
+            }
+
+            $user = User::where('id', $ticket->user_id)
+                ->lockForUpdate()
+                ->first();
+            if (!$user) {
+                abort(500, 'Người dùng không tồn tại');
+            }
+
+            $amount = (int)$user->commission_balance;
+            if ($amount <= 0) {
+                abort(500, 'Người dùng không còn hoa hồng để xác nhận');
+            }
+
+            $amountLabel = number_format($amount / 100, 0, '.', ',');
+            $message = "admin đã xác nhận chuyển {$amountLabel} vnd tiền hoa hồng";
+
+            $user->commission_balance = 0;
+            $ticketMessage = TicketMessage::create([
+                'user_id' => $adminUserId,
+                'ticket_id' => $ticket->id,
+                'message' => $message
+            ]);
+            $ticket->status = 0;
+            $ticket->reply_status = 1;
+            $ticket->touch();
+
+            if (!$ticketMessage || !$user->save() || !$ticket->save()) {
+                abort(500, 'Xác nhận hoa hồng thất bại');
+            }
+
+            return [
+                'amount' => $amount,
+                'message' => $message
+            ];
+        });
+
+        return response([
+            'data' => $result
+        ]);
+    }
 }
