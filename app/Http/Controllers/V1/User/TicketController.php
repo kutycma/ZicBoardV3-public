@@ -184,15 +184,23 @@ class TicketController extends Controller
             abort(500, __('Unsupported withdrawal method'));
         }
         $user = User::find($request->user['id']);
+        if (!$user) {
+            abort(500, __('The user does not exist'));
+        }
+        $withdrawAmount = (int)$request->input('withdraw_amount');
         $limit = config('zicboard.commission_withdraw_limit', 100);
-        if ($limit > ($user->commission_balance / 100)) {
+        if ($withdrawAmount > (int)$user->commission_balance) {
+            abort(500, __('Insufficient commission balance'));
+        }
+        if ($limit > ($withdrawAmount / 100)) {
             abort(500, __('The current required minimum withdrawal commission is :limit', ['limit' => $limit]));
         }
+        $withdrawAmountLabel = number_format($withdrawAmount / 100, 0, '.', ',') . ' VND';
         DB::beginTransaction();
         $subject = __('[Commission Withdrawal Request] This ticket is opened by the system');
         $ticket = Ticket::create([
             'subject' => $subject,
-            'level' => 2,
+            'level' => 3,
             'user_id' => $request->user['id']
         ]);
         if (!$ticket) {
@@ -200,7 +208,8 @@ class TicketController extends Controller
             abort(500, __('Failed to open ticket'));
         }
         $message = sprintf(
-			"%s\r\n%s",
+			"%s\r\n%s\r\n%s",
+            __('Withdrawal amount') . ":" . $withdrawAmountLabel,
             __('Withdrawal method') . ":" . $request->input('withdraw_method'),
             __('Withdrawal account') . ":" . $request->input('withdraw_account')
         );

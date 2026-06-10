@@ -8,11 +8,14 @@ use App\Models\TicketMessage;
 use App\Models\User;
 use App\Services\TicketService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class TicketController extends Controller
 {
+    private const WITHDRAW_TICKET_LEVEL = 3;
+    private const COMMISSION_CONFIRM_PREFIX = 'admin đã xác nhận chuyển ';
+    private const COMMISSION_CONFIRM_SUFFIX = ' vnd tiền hoa hồng';
+
     public function fetch(Request $request)
     {
         if ($request->input('id')) {
@@ -21,14 +24,12 @@ class TicketController extends Controller
             if (!$ticket) {
                 abort(500, 'Ticket không tồn tại');
             }
-            $ticket['message'] = TicketMessage::where('ticket_id', $ticket->id)->get();
-            for ($i = 0; $i < count($ticket['message']); $i++) {
-                if ($ticket['message'][$i]['user_id'] !== $ticket->user_id) {
-                    $ticket['message'][$i]['is_me'] = true;
-                } else {
-                    $ticket['message'][$i]['is_me'] = false;
-                }
+
+            $ticket['message'] = $this->getMessagesWithSender($ticket);
+            if ((int)$ticket->level === self::WITHDRAW_TICKET_LEVEL) {
+                $ticket['withdraw_amount'] = $this->getWithdrawAmount($ticket);
             }
+
             return response([
                 'data' => $ticket
             ]);
@@ -107,6 +108,17 @@ class TicketController extends Controller
             if (!$ticket) {
                 abort(500, 'Ticket không tồn tại');
             }
+            if ((int)$ticket->level !== self::WITHDRAW_TICKET_LEVEL) {
+                abort(500, 'Ticket này không phải yêu cầu rút hoa hồng');
+            }
+            if ($this->hasCommissionConfirmed($ticket)) {
+                abort(500, 'Hoa hồng của ticket này đã được xác nhận');
+            }
+
+            $amount = $this->getWithdrawAmount($ticket);
+            if (!$amount) {
+                abort(500, 'Ticket này không có số tiền rút hợp lệ');
+            }
 
             $user = User::where('id', $ticket->user_id)
                 ->lockForUpdate()
@@ -114,16 +126,14 @@ class TicketController extends Controller
             if (!$user) {
                 abort(500, 'Người dùng không tồn tại');
             }
-
-            $amount = (int)$user->commission_balance;
-            if ($amount <= 0) {
-                abort(500, 'Người dùng không còn hoa hồng để xác nhận');
+            if ((int)$user->commission_balance < $amount) {
+                abort(500, 'Hoa hồng hiện tại không đủ để xác nhận số tiền rút');
             }
 
             $amountLabel = number_format($amount / 100, 0, '.', ',');
-            $message = "admin đã xác nhận chuyển {$amountLabel} vnd tiền hoa hồng";
+            $message = self::COMMISSION_CONFIRM_PREFIX . $amountLabel . self::COMMISSION_CONFIRM_SUFFIX;
 
-            $user->commission_balance = 0;
+            $user->commission_balance = (int)$user->commission_balance - $amount;
             $ticketMessage = TicketMessage::create([
                 'user_id' => $adminUserId,
                 'ticket_id' => $ticket->id,
@@ -146,5 +156,61 @@ class TicketController extends Controller
         return response([
             'data' => $result
         ]);
+    }
+
+    private function getMessagesWithSender(Ticket $ticket)
+    {
+        $messages = TicketMessage::where('ticket_id', $ticket->id)
+            ->orderBy('id', 'ASC')
+            ->get();
+        $emails = User::whereIn('id', $messages->pluck('user_id')->filter()->unique()->values())
+            ->pluck('email', 'id');
+
+        foreach ($messages as $message) {
+            $message['is_me'] = $message->user_id !== $ticket->user_id;
+            $message['user_email'] = $emails[$message->user_id] ?? null;
+        }
+
+        return $messages;
+    }
+
+    private function getWithdrawAmount(Ticket $ticket): ?int
+    {
+        if ((int)$ticket->level !== self::WITHDRAW_TICKET_LEVEL) {
+            return null;
+        }
+
+        $message = TicketMessage::where('ticket_id', $ticket->id)
+            ->where('user_id', $ticket->user_id)
+            ->orderBy('id', 'ASC')
+            ->value('message');
+
+        return $this->parseWithdrawAmount($message);
+    }
+
+    private function parseWithdrawAmount(?string $message): ?int
+    {
+        if (!$message) {
+            return null;
+        }
+        if (!preg_match('/^[^:\r\n]+:\s*([0-9][0-9,.]*)\s*VND\b/im', $message, $matches)) {
+            return null;
+        }
+
+        $amountText = preg_replace('/[^0-9]/', '', $matches[1]);
+        if ($amountText === '') {
+            return null;
+        }
+
+        $amount = (int)$amountText * 100;
+        return $amount > 0 ? $amount : null;
+    }
+
+    private function hasCommissionConfirmed(Ticket $ticket): bool
+    {
+        return TicketMessage::where('ticket_id', $ticket->id)
+            ->where('user_id', '!=', $ticket->user_id)
+            ->where('message', 'like', self::COMMISSION_CONFIRM_PREFIX . '%' . self::COMMISSION_CONFIRM_SUFFIX)
+            ->exists();
     }
 }
