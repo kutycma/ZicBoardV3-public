@@ -365,7 +365,7 @@ class StatController extends Controller
     public function getUserBandwidthSeries(Request $request)
     {
         $range = $this->dashboardRange($request);
-        [$startAt, $endAt] = $this->rangeBounds($range);
+        [$startAt, $endAt] = $this->seriesRangeBounds($range);
         $points = $this->emptyBandwidthPoints($range, $startAt, $endAt);
         $format = $range === 'today' ? '%Y-%m-%d %H:00:00' : '%Y-%m-%d';
         $records = StatUser::select([
@@ -387,11 +387,37 @@ class StatController extends Controller
             $points[$key]['total'] = (float)$record['total'];
         }
 
+        $users = StatUser::select([
+            'user_id',
+            DB::raw('sum(u * server_rate) as upload'),
+            DB::raw('sum(d * server_rate) as download'),
+            DB::raw('sum((u + d) * server_rate) as total')
+        ])
+            ->where('record_at', '>=', $startAt)
+            ->where('record_at', '<', $endAt)
+            ->groupBy('user_id')
+            ->orderBy('total', 'DESC')
+            ->limit(10)
+            ->get();
+        $userModels = User::whereIn('id', $users->pluck('user_id')->toArray())->get()->keyBy('id');
+        $items = [];
+        foreach ($users as $user) {
+            $userId = (int)$user['user_id'];
+            $items[] = [
+                'user_id' => $userId,
+                'email' => isset($userModels[$userId]) ? $userModels[$userId]['email'] : null,
+                'upload' => (float)$user['upload'],
+                'download' => (float)$user['download'],
+                'total' => (float)$user['total']
+            ];
+        }
+
         return [
             'data' => [
                 'range' => $range,
                 'unit' => 'bytes',
-                'points' => array_values($points)
+                'points' => array_values($points),
+                'users' => $items
             ]
         ];
     }
@@ -399,7 +425,7 @@ class StatController extends Controller
     public function getServerBandwidthSeries(Request $request)
     {
         $range = $this->dashboardRange($request);
-        [$startAt, $endAt] = $this->rangeBounds($range);
+        [$startAt, $endAt] = $this->seriesRangeBounds($range);
         $points = $this->emptyBandwidthPoints($range, $startAt, $endAt);
         $format = $range === 'today' ? '%Y-%m-%d %H:00:00' : '%Y-%m-%d';
         $builder = StatServer::where('record_at', '>=', $startAt)
@@ -456,7 +482,7 @@ class StatController extends Controller
     public function getOnlineUserSeries(Request $request)
     {
         $range = $this->dashboardRange($request);
-        [$startAt, $endAt] = $this->rangeBounds($range);
+        [$startAt, $endAt] = $this->seriesRangeBounds($range);
 
         if ($range === 'today') {
             $points = [];
@@ -574,6 +600,15 @@ class StatController extends Controller
             return [strtotime(date('Y-m-d')), strtotime('+1 day', strtotime(date('Y-m-d')))];
         }
         return [strtotime(date('Y-m-1')), strtotime('+1 day', strtotime(date('Y-m-t')))];
+    }
+
+    private function seriesRangeBounds($range)
+    {
+        if ($range === 'today') {
+            return [strtotime(date('Y-m-d')), strtotime('+1 day', strtotime(date('Y-m-d')))];
+        }
+        $todayStart = strtotime(date('Y-m-d'));
+        return [strtotime('-30 day', $todayStart), strtotime('+1 day', $todayStart)];
     }
 
     private function emptyBandwidthPoints($range, $startAt, $endAt)
