@@ -209,9 +209,9 @@ class TicketController extends Controller
         }
         $message = sprintf(
 			"%s\r\n%s\r\n%s",
-            __('Withdrawal amount') . ":" . $withdrawAmountLabel,
-            __('Withdrawal method') . ":" . $request->input('withdraw_method'),
-            __('Withdrawal account') . ":" . $request->input('withdraw_account')
+            __('Withdrawal amount') . ": " . $withdrawAmountLabel,
+            __('Withdrawal method') . ": " . $request->input('withdraw_method'),
+            __('Withdrawal account') . ": " . $request->input('withdraw_account')
         );
         $ticketMessage = TicketMessage::create([
             'user_id' => $request->user['id'],

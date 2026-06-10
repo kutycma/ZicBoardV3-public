@@ -18,6 +18,7 @@ class ConfigController extends Controller
 {
     private const PRESERVED_CONFIG_KEYS = [
         'frontend_admin_path',
+        'cors_allowed_origins',
         'server_log_enable',
         'server_v2ray_domain',
         'server_v2ray_protocol',

@@ -15,6 +15,7 @@ class UserDeviceService
 {
     const HWID_HEADER = 'X-Hwid';
     const HWID_HEADERS = ['X-Hwid', 'Hwid', 'HWID', 'X-Device-Hwid', 'X-Device-HWID'];
+    const DEVICE_NAME_HEADERS = ['X-Device'];
     const HWID_MAX_LENGTH = 255;
     const MODE_STRICT = 'strict';
     const MODE_MIXED = 'mixed';
@@ -64,7 +65,7 @@ class UserDeviceService
 
             $userAgent = $this->readRawUserAgent($request);
             $userAgentHash = $this->userAgentFallbackHash($userAgent);
-            $displayUserAgent = $this->displayUserAgent($userAgent);
+            $displayUserAgent = $this->readUserAgent($request);
             $ip = $this->readIp($request);
             $now = time();
 
@@ -689,12 +690,44 @@ class UserDeviceService
 
     private function readUserAgent(Request $request)
     {
-        return $this->displayUserAgent($this->readRawUserAgent($request));
+        return $this->displayUserAgent($this->buildDisplayUserAgent(
+            $this->readDeviceName($request),
+            $this->readRawUserAgent($request)
+        ));
     }
 
     private function readRawUserAgent(Request $request): string
     {
         return trim((string)$request->userAgent());
+    }
+
+    private function readDeviceName(Request $request): string
+    {
+        foreach (self::DEVICE_NAME_HEADERS as $header) {
+            $deviceName = $this->normalizeDeviceName((string)$request->header($header, ''));
+            if ($deviceName !== '') {
+                return $deviceName;
+            }
+        }
+        return '';
+    }
+
+    private function normalizeDeviceName(string $deviceName): string
+    {
+        $deviceName = preg_replace('/[\x00-\x1F\x7F]+/', ' ', $deviceName);
+        $deviceName = preg_replace('/\s+/', ' ', (string)$deviceName);
+        return trim((string)$deviceName);
+    }
+
+    private function buildDisplayUserAgent(string $deviceName, string $userAgent): string
+    {
+        if ($deviceName === '') {
+            return $userAgent;
+        }
+        if ($userAgent === '') {
+            return $deviceName;
+        }
+        return $deviceName . ' - ' . $userAgent;
     }
 
     private function displayUserAgent(string $userAgent)
