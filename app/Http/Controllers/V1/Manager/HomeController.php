@@ -31,8 +31,10 @@ class HomeController extends Controller
                     'user_update_password' => true,
                     'subscription_reset' => true,
                     'device_unbind' => true,
+                    'device_ban' => true,
                     'order_assign' => true,
-                    'order_paid' => true
+                    'order_paid' => true,
+                    'server_view' => true
                 ]
             ]
         ]);

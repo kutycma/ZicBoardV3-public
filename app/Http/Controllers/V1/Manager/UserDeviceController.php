@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Manager;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Manager\DeviceBan;
 use App\Http\Requests\Manager\DeviceFetch;
 use App\Http\Requests\Manager\DeviceUnbind;
 use App\Models\Plan;
@@ -66,6 +67,33 @@ class UserDeviceController extends Controller
         }
 
         $this->audit->record($request, 'device.unbind', [
+            'manager_id' => $manager->id,
+            'manager_email' => $manager->email,
+            'target_user_id' => $targetUser->id,
+            'target_email' => $targetUser->email,
+            'device_id' => $device->id,
+            'subscription_id' => $device->subscription_id
+        ]);
+
+        return response([
+            'data' => true
+        ]);
+    }
+
+    public function ban(DeviceBan $request)
+    {
+        $manager = $this->access->currentManager($request);
+        $targetUser = $this->access->findManageableUserFromRequest($request, $manager, $request->input('target_user_id'));
+        $device = $this->access->findManageableDevice($request->input('id'));
+        if ((int)$device->user_id !== (int)$targetUser->id) {
+            abort(403, 'Device does not belong to selected user');
+        }
+
+        if (!(new UserDeviceService())->ban($device)) {
+            abort(500, 'Ban device failed');
+        }
+
+        $this->audit->record($request, 'device.ban', [
             'manager_id' => $manager->id,
             'manager_email' => $manager->email,
             'target_user_id' => $targetUser->id,
