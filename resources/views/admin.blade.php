@@ -1,4 +1,7 @@
-@php($assetVersion = config('app.version'))
+@php
+    $assetVersion = config('app.version');
+    $securePath = $secure_path ?? config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key'))));
+@endphp
 <!DOCTYPE html>
 <html lang="vi">
   <head>
@@ -19,7 +22,7 @@
             version: @json($assetVersion),
             background_url: @json($background_url ?? null),
             logo: @json($logo ?? null),
-            secure_path: @json($secure_path ?? config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key')))))
+            secure_path: @json($securePath)
         }
     </script>
     <style>
