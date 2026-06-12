@@ -17,6 +17,7 @@ class ManagerRoute
             $router->get ('/user/detail', 'V1\\Manager\\UserController@detail');
             $router->post('/user/update-password', 'V1\\Manager\\UserController@updatePassword');
             $router->post('/user/resetSecurity', 'V1\\Manager\\UserController@resetSecurity');
+            $router->post('/subscription/subscribeUrl', 'V1\\Manager\\SubscriptionController@subscribeUrl');
             $router->get ('/device/fetch', 'V1\\Manager\\UserDeviceController@fetch');
             $router->post('/device/unbind', 'V1\\Manager\\UserDeviceController@unbind');
             $router->post('/device/ban', 'V1\\Manager\\UserDeviceController@ban');
