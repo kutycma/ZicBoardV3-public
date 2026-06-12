@@ -120,6 +120,7 @@ class ConfigSave extends FormRequest
         'register_limit_expire' => 'integer',
         'secure_path' => 'min:8|regex:/^[\w-]*$/',
         'staff_path' => 'min:5|regex:/^[\w-]*$/',
+        'manager_path' => 'min:5|regex:/^[\w-]*$/',
         'password_limit_enable' => 'in:0,1',
         'password_limit_count' => 'integer',
         'password_limit_expire' => 'integer',

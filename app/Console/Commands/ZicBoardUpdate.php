@@ -226,6 +226,8 @@ class ZicBoardUpdate extends Command
         $this->repairHappSubscribeCacheSchema();
         $this->line('[repair] plan runtime schema');
         $this->repairPlanRuntimeSchema();
+        $this->line('[repair] manager order schema');
+        $this->repairManagerOrderSchema();
         $this->line('[repair] legacy unlimited expired_at values');
         $this->repairLegacyUnlimitedExpiredAt();
         if (!Schema::hasTable('v2_user_subscription')) {
@@ -413,6 +415,16 @@ class ZicBoardUpdate extends Command
             WHERE users.name_sni IS NOT NULL
                 OR users.network_settings IS NOT NULL
         ");
+    }
+
+    private function repairManagerOrderSchema()
+    {
+        if (!Schema::hasTable('v2_order')) {
+            return;
+        }
+
+        $this->ensureColumn('v2_order', 'manager_id', 'ADD `manager_id` int(11) NULL AFTER `invite_user_id`');
+        $this->ensureIndex('v2_order', 'idx_manager_id', 'ADD INDEX `idx_manager_id` (`manager_id`)');
     }
 
     private function repairOrdersSubscriptionSchema()

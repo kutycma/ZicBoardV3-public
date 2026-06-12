@@ -35,6 +35,7 @@ class AuthService
         return [
             'token' => $this->user->token,
             'is_admin' => $this->user->is_admin,
+            'is_manager' => $this->user->is_manager,
             'auth_data' => $authData
         ];
     }
@@ -49,7 +50,8 @@ class AuthService
                     'id',
                     'email',
                     'is_admin',
-                    'is_staff'
+                    'is_staff',
+                    'is_manager'
                 ])
                     ->find($data['id']);
                 if (!$user) return false;

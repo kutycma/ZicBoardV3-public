@@ -98,6 +98,28 @@ Route::get('/' . $staffPath . '/', function () use ($staffPanel) {
     return $staffPanel('dashboard');
 });
 
+$managerPath = config('zicboard.manager_path', 'manager');
+$managerPanel = function ($entry) use ($managerPath) {
+    return view('manager', [
+        'title' => 'Manager Panel',
+        'manager_path' => $managerPath,
+        'entry' => $entry,
+        'locale' => config('app.locale', 'vi')
+    ]);
+};
+
+Route::get('/' . $managerPath . '/login', function () use ($managerPanel) {
+    return $managerPanel('login');
+});
+
+Route::get('/' . $managerPath, function () use ($managerPanel) {
+    return $managerPanel('dashboard');
+});
+
+Route::get('/' . $managerPath . '/', function () use ($managerPanel) {
+    return $managerPanel('dashboard');
+});
+
 $securePath = config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key'))));
 
 Route::get('/' . $securePath, function () use ($securePath) {

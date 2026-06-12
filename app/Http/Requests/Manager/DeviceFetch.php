@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Http\Requests\Manager;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class DeviceFetch extends FormRequest
+{
+    public function rules()
+    {
+        return [
+            'target_user_id' => 'required|integer',
+            'manage_token' => 'required|string'
+        ];
+    }
+}

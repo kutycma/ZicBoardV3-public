@@ -333,6 +333,7 @@ class ConfigController extends Controller
             'safe_mode_enable' => (int)config('zicboard.safe_mode_enable', 0),
             'secure_path' => config('zicboard.secure_path', config('zicboard.frontend_admin_path', hash('crc32b', config('app.key')))),
             'staff_path' => config('zicboard.staff_path', 'webctv'),
+            'manager_path' => config('zicboard.manager_path', 'manager'),
             'email_whitelist_enable' => (int)config('zicboard.email_whitelist_enable', 0),
             'email_whitelist_suffix' => config('zicboard.email_whitelist_suffix', Dict::EMAIL_WHITELIST_SUFFIX_DEFAULT),
             'email_gmail_limit_enable' => config('zicboard.email_gmail_limit_enable', 0),

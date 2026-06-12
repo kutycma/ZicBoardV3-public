@@ -297,6 +297,9 @@ ADD `three_year_price` int(11) NULL AFTER `two_year_price`;
 ALTER TABLE `v2_user`
 ADD `is_staff` tinyint(1) NOT NULL DEFAULT '0' AFTER `is_admin`;
 
+ALTER TABLE `v2_user`
+ADD `is_manager` tinyint(1) NOT NULL DEFAULT '0' AFTER `is_staff`;
+
 CREATE TABLE `v2_server_shadowsocks` (
   `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `group_id` varchar(255) NOT NULL,
@@ -1086,3 +1089,8 @@ WHERE `expired_at` = 0;
 UPDATE `v2_user`
 SET `expired_at` = NULL
 WHERE `expired_at` = 0;
+ALTER TABLE `v2_order`
+ADD `manager_id` int(11) NULL AFTER `invite_user_id`;
+
+ALTER TABLE `v2_order`
+ADD INDEX `idx_manager_id` (`manager_id`);

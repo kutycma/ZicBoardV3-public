@@ -147,6 +147,7 @@ DROP TABLE IF EXISTS `v2_order`;
 CREATE TABLE `v2_order` (
                             `id` int(11) NOT NULL AUTO_INCREMENT,
                             `invite_user_id` int(11) DEFAULT NULL,
+                            `manager_id` int(11) DEFAULT NULL,
                             `user_id` int(11) NOT NULL,
                             `subscription_id` int(11) DEFAULT NULL,
                             `plan_id` int(11) NOT NULL,
@@ -174,7 +175,8 @@ CREATE TABLE `v2_order` (
                             UNIQUE KEY `trade_no` (`trade_no`),
                             INDEX idx_user (`user_id`),
                             INDEX idx_user_status (`user_id`, `status`),
-                            INDEX idx_subscription (`subscription_id`)
+                            INDEX idx_subscription (`subscription_id`),
+                            INDEX idx_manager_id (`manager_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
@@ -593,6 +595,7 @@ CREATE TABLE `v2_user` (
                            `is_admin` tinyint(1) NOT NULL DEFAULT '0',
                            `last_login_at` int(11) DEFAULT NULL,
                            `is_staff` tinyint(1) NOT NULL DEFAULT '0',
+                           `is_manager` tinyint(1) NOT NULL DEFAULT '0',
                            `last_login_ip` int(11) DEFAULT NULL,
                            `uuid` varchar(36) NOT NULL,
                            `group_id` int(11) DEFAULT NULL,
