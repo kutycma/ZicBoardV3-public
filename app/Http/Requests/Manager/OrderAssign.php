@@ -14,8 +14,8 @@ class OrderAssign extends FormRequest
             'manage_token' => 'required|string',
             'email' => 'required|string|regex:/^[^\s@]+@[^\s@]+$/',
             'period' => 'required|in:month_price,quarter_price,half_year_price,year_price,two_year_price,three_year_price,onetime_price,reset_price',
-            'total_amount' => 'required|integer|min:0',
-            'subscription_id' => 'nullable|integer'
+            'subscription_id' => 'nullable|integer',
+            'coupon_code' => 'nullable|string|max:255'
         ];
     }
 }

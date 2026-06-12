@@ -8,6 +8,7 @@ use App\Http\Requests\Manager\OrderPaid;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\CouponService;
 use App\Services\Manager\ManagerAccessService;
 use App\Services\Manager\ManagerAuditService;
 use App\Services\OrderService;
@@ -89,7 +90,8 @@ class OrderController extends Controller
         if ($targetUser->email !== trim((string)$request->input('email'))) {
             abort(403, 'Selected user email does not match');
         }
-        if ((new UserService())->isNotCompleteOrderByUserId($targetUser->id)) {
+        $userService = new UserService();
+        if ($userService->isNotCompleteOrderByUserId($targetUser->id)) {
             abort(500, 'Target user has a pending order');
         }
 
@@ -113,10 +115,38 @@ class OrderController extends Controller
             $order->plan_id = $plan->id;
             $order->period = $period;
             $order->trade_no = Helper::generateOrderNo();
-            $order->total_amount = (int)$request->input('total_amount');
+            $order->total_amount = (int)$planPrice;
             $order->manager_id = $manager->id;
 
+            $couponCode = trim((string)$request->input('coupon_code', ''));
+            if ($couponCode !== '') {
+                $couponService = new CouponService($couponCode);
+                if (!$couponService->use($order)) {
+                    throw new \Exception('Coupon failed');
+                }
+                $order->coupon_id = $couponService->getId();
+            }
+
+            $orderService->setVipDiscount($targetUser);
             $orderService->setOrderType($targetUser);
+
+            if ($targetUser->balance > 0 && $order->total_amount > 0) {
+                $remainingBalance = $targetUser->balance - $order->total_amount;
+                if ($remainingBalance > 0) {
+                    if (!$userService->addBalance($order->user_id, - $order->total_amount)) {
+                        throw new \Exception('Insufficient balance');
+                    }
+                    $order->balance_amount = $order->total_amount;
+                    $order->total_amount = 0;
+                } else {
+                    if (!$userService->addBalance($order->user_id, - $targetUser->balance)) {
+                        throw new \Exception('Insufficient balance');
+                    }
+                    $order->balance_amount = $targetUser->balance;
+                    $order->total_amount -= $targetUser->balance;
+                }
+            }
+
             $orderService->setInvite($targetUser);
             if ((int)$order->total_amount <= 0) {
                 $order->commission_balance = 0;
@@ -142,6 +172,11 @@ class OrderController extends Controller
             'order_trade_no' => $order->trade_no,
             'plan_id' => $order->plan_id,
             'period' => $order->period,
+            'coupon_id' => $order->coupon_id,
+            'discount_amount' => $order->discount_amount,
+            'balance_amount' => $order->balance_amount,
+            'surplus_amount' => $order->surplus_amount,
+            'refund_amount' => $order->refund_amount,
             'total_amount' => $order->total_amount
         ]);
 

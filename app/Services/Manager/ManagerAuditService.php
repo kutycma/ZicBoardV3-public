@@ -18,6 +18,7 @@ class ManagerAuditService
         'uuid',
         'auth_data',
         'authorization',
+        'coupon_code',
         'subscribe_url',
         'new_subscribe_url'
     ];
