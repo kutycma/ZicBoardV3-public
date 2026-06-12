@@ -20,6 +20,7 @@ class StaffRoute
             $router->get ('/user/getUserInfoById', 'V1\\Staff\\UserController@getUserInfoById');
             $router->post('/user/ban', 'V1\\Staff\\UserController@ban');
             $router->post('/user/resetSecurity', 'V1\\Staff\\UserController@resetSecurity');
+            $router->post('/subscription/subscribeUrl', 'V1\\Staff\\SubscriptionController@subscribeUrl');
             // Device
             $router->get ('/device/fetch', 'V1\\Staff\\UserDeviceController@fetch');
             $router->post('/device/ban', 'V1\\Staff\\UserDeviceController@ban');

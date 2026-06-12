@@ -3,3 +3,8 @@
 *.scss linguist-vendored
 *.js linguist-vendored
 CHANGELOG.md export-ignore
+
+# Generated frontend build output (minified): skip whitespace checks
+public/assets/adminzic/** -whitespace
+public/assets/staffzic/** -whitespace
+public/theme/EZ-Zic/static/** -whitespace

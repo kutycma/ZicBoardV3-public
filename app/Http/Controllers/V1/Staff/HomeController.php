@@ -170,12 +170,16 @@ class HomeController extends Controller
 
             $user->ips = implode(', ', $ips);
             $plan = $user->plan_id && isset($plans[$user->plan_id]) ? $plans[$user->plan_id] : null;
-            if ($this->canExposeSubscribeUrl($plan)) {
-            $user->subscribe_url = Helper::getSubscribeUrl($user->token, $request);
-                $user->subscribe_url_hidden = false;
+            if ($this->canExposeSubscribeUrl($plan, $request)) {
+                $subscribeUrl = Helper::getSubscribeUrlDetail((string)$user->token, $request);
+                $user->subscribe_url = $subscribeUrl['url'] ?? null;
+                $user->subscribe_url_error = $subscribeUrl['error'] ?? null;
+                $user->subscribe_url_protected = (bool)($subscribeUrl['protected'] ?? false);
+                $user->subscribe_url_hidden = !$user->subscribe_url;
             } else {
-                $user->subscribe_url = '';
+                $user->subscribe_url = null;
                 $user->subscribe_url_error = 'subscribe_url_disabled';
+                $user->subscribe_url_protected = false;
                 $user->subscribe_url_hidden = true;
             }
             $user->reset_day = $userService->getResetDay($user);
@@ -191,9 +195,9 @@ class HomeController extends Controller
         ]);
     }
 
-    private function canExposeSubscribeUrl($plan)
+    private function canExposeSubscribeUrl($plan, Request $request = null)
     {
-        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
+        return Helper::canExposeSubscribeUrl($plan, $request);
     }
 
     private function activeStaff(Request $request)

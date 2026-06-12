@@ -47,12 +47,16 @@ class UserController extends Controller
         foreach ($subscriptions as $item) {
             $plan = $item->plan_id && isset($plans[$item->plan_id]) ? $plans[$item->plan_id] : null;
             $item->plan_name = $plan ? $plan->name : null;
-            if ($this->canExposeSubscribeUrl($item, $plans)) {
-                $item->subscribe_url = Helper::getSubscribeUrl($item->token, $request);
-                $item->subscribe_url_hidden = false;
+            if ($this->canExposeSubscribeUrl($item, $plans, $request)) {
+                $subscribeUrl = Helper::getSubscribeUrlDetail((string)$item->token, $request);
+                $item->subscribe_url = $subscribeUrl['url'] ?? null;
+                $item->subscribe_url_error = $subscribeUrl['error'] ?? null;
+                $item->subscribe_url_protected = (bool)($subscribeUrl['protected'] ?? false);
+                $item->subscribe_url_hidden = !$item->subscribe_url;
             } else {
-                $item->subscribe_url = '';
+                $item->subscribe_url = null;
                 $item->subscribe_url_error = 'subscribe_url_disabled';
+                $item->subscribe_url_protected = false;
                 $item->subscribe_url_hidden = true;
             }
             $item->makeHidden(['token', 'uuid']);
@@ -191,10 +195,15 @@ class UserController extends Controller
         $responseData = [
             'success' => true
         ];
-        if ($this->canExposeSubscribeUrl($subscription)) {
-            $responseData['new_subscribe_url'] = Helper::getSubscribeUrl($subscription->token, $request);
-            $responseData['subscribe_url_hidden'] = false;
+        if ($this->canExposeSubscribeUrl($subscription, null, $request)) {
+            $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscription->token, $request);
+            $responseData['new_subscribe_url'] = $subscribeUrl['url'] ?? null;
+            $responseData['subscribe_url_error'] = $subscribeUrl['error'] ?? null;
+            $responseData['subscribe_url_protected'] = (bool)($subscribeUrl['protected'] ?? false);
+            $responseData['subscribe_url_hidden'] = empty($responseData['new_subscribe_url']);
         } else {
+            $responseData['subscribe_url_error'] = 'subscribe_url_disabled';
+            $responseData['subscribe_url_protected'] = false;
             $responseData['subscribe_url_hidden'] = true;
         }
 
@@ -203,7 +212,7 @@ class UserController extends Controller
         ]);
     }
 
-    private function canExposeSubscribeUrl(UserSubscription $subscription, $plans = null)
+    private function canExposeSubscribeUrl(UserSubscription $subscription, $plans = null, Request $request = null)
     {
         $plan = $subscription->relationLoaded('plan') ? $subscription->plan : null;
         if (!$plan && $subscription->plan_id) {
@@ -211,7 +220,7 @@ class UserController extends Controller
                 ? $plans[$subscription->plan_id]
                 : Plan::find($subscription->plan_id);
         }
-        return !$plan || (int)($plan->allow_subscribe_url ?? 1) === 1;
+        return Helper::canExposeSubscribeUrl($plan, $request);
     }
 
     private function filter(Request $request, $builder)

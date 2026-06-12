@@ -25,7 +25,6 @@ class UserDeviceController extends Controller
                 'v2_user_device.id',
                 'v2_user_device.user_id',
                 'v2_user_device.subscription_id',
-                'v2_user_device.uuid',
                 'v2_user_device.status',
                 'v2_user_device.hwid',
                 'v2_user_device.user_agent',
