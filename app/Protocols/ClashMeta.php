@@ -439,7 +439,8 @@ class ClashMeta
             $array['mport'] = $server['port'];
         }
         $array['udp'] = true;
-        $array['skip-cert-verify'] = $server['insecure'] == 1 ? true : false;
+        $tlsSettings = $server['tls_settings'] ?? [];
+        $array['skip-cert-verify'] = ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false;
 
         if (isset($server['server_name'])) $array['sni'] = $server['server_name'];
         self::applyMihomoTlsTrust($array, $server, $server['tls_settings'] ?? []);
