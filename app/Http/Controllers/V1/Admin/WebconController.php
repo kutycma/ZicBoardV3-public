@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\WebconSave;
 use App\Models\Staff;
 use App\Models\User;
+use App\Services\AuthService;
 use Illuminate\Http\Request;
 
 class WebconController extends Controller
@@ -54,6 +55,7 @@ class WebconController extends Controller
 
         $data['user_id'] = $user->id;
         unset($data['email']);
+        $previousUserId = null;
 
         if (!$request->input('id')) {
             if (!Staff::create($data)) {
@@ -61,6 +63,7 @@ class WebconController extends Controller
             }
         } else {
             $staff = Staff::find($request->input('id'));
+            $previousUserId = $staff ? $staff->user_id : null;
             if (!$staff || !$staff->update($data)) {
                 abort(500, 'Lưu thất bại');
             }
@@ -69,6 +72,13 @@ class WebconController extends Controller
         if (!(int)$user->is_staff) {
             $user->is_staff = 1;
             $user->save();
+        }
+        (new AuthService($user))->removeAllSession();
+        if ($previousUserId && (int)$previousUserId !== (int)$user->id) {
+            $previousUser = User::find($previousUserId);
+            if ($previousUser) {
+                (new AuthService($previousUser))->removeAllSession();
+            }
         }
 
         return response([
@@ -97,6 +107,12 @@ class WebconController extends Controller
             abort(500, 'Lưu thất bại');
         }
 
+        if ($staff->user_id) {
+            $user = User::find($staff->user_id);
+            if ($user) {
+                (new AuthService($user))->removeAllSession();
+            }
+        }
         return response([
             'data' => true
         ]);
@@ -113,10 +129,17 @@ class WebconController extends Controller
             abort(500, 'Webcon không tồn tại');
         }
 
+        $userId = $staff->user_id;
         if (!$staff->delete()) {
             abort(500, 'Xóa thất bại');
         }
 
+        if ($userId) {
+            $user = User::find($userId);
+            if ($user) {
+                (new AuthService($user))->removeAllSession();
+            }
+        }
         return response([
             'data' => true
         ]);

@@ -35,6 +35,7 @@ class AuthService
         return [
             'token' => $this->user->token,
             'is_admin' => $this->user->is_admin,
+            'is_staff' => $this->user->is_staff,
             'is_manager' => $this->user->is_manager,
             'auth_data' => $authData
         ];

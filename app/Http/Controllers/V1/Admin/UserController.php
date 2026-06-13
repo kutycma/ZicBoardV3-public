@@ -282,6 +282,14 @@ class UserController extends Controller
         if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
             abort(500, 'Email đã được sử dụng');
         }
+        $roleChanged = false;
+        foreach (['is_admin', 'is_staff', 'is_manager'] as $roleKey) {
+            if (array_key_exists($roleKey, $params) && (int)$user->{$roleKey} !== (int)$params[$roleKey]) {
+                $roleChanged = true;
+                break;
+            }
+        }
+        $shouldRemoveSessions = $roleChanged || (isset($params['banned']) && (int)$params['banned'] === 1);
         if (isset($params['password'])) {
             $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
             $params['password_algo'] = NULL;
@@ -306,13 +314,11 @@ class UserController extends Controller
             $params['invite_user_id'] = null;
         }
 
-        if (isset($params['banned']) && (int)$params['banned'] === 1) {
-            $authService = new AuthService($user);
-            $authService->removeAllSession();
-        }
-
         try {
             $user->update($params);
+            if ($shouldRemoveSessions) {
+                (new AuthService($user))->removeAllSession();
+            }
             if (isset($params['plan_id']) && $params['plan_id']) {
                 $subscriptionService = new SubscriptionService();
                 $subscription = $subscriptionService->getPrimaryForUser($user);
