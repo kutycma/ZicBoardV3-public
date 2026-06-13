@@ -80,5 +80,15 @@ class RouteServiceProvider extends ServiceProvider
                 $this->app->make('App\\Http\\Routes\\V2\\' . basename($file, '.php'))->map($router);
             }
         });
+
+        Route::group([
+            'prefix' => '/api/v1',
+            'middleware' => 'api',
+            'namespace' => $this->namespace
+        ], function ($router) {
+            if (file_exists(app_path('Http/Routes/V1/GuestRoute.php'))) {
+                $this->app->make('App\\Http\\Routes\\V1\\GuestRoute')->map($router);
+            }
+        });
     }
 }
