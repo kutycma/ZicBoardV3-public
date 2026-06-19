@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class ServerLoadIpOnline
 {
@@ -12,18 +13,38 @@ class ServerLoadIpOnline
 
     public static function record(Request $request, $server, string $serverType, int $online): void
     {
+        self::recordRequest($request, $server, $serverType, max(0, $online));
+    }
+
+    public static function recordSeen(Request $request, $server, string $serverType): void
+    {
+        self::recordRequest($request, $server, $serverType, null);
+    }
+
+    private static function recordRequest(Request $request, $server, string $serverType, ?int $online): void
+    {
+        $serverId = self::serverId($server);
+        if ($serverId <= 0) {
+            return;
+        }
+
         $loadIps = self::loadIpMap(self::serverLoadIps($server));
+        $usedParentLoadIps = false;
+        if (!$loadIps) {
+            $parentLoadIps = self::parentServerLoadIps($server);
+            if ($parentLoadIps) {
+                $loadIps = self::loadIpMap($parentLoadIps);
+                $usedParentLoadIps = true;
+            }
+        }
+
         if (!$loadIps) {
             return;
         }
 
-        $sourceIp = self::sourceIp($request);
+        $sourceIp = self::normalizeIp($request->ip());
         if (!$sourceIp || !isset($loadIps[$sourceIp])) {
-            return;
-        }
-
-        $serverId = self::serverId($server);
-        if ($serverId <= 0) {
+            self::logMatchMiss($server, $serverType, $sourceIp, $loadIps, $serverId, $usedParentLoadIps);
             return;
         }
 
@@ -35,9 +56,10 @@ class ServerLoadIpOnline
         }
 
         $cached = self::prune($cached, $now);
+        $current = is_array($cached[$sourceIp] ?? null) ? $cached[$sourceIp] : [];
         $cached[$sourceIp] = [
             'ip' => $loadIps[$sourceIp],
-            'online' => max(0, $online),
+            'online' => $online === null ? max(0, (int)($current['online'] ?? 0)) : max(0, $online),
             'last_push_at' => $now,
         ];
 
@@ -140,23 +162,58 @@ class ServerLoadIpOnline
         return !empty($server->parent_id) ? (int)$server->parent_id : (int)($server->id ?? 0);
     }
 
-    private static function sourceIp(Request $request): ?string
+    private static function serverParentId($server): int
     {
-        foreach (['CF-Connecting-IP', 'X-Real-IP', 'X-Forwarded-For', 'X-Client-IP'] as $header) {
-            $value = trim((string)$request->header($header, ''));
-            if ($value === '') {
-                continue;
-            }
+        if (is_array($server)) {
+            return (int)($server['parent_id'] ?? 0);
+        }
+        return (int)($server->parent_id ?? 0);
+    }
 
-            foreach (explode(',', $value) as $candidate) {
-                $ip = self::normalizeIp($candidate);
-                if ($ip) {
-                    return $ip;
-                }
-            }
+    private static function rawServerId($server): int
+    {
+        if (is_array($server)) {
+            return (int)($server['id'] ?? 0);
+        }
+        return (int)($server->id ?? 0);
+    }
+
+    private static function parentServerLoadIps($server): array
+    {
+        if (is_array($server)) {
+            return [];
         }
 
-        return self::normalizeIp($request->ip());
+        $parentId = self::serverParentId($server);
+        if ($parentId <= 0) {
+            return [];
+        }
+
+        $modelClass = get_class($server);
+        if (!method_exists($modelClass, 'find')) {
+            return [];
+        }
+
+        $parent = $modelClass::find($parentId);
+        if (!$parent) {
+            return [];
+        }
+
+        return self::serverLoadIps($parent);
+    }
+
+    private static function logMatchMiss($server, string $serverType, ?string $sourceIp, array $loadIps, int $serverId, bool $usedParentLoadIps): void
+    {
+        Log::debug('Load IP report did not match configured IPs', [
+            'server_type' => strtolower($serverType),
+            'node_id' => self::rawServerId($server),
+            'parent_id' => self::serverParentId($server) ?: null,
+            'effective_node_id' => $serverId,
+            'source_ip' => $sourceIp,
+            'load_ips' => array_values(array_keys($loadIps)),
+            'cache_key' => self::cacheKey($serverType, $serverId),
+            'load_ips_source' => $usedParentLoadIps ? 'parent' : 'node',
+        ]);
     }
 
     private static function serverLoadIps($server): array

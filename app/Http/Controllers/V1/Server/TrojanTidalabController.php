@@ -40,6 +40,7 @@ class TrojanTidalabController extends Controller
         if (!$server) {
             abort(500, 'Thất bại');
         }
+        ServerLoadIpOnline::recordSeen($request, $server, 'trojan');
         Cache::put(CacheKey::get('SERVER_TROJAN_LAST_CHECK_AT', $server->id), time(), 3600);
         $serverService = new ServerService();
         $users = $serverService->getAvailableUsers($server->group_id);
@@ -99,6 +100,11 @@ class TrojanTidalabController extends Controller
         if (empty($nodeId) || empty($localPort)) {
             abort(500, 'tham số lỗi');
         }
+        $server = ServerTrojan::find($nodeId);
+        if (!$server) {
+            abort(500, 'Node not found');
+        }
+        ServerLoadIpOnline::recordSeen($request, $server, 'trojan');
         try {
             $json = $this->getTrojanConfig($nodeId, $localPort);
         } catch (\Exception $e) {

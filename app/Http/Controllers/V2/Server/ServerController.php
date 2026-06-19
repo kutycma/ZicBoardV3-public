@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ServerService;
 use App\Services\Core\ProtectedFeatureService;
 use App\Services\Server\NodeConfigBuilder;
+use App\Support\ServerLoadIpOnline;
 use Illuminate\Http\Request;
 
 class ServerController extends Controller
@@ -53,6 +54,8 @@ class ServerController extends Controller
     // Backend lấy cấu hình
     public function config(Request $request)
     {
+        ServerLoadIpOnline::recordSeen($request, $this->nodeInfo, 'zicnode');
+
         $routes = $this->nodeInfo['route_id']
             ? $this->serverService->getRoutes($this->nodeInfo['route_id'])->toArray()
             : null;

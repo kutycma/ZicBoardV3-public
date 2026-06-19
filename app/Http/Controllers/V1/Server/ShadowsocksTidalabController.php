@@ -37,6 +37,7 @@ class ShadowsocksTidalabController extends Controller
         if (!$server) {
             abort(500, 'Thất bại');
         }
+        ServerLoadIpOnline::recordSeen($request, $server, 'shadowsocks');
         Cache::put(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $server->id), time(), 3600);
         $serverService = new ServerService();
         $users = $serverService->getAvailableUsers($server->group_id);

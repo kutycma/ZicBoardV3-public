@@ -55,6 +55,7 @@ class UniProxyController extends Controller
     // Backend lấy người dùng
     public function user(Request $request)
     {
+        ServerLoadIpOnline::recordSeen($request, $this->nodeInfo, $this->nodeType);
         ini_set('memory_limit', -1);
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_CHECK_AT', $this->nodeInfo->id), time(), 3600);
         $users = $this->serverService->getAvailableUsers($this->nodeInfo->group_id)
@@ -112,6 +113,7 @@ class UniProxyController extends Controller
     // Backend lấy dữ liệu online
     public function alivelist(Request $request)
     {
+        ServerLoadIpOnline::recordSeen($request, $this->nodeInfo, $this->nodeType);
         $alive = Cache::remember('ALIVE_LIST', 60, function () {
             $userService = new UserService();
             $users = $userService->getDeviceLimitedUsers();
@@ -143,6 +145,7 @@ class UniProxyController extends Controller
     // Backend gửi dữ liệu online
     public function alive(Request $request)
     {
+        ServerLoadIpOnline::recordSeen($request, $this->nodeInfo, $this->nodeType);
         $data = $request->json()->all();
         if (empty($data)) {
             $data = $_POST;
@@ -217,6 +220,7 @@ class UniProxyController extends Controller
     // Backend lấy cấu hình
     public function config(Request $request)
     {
+        ServerLoadIpOnline::recordSeen($request, $this->nodeInfo, $this->nodeType);
         if ($this->usesProtectedFeature()) {
             $response = (new ProtectedFeatureService())->nodeConfig(
                 $this->nodeType,

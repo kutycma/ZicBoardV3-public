@@ -40,6 +40,7 @@ class DeepbworkController extends Controller
         if (!$server) {
             abort(500, 'Thất bại');
         }
+        ServerLoadIpOnline::recordSeen($request, $server, 'vmess');
         Cache::put(CacheKey::get('SERVER_VMESS_LAST_CHECK_AT', $server->id), time(), 3600);
         $serverService = new ServerService();
         $users = $serverService->getAvailableUsers($server->group_id);
@@ -103,6 +104,11 @@ class DeepbworkController extends Controller
         if (empty($nodeId) || empty($localPort)) {
             abort(500, 'tham số lỗi');
         }
+        $server = ServerVmess::find($nodeId);
+        if (!$server) {
+            abort(500, 'Node not found');
+        }
+        ServerLoadIpOnline::recordSeen($request, $server, 'vmess');
         try {
             $json = $this->getV2RayConfig($nodeId, $localPort);
         } catch (\Exception $e) {
