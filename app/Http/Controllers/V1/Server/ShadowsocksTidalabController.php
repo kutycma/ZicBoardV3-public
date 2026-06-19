@@ -7,6 +7,7 @@ use App\Models\ServerShadowsocks;
 use App\Services\ServerService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
+use App\Support\ServerLoadIpOnline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -70,7 +71,9 @@ class ShadowsocksTidalabController extends Controller
         }
         $data = request()->getContent() ?: json_encode($_POST);
         $data = json_decode($data, true);
-        Cache::put(CacheKey::get('SERVER_SHADOWSOCKS_ONLINE_USER', $server->id), count($data), 3600);
+        $online = is_array($data) ? count($data) : 0;
+        Cache::put(CacheKey::get('SERVER_SHADOWSOCKS_ONLINE_USER', $server->id), $online, 3600);
+        ServerLoadIpOnline::record($request, $server, 'shadowsocks', $online);
         Cache::put(CacheKey::get('SERVER_SHADOWSOCKS_LAST_PUSH_AT', $server->id), time(), 3600);
         $userService = new UserService();
         $formatData = [];

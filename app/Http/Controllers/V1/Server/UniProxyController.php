@@ -11,6 +11,7 @@ use App\Services\Server\NodeConfigBuilder;
 use App\Services\UserDeviceService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
+use App\Support\ServerLoadIpOnline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use MessagePack\Packer;
@@ -96,7 +97,9 @@ class UniProxyController extends Controller
                 'error' => 'Invalid traffic data'
             ], 400);
         }
-        Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), count($data), 3600);
+        $online = is_array($data) ? count($data) : 0;
+        Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), $online, 3600);
+        ServerLoadIpOnline::record($request, $this->nodeInfo, $this->nodeType, $online);
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_PUSH_AT', $this->nodeInfo->id), time(), 3600);
         $userService = new UserService();
         $userService->trafficFetch($this->nodeInfo->toArray(), $this->nodeType, $data);

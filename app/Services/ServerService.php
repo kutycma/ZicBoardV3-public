@@ -18,6 +18,7 @@ use App\Models\ServerAnytls;
 use App\Services\Core\ProtectedFeatureService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
+use App\Support\ServerLoadIpOnline;
 use Illuminate\Support\Facades\Cache;
 
 class ServerService
@@ -489,6 +490,7 @@ class ServerService
             } else {
                 $servers[$k]['available_status'] = 2;
             }
+            ServerLoadIpOnline::attachToServer($servers[$k], $serverType);
         }
     }
 
