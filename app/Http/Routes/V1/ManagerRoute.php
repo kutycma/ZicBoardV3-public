@@ -18,6 +18,7 @@ class ManagerRoute
             $router->post('/user/update-password', 'V1\\Manager\\UserController@updatePassword');
             $router->post('/user/resetSecurity', 'V1\\Manager\\UserController@resetSecurity');
             $router->post('/subscription/subscribeUrl', 'V1\\Manager\\SubscriptionController@subscribeUrl');
+            $router->post('/subscription/update', 'V1\\Manager\\SubscriptionController@update');
             $router->get ('/device/fetch', 'V1\\Manager\\UserDeviceController@fetch');
             $router->post('/device/unbind', 'V1\\Manager\\UserDeviceController@unbind');
             $router->post('/device/ban', 'V1\\Manager\\UserDeviceController@ban');
@@ -26,6 +27,7 @@ class ManagerRoute
             $router->post('/order/assign', 'V1\\Manager\\OrderController@assign');
             $router->get ('/order/fetch', 'V1\\Manager\\OrderController@fetch');
             $router->post('/order/paid', 'V1\\Manager\\OrderController@paid');
+            $router->get ('/audit/fetch', 'V1\\Manager\\AuditController@fetch');
         });
     }
 }

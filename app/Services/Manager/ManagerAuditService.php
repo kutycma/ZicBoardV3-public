@@ -47,6 +47,32 @@ class ManagerAuditService
         }
     }
 
+    public function changes(array $before, array $after, array $fields)
+    {
+        $changes = [];
+        foreach ($fields as $field) {
+            $from = array_key_exists($field, $before) ? $before[$field] : null;
+            $to = array_key_exists($field, $after) ? $after[$field] : null;
+            if ($this->normalizeForCompare($from) === $this->normalizeForCompare($to)) {
+                continue;
+            }
+            $changes[$field] = [
+                'from' => $from,
+                'to' => $to
+            ];
+        }
+        return $this->sanitize($changes);
+    }
+
+    public function snapshot($model, array $fields)
+    {
+        $snapshot = [];
+        foreach ($fields as $field) {
+            $snapshot[$field] = $model ? $model->getAttribute($field) : null;
+        }
+        return $snapshot;
+    }
+
     public function notifyOrderPaid(Order $order, User $manager, User $targetUser)
     {
         try {
@@ -60,6 +86,20 @@ class ManagerAuditService
         } catch (\Throwable $e) {
             Log::channel('daily')->warning('manager order telegram notification failed: ' . $e->getMessage());
         }
+    }
+
+    private function normalizeForCompare($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+        if (is_numeric($value)) {
+            return (string)(0 + $value);
+        }
+        return (string)$value;
     }
 
     private function sanitize($value)

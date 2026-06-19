@@ -24,19 +24,22 @@ class HomeController extends Controller
                 'id' => $manager->id,
                 'email' => $manager->email,
                 'is_manager' => (int)$manager->is_manager,
+                'is_admin' => (int)$manager->is_admin,
                 'manager_path' => config('zicboard.manager_path', 'manager'),
                 'capabilities' => [
                     'user_search' => true,
                     'user_create' => true,
                     'user_update_password' => true,
                     'subscription_reset' => true,
+                    'subscription_update' => true,
                     'subscription_subscribe_url' => true,
                     'subscription_qr' => true,
                     'device_unbind' => true,
                     'device_ban' => true,
                     'order_assign' => true,
                     'order_paid' => true,
-                    'server_view' => true
+                    'server_view' => true,
+                    'audit_view' => true
                 ]
             ]
         ]);

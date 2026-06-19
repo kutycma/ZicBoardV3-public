@@ -4,13 +4,14 @@ namespace App\Http\Requests\Manager;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UserCreate extends FormRequest
+class SubscriptionUpdate extends FormRequest
 {
     public function rules()
     {
         return [
-            'email' => 'required|string|regex:/^[^\s@]+@[^\s@]+$/',
-            'password' => 'required|min:8',
+            'target_user_id' => 'required|integer',
+            'manage_token' => 'required|string',
+            'subscription_id' => 'required|integer',
             'plan_id' => 'required|integer',
             'expired_at' => 'nullable|integer'
         ];

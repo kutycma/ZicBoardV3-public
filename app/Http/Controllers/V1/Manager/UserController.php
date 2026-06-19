@@ -17,6 +17,7 @@ use App\Services\SubscriptionService;
 use App\Services\UserDeviceService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -32,20 +33,31 @@ class UserController extends Controller
     public function search(UserSearch $request)
     {
         $manager = $this->access->currentManager($request);
-        $keyword = trim((string)($request->input('keyword') ?: $request->input('email')));
-        if (strlen($keyword) < 5) {
-            abort(500, 'Search keyword must be at least 5 characters');
+        $rawKeyword = trim((string)($request->input('id') ?: $request->input('keyword') ?: $request->input('email')));
+        $query = $this->access->manageableUsersQuery();
+
+        if ($request->filled('id') || preg_match('/^\d+$/', $rawKeyword)) {
+            $query->where('id', (int)$rawKeyword);
+        } else {
+            if (strlen($rawKeyword) < 5) {
+                abort(500, 'Search keyword must be at least 5 characters');
+            }
+            $query->where('email', 'like', '%' . $rawKeyword . '%')
+                ->orderByRaw('CASE WHEN email = ? THEN 0 WHEN email LIKE ? THEN 1 ELSE 2 END', [$rawKeyword, $rawKeyword . '%'])
+                ->orderBy('email', 'ASC');
         }
 
-        $users = $this->access->manageableUsersQuery()
-            ->where('email', 'like', '%' . $keyword . '%')
-            ->orderByRaw('CASE WHEN email = ? THEN 0 WHEN email LIKE ? THEN 1 ELSE 2 END', [$keyword, $keyword . '%'])
-            ->orderBy('email', 'ASC')
-            ->limit(10)
-            ->get(['id', 'email', 'plan_id', 'banned', 'created_at']);
+        $users = $query->limit(10)->get(['id', 'email', 'plan_id', 'banned', 'created_at']);
         foreach ($users as $user) {
             $this->access->attachManageToken($manager, $user);
         }
+
+        $this->audit->record($request, 'user.search', [
+            'manager_id' => $manager->id,
+            'manager_email' => $manager->email,
+            'keyword' => $rawKeyword,
+            'result_count' => $users->count()
+        ]);
 
         return response([
             'data' => $users
@@ -60,25 +72,64 @@ class UserController extends Controller
             abort(500, 'Email already exists');
         }
 
-        $user = User::create([
-            'email' => $email,
-            'password' => password_hash($request->input('password'), PASSWORD_DEFAULT),
-            'password_algo' => null,
-            'uuid' => Helper::guid(true),
-            'token' => Helper::guid(),
-            'is_admin' => 0,
-            'is_staff' => 0,
-            'is_manager' => 0
-        ]);
-        if (!$user) {
-            abort(500, 'Create user failed');
+        $plan = Plan::find($request->input('plan_id'));
+        if (!$plan) {
+            abort(500, 'Plan does not exist');
+        }
+
+        $subscription = null;
+        DB::beginTransaction();
+        try {
+            $user = User::create([
+                'email' => $email,
+                'password' => password_hash($request->input('password'), PASSWORD_DEFAULT),
+                'password_algo' => null,
+                'uuid' => Helper::guid(true),
+                'token' => Helper::guid(),
+                'plan_id' => $plan->id,
+                'group_id' => $plan->group_id,
+                'transfer_enable' => $plan->transfer_enable * 1073741824,
+                'device_limit' => $plan->device_limit,
+                'speed_limit' => $plan->speed_limit,
+                'u' => 0,
+                'd' => 0,
+                'expired_at' => $request->has('expired_at') ? $request->input('expired_at') : null,
+                'is_admin' => 0,
+                'is_staff' => 0,
+                'is_manager' => 0
+            ]);
+            if (!$user) {
+                throw new \Exception('Create user failed');
+            }
+
+            $subscriptionService = new SubscriptionService();
+            $subscription = $subscriptionService->getPrimaryForUser($user);
+            if (!$subscription) {
+                throw new \Exception('Create subscription failed');
+            }
+            $subscriptionService->syncUserSummary($subscription);
+            (new UserDeviceService())->ensureWaitingSlot($subscription);
+            $user->refresh();
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            abort(500, $e->getMessage());
         }
 
         $this->audit->record($request, 'user.create', [
             'manager_id' => $manager->id,
             'manager_email' => $manager->email,
             'target_user_id' => $user->id,
-            'target_email' => $user->email
+            'target_email' => $user->email,
+            'subscription_id' => $subscription ? $subscription->id : null,
+            'plan_id' => $user->plan_id,
+            'expired_at' => $user->expired_at,
+            'changes' => [
+                'user' => ['from' => null, 'to' => $this->userSummary($user, $manager)],
+                'subscription_id' => ['from' => null, 'to' => $subscription ? $subscription->id : null],
+                'plan_id' => ['from' => null, 'to' => $user->plan_id],
+                'expired_at' => ['from' => null, 'to' => $user->expired_at]
+            ]
         ]);
 
         return response([
@@ -117,6 +168,13 @@ class UserController extends Controller
         }
         $user->subscriptions = $subscriptions;
 
+        $this->audit->record($request, 'user.detail', [
+            'manager_id' => $manager->id,
+            'manager_email' => $manager->email,
+            'target_user_id' => $user->id,
+            'target_email' => $user->email
+        ]);
+
         return response([
             'data' => $this->hideUserSecrets($user)
         ]);
@@ -138,7 +196,10 @@ class UserController extends Controller
             'manager_id' => $manager->id,
             'manager_email' => $manager->email,
             'target_user_id' => $user->id,
-            'target_email' => $user->email
+            'target_email' => $user->email,
+            'changes' => [
+                'password' => ['from' => '[redacted]', 'to' => '[changed]']
+            ]
         ]);
 
         return response([
@@ -159,6 +220,7 @@ class UserController extends Controller
             abort(500, 'Subscription does not exist');
         }
 
+        $before = $this->audit->snapshot($subscription, ['token', 'uuid']);
         $primarySubscription = $subscriptionService->getPrimaryForUser($targetUser);
         $isPrimarySubscription = $primarySubscription && (int)$primarySubscription->id === (int)$subscription->id;
 
@@ -177,7 +239,8 @@ class UserController extends Controller
             'manager_email' => $manager->email,
             'target_user_id' => $targetUser->id,
             'target_email' => $targetUser->email,
-            'subscription_id' => $subscription->id
+            'subscription_id' => $subscription->id,
+            'changes' => $this->audit->changes($before, $this->audit->snapshot($subscription, ['token', 'uuid']), ['token', 'uuid'])
         ]);
 
         return response([
