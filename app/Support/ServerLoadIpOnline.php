@@ -17,7 +17,7 @@ class ServerLoadIpOnline
             return;
         }
 
-        $sourceIp = self::normalizeIp($request->ip());
+        $sourceIp = self::sourceIp($request);
         if (!$sourceIp || !isset($loadIps[$sourceIp])) {
             return;
         }
@@ -135,9 +135,28 @@ class ServerLoadIpOnline
     private static function serverId($server): int
     {
         if (is_array($server)) {
-            return (int)($server['id'] ?? 0);
+            return !empty($server['parent_id']) ? (int)$server['parent_id'] : (int)($server['id'] ?? 0);
         }
-        return (int)($server->id ?? 0);
+        return !empty($server->parent_id) ? (int)$server->parent_id : (int)($server->id ?? 0);
+    }
+
+    private static function sourceIp(Request $request): ?string
+    {
+        foreach (['CF-Connecting-IP', 'X-Real-IP', 'X-Forwarded-For', 'X-Client-IP'] as $header) {
+            $value = trim((string)$request->header($header, ''));
+            if ($value === '') {
+                continue;
+            }
+
+            foreach (explode(',', $value) as $candidate) {
+                $ip = self::normalizeIp($candidate);
+                if ($ip) {
+                    return $ip;
+                }
+            }
+        }
+
+        return self::normalizeIp($request->ip());
     }
 
     private static function serverLoadIps($server): array
