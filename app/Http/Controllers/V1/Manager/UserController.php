@@ -52,12 +52,6 @@ class UserController extends Controller
             $this->access->attachManageToken($manager, $user);
         }
 
-        $this->audit->record($request, 'user.search', [
-            'manager_id' => $manager->id,
-            'manager_email' => $manager->email,
-            'keyword' => $rawKeyword,
-            'result_count' => $users->count()
-        ]);
 
         return response([
             'data' => $users
@@ -168,12 +162,6 @@ class UserController extends Controller
         }
         $user->subscriptions = $subscriptions;
 
-        $this->audit->record($request, 'user.detail', [
-            'manager_id' => $manager->id,
-            'manager_email' => $manager->email,
-            'target_user_id' => $user->id,
-            'target_email' => $user->email
-        ]);
 
         return response([
             'data' => $this->hideUserSecrets($user)

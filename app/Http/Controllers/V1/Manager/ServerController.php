@@ -4,19 +4,15 @@ namespace App\Http\Controllers\V1\Manager;
 
 use App\Http\Controllers\Controller;
 use App\Services\Manager\ManagerAccessService;
-use App\Services\Manager\ManagerAuditService;
 use App\Services\ServerService;
 use Illuminate\Http\Request;
 
 class ServerController extends Controller
 {
     private $access;
-    private $audit;
-
-    public function __construct(ManagerAccessService $access, ManagerAuditService $audit)
+    public function __construct(ManagerAccessService $access)
     {
         $this->access = $access;
-        $this->audit = $audit;
     }
 
     /**
@@ -26,7 +22,7 @@ class ServerController extends Controller
      */
     public function fetch(Request $request)
     {
-        $manager = $this->access->currentManager($request);
+        $this->access->currentManager($request);
 
         $servers = (new ServerService())->getAllServers();
         $data = [];
@@ -37,11 +33,6 @@ class ServerController extends Controller
             $data[] = $this->presentServer($server);
         }
 
-        $this->audit->record($request, 'server.fetch', [
-            'manager_id' => $manager->id,
-            'manager_email' => $manager->email,
-            'result_count' => count($data)
-        ]);
 
         return response([
             'data' => $data

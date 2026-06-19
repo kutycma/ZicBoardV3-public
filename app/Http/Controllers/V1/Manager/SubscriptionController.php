@@ -40,16 +40,6 @@ class SubscriptionController extends Controller
 
         $subscribeUrl = Helper::getSubscribeUrlDetail((string)$subscription->token, $request);
 
-        $this->audit->record($request, 'subscription.subscribe_url', [
-            'manager_id' => $manager->id,
-            'manager_email' => $manager->email,
-            'target_user_id' => $targetUser->id,
-            'target_email' => $targetUser->email,
-            'subscription_id' => $subscription->id,
-            'purpose' => $request->input('purpose', 'link'),
-            'subscribe_url_error' => $subscribeUrl['error'] ?? null,
-            'subscribe_url_protected' => (bool)($subscribeUrl['protected'] ?? false)
-        ]);
 
         return response([
             'data' => [

@@ -5,18 +5,14 @@ namespace App\Http\Controllers\V1\Manager;
 use App\Http\Controllers\Controller;
 use App\Models\Log as LogModel;
 use App\Services\Manager\ManagerAccessService;
-use App\Services\Manager\ManagerAuditService;
 use Illuminate\Http\Request;
 
 class AuditController extends Controller
 {
     private $access;
-    private $audit;
-
-    public function __construct(ManagerAccessService $access, ManagerAuditService $audit)
+    public function __construct(ManagerAccessService $access)
     {
         $this->access = $access;
-        $this->audit = $audit;
     }
 
     public function fetch(Request $request)
@@ -64,13 +60,6 @@ class AuditController extends Controller
             return $log;
         });
 
-        $this->audit->record($request, 'audit.fetch', [
-            'manager_id' => $manager->id,
-            'manager_email' => $manager->email,
-            'requested_manager_id' => $request->input('manager_id'),
-            'effective_manager_id' => $managerId ?: null,
-            'result_count' => $logs->count()
-        ]);
 
         return response([
             'data' => $logs,
