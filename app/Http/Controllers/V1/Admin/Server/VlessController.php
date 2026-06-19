@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Models\ServerVless;
 use App\Services\LegacyTlsSettingsService;
 use App\Services\Core\ProtectedFeatureService;
@@ -28,10 +29,12 @@ class VlessController extends Controller
             'encryption' => 'nullable',
             'encryption_settings' => 'nullable|array',
             'tags' => 'nullable|array',
+            'load_ips' => 'nullable|array',
             'rate' => 'required',
             'show' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
+        $params = ServerLoadIps::apply($params);
 
         $server = null;
         if ($request->input('id')) {

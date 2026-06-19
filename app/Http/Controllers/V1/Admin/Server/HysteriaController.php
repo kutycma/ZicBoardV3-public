@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Models\ServerHysteria;
 use App\Services\LegacyTlsSettingsService;
 use App\Utils\Helper;
@@ -23,6 +24,7 @@ class HysteriaController extends Controller
             'port' => 'required',
             'server_port' => 'required',
             'tags' => 'nullable|array',
+            'load_ips' => 'nullable|array',
             'rate' => 'required|numeric',
             'up_mbps' => 'nullable|numeric',
             'down_mbps' => 'nullable|numeric',
@@ -32,6 +34,7 @@ class HysteriaController extends Controller
             'tls_settings' => 'nullable|array',
             'insecure' => 'required|in:0,1'
         ]);
+        $params = ServerLoadIps::apply($params);
 
         if (!isset($params['up_mbps'])) {
             $params['up_mbps'] = 0;

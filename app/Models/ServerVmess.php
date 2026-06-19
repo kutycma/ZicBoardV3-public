@@ -14,6 +14,7 @@ class ServerVmess extends Model
         'updated_at' => 'timestamp',
         'group_id' => 'array',
         'route_id' => 'array',
+        'load_ips' => 'array',
         'tlsSettings' => 'array',
         'networkSettings' => 'array',
         'dnsSettings' => 'array',

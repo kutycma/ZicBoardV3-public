@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Models\ServerTuic;
 use App\Services\LegacyTlsSettingsService;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class TuicController extends Controller
             'port' => 'required',
             'server_port' => 'required',
             'tags' => 'nullable|array',
+            'load_ips' => 'nullable|array',
             'rate' => 'required|numeric',
             'server_name' => 'nullable',
             'tls_settings' => 'nullable|array',
@@ -30,6 +32,7 @@ class TuicController extends Controller
             'zero_rtt_handshake' => 'required|in:0,1',
             'congestion_control' => 'nullable'
         ]);
+        $params = ServerLoadIps::apply($params);
 
         if ($request->input('id')) {
             $server = ServerTuic::find($request->input('id'));

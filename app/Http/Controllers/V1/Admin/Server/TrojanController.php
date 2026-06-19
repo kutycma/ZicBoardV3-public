@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Http\Requests\Admin\ServerTrojanSave;
 use App\Http\Requests\Admin\ServerTrojanUpdate;
 use App\Models\ServerTrojan;
@@ -14,7 +15,7 @@ class TrojanController extends Controller
 {
     public function save(ServerTrojanSave $request)
     {
-        $params = $request->validated();
+        $params = ServerLoadIps::apply($request->validated());
         if ($request->input('id')) {
             $server = ServerTrojan::find($request->input('id'));
             if (!$server) {

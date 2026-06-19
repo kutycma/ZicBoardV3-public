@@ -68,6 +68,7 @@ class ZicBoardUpdate extends Command
             $this->info('database/update.sql has not changed; skipping database update SQL.');
             $this->repairSubscriptionMigration();
             $this->repairServerRateSchema();
+            $this->repairServerLoadIpSchema();
             $this->repairZicnodeNodeCompatibility();
             $this->repairLegacyTlsSettingsSchema();
             $this->repairSingleSubscriptionMode();
@@ -107,6 +108,7 @@ class ZicBoardUpdate extends Command
         }
         $this->repairSubscriptionMigration();
         $this->repairServerRateSchema();
+            $this->repairServerLoadIpSchema();
         $this->repairZicnodeNodeCompatibility();
         $this->repairLegacyTlsSettingsSchema();
         $this->repairSingleSubscriptionMode();
@@ -656,6 +658,27 @@ class ZicBoardUpdate extends Command
             $this->ensureColumn($table, 'tls_settings', $afterColumn);
         }
     }
+    private function repairServerLoadIpSchema()
+    {
+        foreach ($this->serverNodeTables() as $table) {
+            $this->ensureColumn($table, 'load_ips', 'ADD `load_ips` text DEFAULT NULL AFTER `tags`');
+        }
+    }
+
+    private function serverNodeTables()
+    {
+        return [
+            'v2_server_shadowsocks',
+            'v2_server_vmess',
+            'v2_server_vless',
+            'v2_server_trojan',
+            'v2_server_tuic',
+            'v2_server_hysteria',
+            'v2_server_anytls',
+            'v2_server_zicnode',
+            'v2_server_v2node',
+        ];
+    }
 
     private function repairServerRateSchema()
     {
@@ -710,6 +733,7 @@ class ZicBoardUpdate extends Command
                     `port` varchar(11) NOT NULL DEFAULT '',
                     `server_port` int(11) NOT NULL DEFAULT '0',
                     `tags` varchar(255) DEFAULT NULL,
+                    `load_ips` text DEFAULT NULL,
                     `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
                     `show` tinyint(1) NOT NULL DEFAULT '0',
                     `sort` int(11) DEFAULT NULL,
@@ -779,6 +803,7 @@ class ZicBoardUpdate extends Command
             'port' => "ADD `port` varchar(11) NOT NULL DEFAULT '' AFTER `listen_ip`",
             'server_port' => "ADD `server_port` int(11) NOT NULL DEFAULT '0' AFTER `port`",
             'tags' => "ADD `tags` varchar(255) DEFAULT NULL AFTER `server_port`",
+            'load_ips' => "ADD `load_ips` text DEFAULT NULL AFTER `tags`",
             'rate' => "ADD `rate` decimal(10,2) NOT NULL DEFAULT '1.00' AFTER `tags`",
             'show' => "ADD `show` tinyint(1) NOT NULL DEFAULT '0' AFTER `rate`",
             'sort' => "ADD `sort` int(11) DEFAULT NULL AFTER `show`",
@@ -816,6 +841,7 @@ class ZicBoardUpdate extends Command
             'port' => "''",
             'server_port' => '0',
             'rate' => "'1.00'",
+            'load_ips' => 'NULL',
             'show' => '0',
             'protocol' => "'vless'",
             'tls' => '0',

@@ -1094,3 +1094,12 @@ ADD `manager_id` int(11) NULL AFTER `invite_user_id`;
 
 ALTER TABLE `v2_order`
 ADD INDEX `idx_manager_id` (`manager_id`);
+ALTER TABLE `v2_server_shadowsocks` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_vmess` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_vless` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_trojan` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_tuic` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_hysteria` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_anytls` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_zicnode` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+ALTER TABLE `v2_server_v2node` ADD `load_ips` text DEFAULT NULL AFTER `tags`;

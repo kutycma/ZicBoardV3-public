@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Http\Requests\Admin\ServerShadowsocksSave;
 use App\Http\Requests\Admin\ServerShadowsocksUpdate;
 use App\Models\ServerShadowsocks;
@@ -12,7 +13,7 @@ class ShadowsocksController extends Controller
 {
     public function save(ServerShadowsocksSave $request)
     {
-        $params = $request->validated();
+        $params = ServerLoadIps::apply($request->validated());
         if ($request->input('id')) {
             $server = ServerShadowsocks::find($request->input('id'));
             if (!$server) {

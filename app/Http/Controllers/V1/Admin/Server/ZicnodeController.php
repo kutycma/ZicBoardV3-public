@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Models\ServerZicnode;
 use App\Services\Core\ProtectedFeatureService;
 use Illuminate\Http\Request;
@@ -40,10 +41,12 @@ class ZicnodeController extends Controller
             'padding_scheme' => 'nullable',
             'warp_settings' => 'nullable|array',
             'tags' => 'nullable|array',
+            'load_ips' => 'nullable|array',
             'rate' => 'required',
             'show' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
+        $params = ServerLoadIps::apply($params);
 
         $params = $this->normalizeImplicitTlsMode($params);
 

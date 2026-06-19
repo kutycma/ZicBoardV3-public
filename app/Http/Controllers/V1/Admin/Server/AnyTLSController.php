@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Models\ServerAnytls;
 use App\Services\LegacyTlsSettingsService;
 use App\Services\Core\ProtectedFeatureService;
@@ -22,12 +23,14 @@ class AnyTLSController extends Controller
             'port' => 'required',
             'server_port' => 'required',
             'tags' => 'nullable|array',
+            'load_ips' => 'nullable|array',
             'rate' => 'required|numeric',
             'server_name' => 'nullable',
             'tls_settings' => 'nullable|array',
             'insecure' => 'required|in:0,1',
             'padding_scheme' => 'nullable',
         ]);
+        $params = ServerLoadIps::apply($params);
 
         $params = (new ProtectedFeatureService())->prepareServerParams('anytls', $params);
 

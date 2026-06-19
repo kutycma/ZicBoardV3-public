@@ -14,6 +14,7 @@ class ServerTuic extends Model
         'updated_at' => 'timestamp',
         'group_id' => 'array',
         'route_id' => 'array',
+        'load_ips' => 'array',
         'tls_settings' => 'array',
         'tags' => 'array'
     ];

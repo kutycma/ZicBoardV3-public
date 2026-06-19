@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
+use App\Support\ServerLoadIps;
 use App\Http\Requests\Admin\ServerVmessSave;
 use App\Http\Requests\Admin\ServerVmessUpdate;
 use App\Models\ServerVmess;
@@ -13,7 +14,7 @@ class VmessController extends Controller
 {
     public function save(ServerVmessSave $request)
     {
-        $params = $request->validated();
+        $params = ServerLoadIps::apply($request->validated());
 
         if ($request->input('id')) {
             $server = ServerVmess::find($request->input('id'));
