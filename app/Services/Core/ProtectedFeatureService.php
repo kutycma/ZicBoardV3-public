@@ -61,6 +61,17 @@ class ProtectedFeatureService
         if (!is_array($result)) {
             return [];
         }
+
+        if ($type === 'shadowsocks' || ($type === 'zicnode' && ($node['protocol'] ?? '') === 'shadowsocks')) {
+            if (isset($node['cipher'])) {
+                if ($node['cipher'] === '2022-blake3-aes-128-gcm') {
+                    $result['server_key'] = \App\Utils\Helper::getServerKey($node['created_at'], 16);
+                } elseif ($node['cipher'] === '2022-blake3-aes-256-gcm') {
+                    $result['server_key'] = \App\Utils\Helper::getServerKey($node['created_at'], 32);
+                }
+            }
+        }
+
         return $type === 'zicnode'
             ? self::normalizeZicnodeConfigShape($result, true)
             : $result;

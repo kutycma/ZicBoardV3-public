@@ -60,9 +60,15 @@ class UniProxyController extends Controller
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_CHECK_AT', $this->nodeInfo->id), time(), 3600);
         $users = $this->serverService->getAvailableUsers($this->nodeInfo->group_id)
             ->map(function ($user) {
-                return array_filter($user->toArray(), function ($v) {
+                $userArray = array_filter($user->toArray(), function ($v) {
                     return !is_null($v);
                 });
+                // Fix SS2022: Xray-core yêu cầu method của user con phải rỗng khi dùng 2022-blake3
+                if ($this->nodeType === 'shadowsocks') {
+                    $cipher = $this->nodeInfo->cipher ?? '';
+                    $userArray['method'] = (strpos($cipher, '2022-blake3') !== false) ? '' : $cipher;
+                }
+                return $userArray;
             })->toArray();
 
         $response['users'] = $users;

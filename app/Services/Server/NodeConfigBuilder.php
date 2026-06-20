@@ -133,6 +133,13 @@ class NodeConfigBuilder
         if (empty($node['listen_ip'])) {
             $node['listen_ip'] = '0.0.0.0';
         }
+        if (isset($node['protocol']) && $node['protocol'] === 'shadowsocks' && isset($node['cipher'])) {
+            if ($node['cipher'] === '2022-blake3-aes-128-gcm') {
+                $node['server_key'] = \App\Utils\Helper::getServerKey($nodeInfo->created_at, 16);
+            } elseif ($node['cipher'] === '2022-blake3-aes-256-gcm') {
+                $node['server_key'] = \App\Utils\Helper::getServerKey($nodeInfo->created_at, 32);
+            }
+        }
         return $node;
     }
 
