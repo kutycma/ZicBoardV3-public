@@ -1,7 +1,7 @@
 {
   "name": "EZ-Zic",
   "description": "EZ-Zic user theme for ZicBoard.",
-  "version": "3.1.55",
+  "version": "3.1.56",
   "images": "",
   "config": {
     "PANEL_TYPE": "Xiao-V2board",
@@ -239,8 +239,8 @@
       "includeUserInfoInTicket": true,
       "popup": {
         "enabled": true,
-        "title": "Luu y khi tao ticket",
-        "content": "<p>Vui long mo ta chinh xac van de cua ban truoc khi gui ticket de chung toi ho tro nhanh hon.</p>",
+        "title": "Lưu ý khi tạo ticket",
+        "content": "<p>Vui lòng mô tả chính xác vấn đề của bạn trước khi gửi ticket để chúng tôi hỗ trợ nhanh hơn.</p>",
         "cooldownHours": 24,
         "closeWaitSeconds": 0
       },
@@ -1779,7 +1779,7 @@
       "placeholder": "Value for TICKET_CONFIG.popup.title",
       "field_name": "TICKET_CONFIG.popup.title",
       "field_type": "input",
-      "default_value": "Luu y khi tao ticket",
+      "default_value": "Lưu ý khi tạo ticket",
       "description": "Tiêu đề popup lưu ý gửi ticket."
     },
     {
@@ -1787,7 +1787,7 @@
       "placeholder": "Value for TICKET_CONFIG.popup.content",
       "field_name": "TICKET_CONFIG.popup.content",
       "field_type": "textarea",
-      "default_value": "<p>Vui long mo ta chinh xac van de cua ban truoc khi gui ticket de chung toi ho tro nhanh hon.</p>",
+      "default_value": "<p>Vui lòng mô tả chính xác vấn đề của bạn trước khi gửi ticket để chúng tôi hỗ trợ nhanh hơn.</p>",
       "description": "Nội dung popup lưu ý gửi ticket, hỗ trợ HTML."
     },
     {

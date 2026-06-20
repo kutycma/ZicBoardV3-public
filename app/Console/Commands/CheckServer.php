@@ -11,7 +11,7 @@ class CheckServer extends Command
 {
     protected $signature = 'check:server';
 
-    protected $description = 'Tac vu kiem tra node';
+    protected $description = 'Tác vụ kiểm tra node';
 
     private const STALE_SECONDS = 300;
     private const ALERT_THROTTLE_SECONDS = 300;
@@ -78,7 +78,7 @@ class CheckServer extends Command
         }
 
         $message = sprintf(
-            "Thong bao node loi\n----\nNode: %s\nLoai: %s\nDia chi: %s\nID: %s\n",
+            "🚨 Cảnh báo node lỗi\n━━━━━━━━━━━━━━\n🖥️ Node: %s\n🔌 Loại: %s\n🌐 Địa chỉ: %s\n🆔 ID: %s\n",
             (string)($server['name'] ?? '-'),
             strtoupper((string)($server['type'] ?? '-')),
             $this->serverAddress($server),
@@ -94,9 +94,9 @@ class CheckServer extends Command
             return;
         }
 
-        $lastReport = $lastPushAt > 0 ? date('Y-m-d H:i:s', $lastPushAt) : 'chua report';
+        $lastReport = $lastPushAt > 0 ? date('Y-m-d H:i:s', $lastPushAt) : 'chưa report';
         $message = sprintf(
-            "Thong bao Load IP loi\n----\nNode: %s\nLoai: %s\nDia chi: %s\nID: %s\nIP loi: %s\nLan report cuoi: %s\n",
+            "⚠️ Cảnh báo Load IP lỗi\n━━━━━━━━━━━━━━\n🖥️ Node: %s\n🔌 Loại: %s\n🌐 Địa chỉ: %s\n🆔 ID: %s\n📍 IP lỗi: %s\n🕒 Lần report cuối: %s\n",
             (string)($server['name'] ?? '-'),
             strtoupper((string)($server['type'] ?? '-')),
             $this->serverAddress($server),
