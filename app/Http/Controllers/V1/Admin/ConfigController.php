@@ -71,8 +71,9 @@ class ConfigController extends Controller
 
     public function setTelegramWebhook(Request $request)
     {
-        $hookUrl = secure_url('/api/v3/guest/telegram/webhook?access_token=' . md5(config('zicboard.telegram_bot_token', $request->input('telegram_bot_token'))));
-        $telegramService = new TelegramService($request->input('telegram_bot_token'));
+        $telegramBotToken = trim((string)$request->input('telegram_bot_token', ''));
+        $hookUrl = secure_url('/api/v3/guest/telegram/webhook?access_token=' . md5($telegramBotToken));
+        $telegramService = new TelegramService($telegramBotToken);
         $telegramService->getMe();
         $telegramService->setWebhook($hookUrl);
 
