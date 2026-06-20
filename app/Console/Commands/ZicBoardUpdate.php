@@ -699,7 +699,7 @@ class ZicBoardUpdate extends Command
     private function repairServerCheckSchema()
     {
         foreach ($this->serverNodeTables() as $table) {
-            $this->ensureColumn($table, 'check', 'ADD `check` tinyint(1) NOT NULL DEFAULT ''0'' AFTER `show`');
+            $this->ensureColumn($table, 'check', "ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`");
         }
     }
 
