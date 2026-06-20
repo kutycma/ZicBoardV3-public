@@ -251,6 +251,7 @@ class MigrateV2bZicToZicBoard extends Command
     private function repairCurrentRuntimeSchema()
     {
         $this->repairHappSubscribeCacheSchema();
+        $this->repairStatOnlineUserSchema();
         $this->repairPlanRuntimeSchema();
         $this->repairPaymentRuntimeSchema();
     }
@@ -783,6 +784,33 @@ class MigrateV2bZicToZicBoard extends Command
             WHERE (`hwid_hash` IS NULL OR TRIM(`hwid_hash`) = '')
                 AND (`status` IS NULL OR TRIM(`status`) = '' OR `status` <> 'pending')
         ");
+    }
+
+    private function repairStatOnlineUserSchema()
+    {
+        if (!Schema::hasTable('v2_stat_online_user')) {
+            DB::statement("
+                CREATE TABLE `v2_stat_online_user` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `online_user` int(11) NOT NULL DEFAULT '0',
+                    `record_at` int(11) NOT NULL,
+                    `created_at` int(11) NOT NULL DEFAULT '0',
+                    `updated_at` int(11) NOT NULL DEFAULT '0',
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `record_at` (`record_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+            return;
+        }
+
+        $this->ensureColumn('v2_stat_online_user', 'online_user', "ADD `online_user` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_stat_online_user', 'id'));
+        $this->ensureColumn('v2_stat_online_user', 'record_at', "ADD `record_at` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_stat_online_user', 'online_user'));
+        $this->ensureColumn('v2_stat_online_user', 'created_at', "ADD `created_at` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_stat_online_user', 'record_at'));
+        $this->ensureColumn('v2_stat_online_user', 'updated_at', "ADD `updated_at` int(11) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_stat_online_user', 'created_at'));
+
+        if (!$this->indexExists('v2_stat_online_user', 'record_at') && !$this->indexExists('v2_stat_online_user', 'v2_stat_online_user_record_at_unique')) {
+            DB::statement('ALTER TABLE `v2_stat_online_user` ADD UNIQUE KEY `record_at` (`record_at`)');
+        }
     }
 
     private function repairStatsSubscriptionSchema()

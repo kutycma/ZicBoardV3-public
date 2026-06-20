@@ -1103,3 +1103,12 @@ ALTER TABLE `v2_server_hysteria` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
 ALTER TABLE `v2_server_anytls` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
 ALTER TABLE `v2_server_zicnode` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
 ALTER TABLE `v2_server_v2node` ADD `load_ips` text DEFAULT NULL AFTER `tags`;
+CREATE TABLE IF NOT EXISTS `v2_stat_online_user` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `online_user` int(11) NOT NULL DEFAULT '0',
+  `record_at` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL DEFAULT '0',
+  `updated_at` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `record_at` (`record_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

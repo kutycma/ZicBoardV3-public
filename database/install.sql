@@ -515,6 +515,16 @@ CREATE TABLE `v2_stat` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Thá»‘ng kÃª Ä‘Æ¡n hÃ ng';
 
 
+DROP TABLE IF EXISTS `v2_stat_online_user`;
+CREATE TABLE `v2_stat_online_user` (
+                                      `id` int(11) NOT NULL AUTO_INCREMENT,
+                                      `online_user` int(11) NOT NULL DEFAULT '0',
+                                      `record_at` int(11) NOT NULL,
+                                      `created_at` int(11) NOT NULL DEFAULT '0',
+                                      `updated_at` int(11) NOT NULL DEFAULT '0',
+                                      PRIMARY KEY (`id`),
+                                      UNIQUE KEY `record_at` (`record_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 DROP TABLE IF EXISTS `v2_stat_server`;
 CREATE TABLE `v2_stat_server` (
                                   `id` int(11) NOT NULL AUTO_INCREMENT,

@@ -1,7 +1,7 @@
 {
   "name": "EZ-Zic",
   "description": "EZ-Zic user theme for ZicBoard.",
-  "version": "3.1.50",
+  "version": "3.1.51",
   "images": "",
   "config": {
     "PANEL_TYPE": "Xiao-V2board",
