@@ -55,6 +55,7 @@ class ShadowsocksController extends Controller
     {
         $params = $request->only([
             'show',
+            'check',
         ]);
 
         $server = ServerShadowsocks::find($request->input('id'));
@@ -76,10 +77,11 @@ class ShadowsocksController extends Controller
     public function copy(Request $request)
     {
         $server = ServerShadowsocks::find($request->input('id'));
-        $server->show = 0;
         if (!$server) {
             abort(500, 'Máy chủ không tồn tại');
         }
+        $server->show = 0;
+        $server->check = 0;
         if (!ServerShadowsocks::create($server->toArray())) {
             abort(500, 'Sao chép thất bại');
         }

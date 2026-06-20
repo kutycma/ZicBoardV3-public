@@ -15,7 +15,8 @@ class ServerTrojanUpdate extends FormRequest
     public function rules()
     {
         return [
-            'show' => 'in:0,1'
+            'show' => 'nullable|in:0,1',
+            'check' => 'nullable|in:0,1'
         ];
     }
 

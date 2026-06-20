@@ -1112,3 +1112,12 @@ CREATE TABLE IF NOT EXISTS `v2_stat_online_user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `record_at` (`record_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE `v2_server_shadowsocks` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_vmess` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_vless` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_trojan` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_tuic` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_hysteria` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_anytls` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_zicnode` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
+ALTER TABLE `v2_server_v2node` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;

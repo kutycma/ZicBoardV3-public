@@ -15,6 +15,7 @@ class HysteriaController extends Controller
     {
         $params = $request->validate([
             'show' => '',
+            'check' => 'nullable|in:0,1',
             'name' => 'required',
             'version' => 'required|in:1,2',
             'group_id' => 'required|array',
@@ -91,12 +92,14 @@ class HysteriaController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'show' => 'in:0,1'
+            'show' => 'nullable|in:0,1',
+            'check' => 'nullable|in:0,1'
         ], [
             'show.in' => 'Trạng thái hiển thịkhông đúng định dạng'
         ]);
         $params = $request->only([
             'show',
+            'check',
         ]);
 
         $server = ServerHysteria::find($request->input('id'));
@@ -118,10 +121,11 @@ class HysteriaController extends Controller
     public function copy(Request $request)
     {
         $server = ServerHysteria::find($request->input('id'));
-        $server->show = 0;
         if (!$server) {
             abort(500, 'Máy chủ không tồn tại');
         }
+        $server->show = 0;
+        $server->check = 0;
         if (!ServerHysteria::create($server->toArray())) {
             abort(500, 'Sao chép thất bại');
         }

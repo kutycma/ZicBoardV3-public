@@ -15,6 +15,7 @@ class ServerShadowsocksSave extends FormRequest
     {
         return [
             'show' => '',
+            'check' => 'nullable|in:0,1',
             'name' => 'required',
             'group_id' => 'required|array',
             'parent_id' => 'nullable|integer',

@@ -59,6 +59,7 @@ class VmessController extends Controller
     {
         $params = $request->only([
             'show',
+            'check',
         ]);
 
         $server = ServerVmess::find($request->input('id'));
@@ -80,10 +81,11 @@ class VmessController extends Controller
     public function copy(Request $request)
     {
         $server = ServerVmess::find($request->input('id'));
-        $server->show = 0;
         if (!$server) {
             abort(500, 'Máy chủ không tồn tại');
         }
+        $server->show = 0;
+        $server->check = 0;
         if (!ServerVmess::create($server->toArray())) {
             abort(500, 'Sao chép thất bại');
         }

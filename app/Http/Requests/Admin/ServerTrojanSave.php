@@ -15,6 +15,7 @@ class ServerTrojanSave extends FormRequest
     {
         return [
             'show' => '',
+            'check' => 'nullable|in:0,1',
             'name' => 'required',
             'group_id' => 'required|array',
             'route_id' => 'nullable|array',

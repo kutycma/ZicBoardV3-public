@@ -69,6 +69,7 @@ class ZicBoardUpdate extends Command
             $this->repairSubscriptionMigration();
             $this->repairServerRateSchema();
             $this->repairServerLoadIpSchema();
+            $this->repairServerCheckSchema();
             $this->repairZicnodeNodeCompatibility();
             $this->repairLegacyTlsSettingsSchema();
             $this->repairSingleSubscriptionMode();
@@ -108,7 +109,8 @@ class ZicBoardUpdate extends Command
         }
         $this->repairSubscriptionMigration();
         $this->repairServerRateSchema();
-            $this->repairServerLoadIpSchema();
+        $this->repairServerLoadIpSchema();
+        $this->repairServerCheckSchema();
         $this->repairZicnodeNodeCompatibility();
         $this->repairLegacyTlsSettingsSchema();
         $this->repairSingleSubscriptionMode();
@@ -694,6 +696,13 @@ class ZicBoardUpdate extends Command
         }
     }
 
+    private function repairServerCheckSchema()
+    {
+        foreach ($this->serverNodeTables() as $table) {
+            $this->ensureColumn($table, 'check', 'ADD `check` tinyint(1) NOT NULL DEFAULT ''0'' AFTER `show`');
+        }
+    }
+
     private function serverNodeTables()
     {
         return [
@@ -765,6 +774,7 @@ class ZicBoardUpdate extends Command
                     `load_ips` text DEFAULT NULL,
                     `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
                     `show` tinyint(1) NOT NULL DEFAULT '0',
+                    `check` tinyint(1) NOT NULL DEFAULT '0',
                     `sort` int(11) DEFAULT NULL,
                     `protocol` varchar(24) NOT NULL DEFAULT 'vless',
                     `tls` tinyint(1) NOT NULL DEFAULT '0',
@@ -835,6 +845,7 @@ class ZicBoardUpdate extends Command
             'load_ips' => "ADD `load_ips` text DEFAULT NULL AFTER `tags`",
             'rate' => "ADD `rate` decimal(10,2) NOT NULL DEFAULT '1.00' AFTER `tags`",
             'show' => "ADD `show` tinyint(1) NOT NULL DEFAULT '0' AFTER `rate`",
+            'check' => "ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`",
             'sort' => "ADD `sort` int(11) DEFAULT NULL AFTER `show`",
             'protocol' => "ADD `protocol` varchar(24) NOT NULL DEFAULT 'vless' AFTER `sort`",
             'tls' => "ADD `tls` tinyint(1) NOT NULL DEFAULT '0' AFTER `protocol`",
@@ -872,6 +883,7 @@ class ZicBoardUpdate extends Command
             'rate' => "'1.00'",
             'load_ips' => 'NULL',
             'show' => '0',
+            'check' => '0',
             'protocol' => "'vless'",
             'tls' => '0',
             'tls_settings' => "'{}'",

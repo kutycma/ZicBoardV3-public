@@ -15,6 +15,7 @@ class AnyTLSController extends Controller
     {
         $params = $request->validate([
             'show' => '',
+            'check' => 'nullable|in:0,1',
             'name' => 'required',
             'group_id' => 'required|array',
             'route_id' => 'nullable|array',
@@ -76,12 +77,14 @@ class AnyTLSController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'show' => 'in:0,1'
+            'show' => 'nullable|in:0,1',
+            'check' => 'nullable|in:0,1'
         ], [
             'show.in' => 'Trạng thái hiển thịkhông đúng định dạng'
         ]);
         $params = $request->only([
             'show',
+            'check',
         ]);
 
         $server = ServerAnytls::find($request->input('id'));
@@ -89,7 +92,7 @@ class AnyTLSController extends Controller
         if (!$server) {
             abort(500, 'Máy chủ này không tồn tại');
         }
-        if ((int)($params['show'] ?? 0) === 1) {
+        if (array_key_exists('show', $params) && (int)($params['show'] ?? 0) === 1) {
             (new ProtectedFeatureService())->ensureEnabled();
         }
         try {
@@ -106,10 +109,11 @@ class AnyTLSController extends Controller
     public function copy(Request $request)
     {
         $server = ServerAnytls::find($request->input('id'));
-        $server->show = 0;
         if (!$server) {
             abort(500, 'Máy chủ không tồn tại');
         }
+        $server->show = 0;
+        $server->check = 0;
         if (!ServerAnytls::create($server->toArray())) {
             abort(500, 'Sao chép thất bại');
         }
