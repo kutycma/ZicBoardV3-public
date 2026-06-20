@@ -65,7 +65,8 @@ class UserDeviceController extends Controller
             $matchedIds = $deviceService->filterOnlineDeviceIdsByNode(
                 $candidateIds,
                 $nodeFilter['node_type'],
-                $nodeFilter['node_id']
+                $nodeFilter['node_id'],
+                $nodeFilter['online_ip'] ?? null
             );
             $total = count($matchedIds);
             $pageIds = array_slice($matchedIds, ($current - 1) * $pageSize, $pageSize);
@@ -166,6 +167,7 @@ class UserDeviceController extends Controller
     {
         $nodeType = null;
         $nodeId = null;
+        $onlineIp = null;
 
         foreach ($request->input('filter', []) ?: [] as $filter) {
             $key = $filter['key'] ?? '';
@@ -185,16 +187,19 @@ class UserDeviceController extends Controller
                 if ($id > 0) {
                     $nodeId = $id;
                 }
+            } elseif ($key === 'online_ip') {
+                $onlineIp = $value;
             }
         }
 
-        if ($nodeType === null && $nodeId === null) {
+        if ($nodeType === null && $nodeId === null && $onlineIp === null) {
             return null;
         }
 
         return [
             'node_type' => $nodeType,
-            'node_id' => $nodeId
+            'node_id' => $nodeId,
+            'online_ip' => $onlineIp
         ];
     }
 

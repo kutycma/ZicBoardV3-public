@@ -400,7 +400,7 @@ class UserDeviceService
         return $devices;
     }
 
-    public function filterOnlineDeviceIdsByNode(array $deviceIds, $nodeType = null, $nodeId = null): array
+    public function filterOnlineDeviceIdsByNode(array $deviceIds, $nodeType = null, $nodeId = null, $onlineIp = null): array
     {
         $deviceIds = array_values(array_unique(array_filter(array_map('intval', $deviceIds), function ($id) {
             return $id > 0;
@@ -414,8 +414,9 @@ class UserDeviceService
         $nodeType = $nodeType === '' ? null : $nodeType;
         $nodeId = (int)$nodeId;
         $nodeId = $nodeId > 0 ? $nodeId : null;
+        $onlineIp = $this->normalizeComparableOnlineIp($onlineIp);
 
-        if ($nodeType === null && $nodeId === null) {
+        if ($nodeType === null && $nodeId === null && $onlineIp === null) {
             return $deviceIds;
         }
 
@@ -444,6 +445,9 @@ class UserDeviceService
                 if ($nodeId !== null && $currentId !== $nodeId) {
                     continue;
                 }
+                if ($onlineIp !== null && !$this->onlineIpListContains($node['online_ips'] ?? [], $onlineIp)) {
+                    continue;
+                }
 
                 $matchedIds[] = $keyToId[$key];
                 break;
@@ -454,6 +458,36 @@ class UserDeviceService
         return array_values(array_filter($deviceIds, function ($id) use ($matchedMap) {
             return isset($matchedMap[$id]);
         }));
+    }
+
+    private function onlineIpListContains($ips, string $needle): bool
+    {
+        foreach ($this->sanitizeOnlineIps($ips) as $ip) {
+            if ($this->normalizeComparableOnlineIp($ip) === $needle) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeComparableOnlineIp($ip): ?string
+    {
+        $ip = trim((string)$ip);
+        if ($ip === '') {
+            return null;
+        }
+
+        $ip = substr($ip, 0, self::IP_MAX_LENGTH);
+        $packed = @inet_pton($ip);
+        if ($packed !== false) {
+            $normalized = @inet_ntop($packed);
+            if ($normalized !== false) {
+                return strtolower($normalized);
+            }
+        }
+
+        return strtolower($ip);
     }
 
     private function applyHwidDecision(UserSubscription $subscription, array $decision, $devices = null): array

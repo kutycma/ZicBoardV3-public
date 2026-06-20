@@ -82,6 +82,7 @@
     "device.filterHwid": "HWID",
     "device.filterUserAgent": "Ứng dụng",
     "device.filterIp": "IP cuối",
+    "device.filterOnlineIp": "IP online",
     "device.user": "Người dùng",
     "device.plan": "Gói",
     "device.boundLimit": "Đã bind / giới hạn",

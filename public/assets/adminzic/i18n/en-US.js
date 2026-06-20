@@ -82,6 +82,7 @@
     "device.filterHwid": "HWID",
     "device.filterUserAgent": "Client",
     "device.filterIp": "Last IP",
+    "device.filterOnlineIp": "Online IP",
     "device.user": "User",
     "device.plan": "Plan",
     "device.boundLimit": "Bound / limit",
