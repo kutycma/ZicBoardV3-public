@@ -18,6 +18,8 @@ class GuestRoute
             $router->get ('/comm/config', 'V1\\Guest\\CommController@config');
             // Plan
             $router->get ('/plan/fetch', 'V1\\Guest\\PlanController@fetch');
+            // Server
+            $router->get ('/server/fetch', 'V1\\Guest\\ServerController@fetch');
         });
     }
 }

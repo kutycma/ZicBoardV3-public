@@ -34,6 +34,7 @@ BACKUP_WATCH_PATHS=(
 CLEAN_EXCLUDES=(
   "public/"
   "app/Payments/"
+  "app/Http/Controllers/V1/Guest/ServerController.php"
   "storage/"
   "bootstrap/cache/"
   "config/theme/"
