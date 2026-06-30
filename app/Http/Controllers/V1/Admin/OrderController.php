@@ -42,6 +42,10 @@ class OrderController extends Controller
     {
         $order = Order::find($request->input('id'));
         if (!$order) abort(500, 'Đơn hàng không tồn tại');
+        $user = User::where('id', $order->user_id)
+            ->select(['billing_phone', 'billing_address'])
+            ->first();
+        $order['billing_address'] = $user ? $user->billing_address : null;
         $order['commission_log'] = CommissionLog::where('trade_no', $order->trade_no)->get();
         if ($order->surplus_order_ids) {
             $order['surplus_orders'] = Order::whereIn('id', $order->surplus_order_ids)->get();

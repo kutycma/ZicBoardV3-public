@@ -16,7 +16,9 @@ class UserUpdate extends FormRequest
         return [
             'auto_renewal' => 'in:0,1',
             'remind_expire' => 'in:0,1',
-            'remind_traffic' => 'in:0,1'
+            'remind_traffic' => 'in:0,1',
+            'billing_phone' => ['nullable', 'string', 'max:32', 'regex:/^[0-9\\s+\\-().]*$/'],
+            'billing_address' => 'nullable|string|max:255'
         ];
     }
 
@@ -24,7 +26,10 @@ class UserUpdate extends FormRequest
     {
         return [
             'show.in' => __('Incorrect format of expiration reminder'),
-            'renew.in' => __('Incorrect traffic alert format')
+            'renew.in' => __('Incorrect traffic alert format'),
+            'billing_phone.regex' => __('Incorrect phone number format'),
+            'billing_phone.max' => __('Phone number is too long'),
+            'billing_address.max' => __('Address is too long')
         ];
     }
 }

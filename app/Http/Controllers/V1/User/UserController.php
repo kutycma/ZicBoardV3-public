@@ -365,6 +365,8 @@ class UserController extends Controller
             ->select([
                 'id',
                 'email',
+                'billing_phone',
+                'billing_address',
                 'transfer_enable',
                 'device_limit',
                 'token',
@@ -564,11 +566,24 @@ class UserController extends Controller
 
     public function update(UserUpdate $request)
     {
-        $updateData = $request->only([
+        $remindFields = [
             'auto_renewal',
             'remind_expire',
             'remind_traffic'
-        ]);
+        ];
+        $billingFields = [
+            'billing_phone',
+            'billing_address'
+        ];
+        $updateData = $request->only(array_merge($remindFields, $billingFields));
+        $subscriptionUpdateData = $request->only($remindFields);
+
+        foreach ($billingFields as $field) {
+            if ($request->has($field)) {
+                $value = trim((string)$request->input($field, ''));
+                $updateData[$field] = $value === '' ? null : $value;
+            }
+        }
 
         $user = User::find($request->user['id']);
         if (!$user) {
@@ -576,10 +591,12 @@ class UserController extends Controller
         }
         try {
             $user->update($updateData);
-            $subscriptionService = new SubscriptionService();
-            $subscription = $subscriptionService->getPrimaryForUser($user);
-            if ($subscription) {
-                $subscription->update($updateData);
+            if (!empty($subscriptionUpdateData)) {
+                $subscriptionService = new SubscriptionService();
+                $subscription = $subscriptionService->getPrimaryForUser($user);
+                if ($subscription) {
+                    $subscription->update($subscriptionUpdateData);
+                }
             }
         } catch (\Exception $e) {
             abort(500, __('Save failed'));

@@ -275,6 +275,16 @@ class UserController extends Controller
     public function update(UserUpdate $request)
     {
         $params = $request->validated();
+        $billingFields = [
+            'billing_phone',
+            'billing_address'
+        ];
+        foreach ($billingFields as $billingField) {
+            if (array_key_exists($billingField, $params)) {
+                $value = trim((string)($params[$billingField] ?? ''));
+                $params[$billingField] = $value === '' ? null : $value;
+            }
+        }
         $user = User::find($request->input('id'));
         if (!$user) {
             abort(500, 'Người dùng không tồn tại');
