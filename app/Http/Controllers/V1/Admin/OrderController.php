@@ -45,6 +45,7 @@ class OrderController extends Controller
         $user = User::where('id', $order->user_id)
             ->select(['billing_phone', 'billing_address'])
             ->first();
+        $order['billing_phone'] = $user ? $user->billing_phone : null;
         $order['billing_address'] = $user ? $user->billing_address : null;
         $order['commission_log'] = CommissionLog::where('trade_no', $order->trade_no)->get();
         if ($order->surplus_order_ids) {
