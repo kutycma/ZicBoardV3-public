@@ -43,8 +43,10 @@ class OrderController extends Controller
         $order = Order::find($request->input('id'));
         if (!$order) abort(500, 'Đơn hàng không tồn tại');
         $user = User::where('id', $order->user_id)
-            ->select(['billing_phone', 'billing_address'])
+            ->select(['billing_name', 'billing_tax_code', 'billing_phone', 'billing_address'])
             ->first();
+        $order['billing_name'] = $user ? $user->billing_name : null;
+        $order['billing_tax_code'] = $user ? $user->billing_tax_code : null;
         $order['billing_phone'] = $user ? $user->billing_phone : null;
         $order['billing_address'] = $user ? $user->billing_address : null;
         $order['commission_log'] = CommissionLog::where('trade_no', $order->trade_no)->get();

@@ -1121,6 +1121,7 @@ ALTER TABLE `v2_server_hysteria` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFT
 ALTER TABLE `v2_server_anytls` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
 ALTER TABLE `v2_server_zicnode` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
 ALTER TABLE `v2_server_v2node` ADD `check` tinyint(1) NOT NULL DEFAULT '0' AFTER `show`;
-ALTER TABLE `v2_user`
-ADD `billing_phone` varchar(32) DEFAULT NULL AFTER `email`,
-ADD `billing_address` varchar(255) DEFAULT NULL AFTER `billing_phone`;
+ALTER TABLE `v2_user` ADD `billing_name` varchar(128) DEFAULT NULL AFTER `email`;
+ALTER TABLE `v2_user` ADD `billing_tax_code` varchar(32) DEFAULT NULL AFTER `billing_name`;
+ALTER TABLE `v2_user` ADD `billing_phone` varchar(32) DEFAULT NULL AFTER `billing_tax_code`;
+ALTER TABLE `v2_user` ADD `billing_address` varchar(255) DEFAULT NULL AFTER `billing_phone`;

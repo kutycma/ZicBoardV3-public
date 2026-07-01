@@ -365,6 +365,8 @@ class UserController extends Controller
             ->select([
                 'id',
                 'email',
+                'billing_name',
+                'billing_tax_code',
                 'billing_phone',
                 'billing_address',
                 'transfer_enable',
@@ -572,6 +574,8 @@ class UserController extends Controller
             'remind_traffic'
         ];
         $billingFields = [
+            'billing_name',
+            'billing_tax_code',
             'billing_phone',
             'billing_address'
         ];

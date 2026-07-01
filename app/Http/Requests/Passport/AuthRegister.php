@@ -19,6 +19,8 @@ class AuthRegister extends FormRequest
         ];
 
         if ((int)config('zicboard.billing_info_enable', 0)) {
+            $rules['billing_name'] = 'nullable|string|max:128';
+            $rules['billing_tax_code'] = ['nullable', 'string', 'max:32', 'regex:/^[0-9-]*$/'];
             $rules['billing_phone'] = ['nullable', 'string', 'max:32', 'regex:/^[0-9\\s+\\-().]*$/'];
             $rules['billing_address'] = 'nullable|string|max:255';
         }
@@ -33,6 +35,9 @@ class AuthRegister extends FormRequest
             'email.regex' => __('Email format is incorrect'),
             'password.required' => __('Password can not be empty'),
             'password.min' => __('Password must be greater than 8 digits'),
+            'billing_name.max' => __('Billing name is too long'),
+            'billing_tax_code.regex' => __('Tax code format is incorrect'),
+            'billing_tax_code.max' => __('Tax code is too long'),
             'billing_phone.regex' => __('Incorrect phone number format'),
             'billing_phone.max' => __('Phone number is too long'),
             'billing_address.max' => __('Address is too long')

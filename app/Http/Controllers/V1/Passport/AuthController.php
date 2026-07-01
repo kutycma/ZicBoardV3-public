@@ -79,10 +79,16 @@ class AuthController extends Controller
         $user->email = $email;
         $user->password = password_hash($password, PASSWORD_DEFAULT);
         if ((int)config('zicboard.billing_info_enable', 0)) {
-            $billingPhone = trim((string)$request->input('billing_phone', ''));
-            $billingAddress = trim((string)$request->input('billing_address', ''));
-            $user->billing_phone = $billingPhone === '' ? null : $billingPhone;
-            $user->billing_address = $billingAddress === '' ? null : $billingAddress;
+            $billingFields = [
+                'billing_name',
+                'billing_tax_code',
+                'billing_phone',
+                'billing_address'
+            ];
+            foreach ($billingFields as $field) {
+                $value = trim((string)$request->input($field, ''));
+                $user->{$field} = $value === '' ? null : $value;
+            }
         }
         $user->uuid = Helper::guid(true);
         $user->token = Helper::guid();

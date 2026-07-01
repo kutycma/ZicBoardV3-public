@@ -276,6 +276,8 @@ class UserController extends Controller
     {
         $params = $request->validated();
         $billingFields = [
+            'billing_name',
+            'billing_tax_code',
             'billing_phone',
             'billing_address'
         ];

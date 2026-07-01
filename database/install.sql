@@ -604,6 +604,8 @@ CREATE TABLE `v2_user` (
                            `invite_user_id` int(11) DEFAULT NULL,
                            `telegram_id` bigint(20) DEFAULT NULL,
                            `email` varchar(64) NOT NULL,
+                           `billing_name` varchar(128) DEFAULT NULL,
+                           `billing_tax_code` varchar(32) DEFAULT NULL,
                            `billing_phone` varchar(32) DEFAULT NULL,
                            `billing_address` varchar(255) DEFAULT NULL,
                            `password` varchar(64) NOT NULL,

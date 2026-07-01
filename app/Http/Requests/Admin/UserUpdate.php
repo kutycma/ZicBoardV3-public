@@ -32,6 +32,8 @@ class UserUpdate extends FormRequest
             'commission_type' => 'integer',
             'commission_balance' => 'integer',
             'remarks' => 'nullable',
+            'billing_name' => 'nullable|string|max:128',
+            'billing_tax_code' => ['nullable', 'string', 'max:32', 'regex:/^[0-9-]*$/'],
             'billing_phone' => ['nullable', 'string', 'max:32', 'regex:/^[0-9\\s+\\-().]*$/'],
             'billing_address' => 'nullable|string|max:255',
             'speed_limit' => 'nullable|integer'
@@ -68,6 +70,9 @@ class UserUpdate extends FormRequest
             'balance.integer' => 'Số dưkhông đúng định dạng',
             'commission_balance.integer' => 'Hoa hồngkhông đúng định dạng',
             'password.min' => 'Mật khẩu tối thiểu 8 ký tự',
+            'billing_name.max' => 'Ho ten toi da 128 ky tu',
+            'billing_tax_code.regex' => 'Ma so thue chi gom so va dau gach ngang',
+            'billing_tax_code.max' => 'Ma so thue toi da 32 ky tu',
             'billing_phone.regex' => 'So dien thoai khong dung dinh dang',
             'billing_phone.max' => 'So dien thoai toi da 32 ky tu',
             'billing_address.max' => 'Dia chi toi da 255 ky tu',
