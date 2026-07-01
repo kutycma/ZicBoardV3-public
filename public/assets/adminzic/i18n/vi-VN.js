@@ -261,6 +261,8 @@
     "config.site.tosUrlHelp": "URL bên ngoài cho điều khoản người dùng.",
     "config.site.stopRegister": "Ngừng đăng ký người dùng mới",
     "config.site.stopRegisterHelp": "Khi bật, người dùng mới không thể đăng ký tài khoản.",
+    "config.site.billingInfoEnable": "Hiển thị thông tin VAT cho user",
+    "config.site.billingInfoEnableHelp": "Cho phép user nhập số điện thoại và địa chỉ xuất VAT ở đăng ký và hồ sơ.",
     "config.site.trialPlan": "Gói dùng thử",
     "config.site.trialPlanHelp": "Gói được cấp làm bản dùng thử. Tắt khi không cần cung cấp bản dùng thử.",
     "config.site.trialHours": "Thời gian dùng thử (giờ)",

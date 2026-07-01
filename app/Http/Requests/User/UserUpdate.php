@@ -13,13 +13,18 @@ class UserUpdate extends FormRequest
      */
     public function rules()
     {
-        return [
+        $rules = [
             'auto_renewal' => 'in:0,1',
             'remind_expire' => 'in:0,1',
-            'remind_traffic' => 'in:0,1',
-            'billing_phone' => ['nullable', 'string', 'max:32', 'regex:/^[0-9\\s+\\-().]*$/'],
-            'billing_address' => 'nullable|string|max:255'
+            'remind_traffic' => 'in:0,1'
         ];
+
+        if ((int)config('zicboard.billing_info_enable', 0)) {
+            $rules['billing_phone'] = ['nullable', 'string', 'max:32', 'regex:/^[0-9\\s+\\-().]*$/'];
+            $rules['billing_address'] = 'nullable|string|max:255';
+        }
+
+        return $rules;
     }
 
     public function messages()

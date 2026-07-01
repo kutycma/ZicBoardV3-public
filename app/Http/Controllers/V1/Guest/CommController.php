@@ -18,6 +18,7 @@ class CommController extends Controller
                 'tos_url' => config('zicboard.tos_url'),
                 'is_email_verify' => (int)config('zicboard.email_verify', 0) ? 1 : 0,
                 'is_invite_force' => (int)config('zicboard.invite_force', 0) ? 1 : 0,
+                'billing_info_enable' => (int)config('zicboard.billing_info_enable', 0) ? 1 : 0,
                 'email_whitelist_suffix' => (int)config('zicboard.email_whitelist_enable', 0)
                     ? $this->getEmailSuffix()
                     : 0,

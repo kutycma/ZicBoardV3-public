@@ -260,6 +260,8 @@
     "config.site.tosUrlHelp": "用户条款的外部链接。",
     "config.site.stopRegister": "停止新用户注册",
     "config.site.stopRegisterHelp": "启用后，新用户将无法注册账户。",
+    "config.site.billingInfoEnable": "向用户显示 VAT 信息",
+    "config.site.billingInfoEnableHelp": "允许用户在注册和个人资料页填写电话号码和开票地址。",
     "config.site.trialPlan": "试用套餐",
     "config.site.trialPlanHelp": "作为试用发放的套餐。不提供试用时禁用。",
     "config.site.trialHours": "试用时长（小时）",

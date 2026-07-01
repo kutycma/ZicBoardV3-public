@@ -206,6 +206,7 @@ class ConfigController extends Controller
             'logo' => config('zicboard.logo'),
             'force_https' => (int)config('zicboard.force_https', 0),
             'stop_register' => (int)config('zicboard.stop_register', 0),
+            'billing_info_enable' => (int)config('zicboard.billing_info_enable', 0),
             'app_name' => config('zicboard.app_name', 'ZicBoard'),
             'app_description' => config('zicboard.app_description', 'Nền tảng quản lý dịch vụ'),
             'app_url' => config('zicboard.app_url'),

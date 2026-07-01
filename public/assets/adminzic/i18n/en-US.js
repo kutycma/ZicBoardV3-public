@@ -261,6 +261,8 @@
     "config.site.tosUrlHelp": "External URL for user terms.",
     "config.site.stopRegister": "Stop new user registration",
     "config.site.stopRegisterHelp": "When enabled, new users cannot register accounts.",
+    "config.site.billingInfoEnable": "Show VAT information to users",
+    "config.site.billingInfoEnableHelp": "Allow users to enter phone number and VAT address on registration and profile pages.",
     "config.site.trialPlan": "Trial plan",
     "config.site.trialPlanHelp": "Plan granted as a trial. Disable when no trial should be offered.",
     "config.site.trialHours": "Trial duration in hours",

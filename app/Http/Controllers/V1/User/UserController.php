@@ -575,16 +575,19 @@ class UserController extends Controller
             'billing_phone',
             'billing_address'
         ];
-        $updateData = $request->only(array_merge($remindFields, $billingFields));
+        $billingInfoEnabled = (int)config('zicboard.billing_info_enable', 0) === 1;
+        $updateFields = $billingInfoEnabled ? array_merge($remindFields, $billingFields) : $remindFields;
+        $updateData = $request->only($updateFields);
         $subscriptionUpdateData = $request->only($remindFields);
 
-        foreach ($billingFields as $field) {
-            if ($request->has($field)) {
-                $value = trim((string)$request->input($field, ''));
-                $updateData[$field] = $value === '' ? null : $value;
+        if ($billingInfoEnabled) {
+            foreach ($billingFields as $field) {
+                if ($request->has($field)) {
+                    $value = trim((string)$request->input($field, ''));
+                    $updateData[$field] = $value === '' ? null : $value;
+                }
             }
         }
-
         $user = User::find($request->user['id']);
         if (!$user) {
             abort(500, __('The user does not exist'));

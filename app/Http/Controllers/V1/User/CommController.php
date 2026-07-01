@@ -24,6 +24,7 @@ class CommController extends Controller
                 'withdraw_close' => (int)config('zicboard.withdraw_close_enable', 0),
                 'currency' => config('zicboard.currency', 'VND'),
                 'currency_symbol' => config('zicboard.currency_symbol', 'VND'),
+                'billing_info_enable' => (int)config('zicboard.billing_info_enable', 0) ? 1 : 0,
                 'multiple_subscription_enable' => (int)config('zicboard.multiple_subscription_enable', 1),
                 'device_hwid_enable' => (int)config('zicboard.device_hwid_enable', 0),
                 'device_hwid_mode' => $deviceService->hwidMode(),
