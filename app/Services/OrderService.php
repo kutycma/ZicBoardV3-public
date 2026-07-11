@@ -15,6 +15,7 @@ class OrderService
 {
     CONST STR_TO_TIME = [
         'month_price' => 1,
+        'two_month_price' => 2,
         'quarter_price' => 3,
         'half_year_price' => 6,
         'year_price' => 12,
@@ -251,7 +252,7 @@ class OrderService
         $remainingTrafficRatio = $notUsedTraffic / $nowUserTraffic;
         $result = $remainingTrafficRatio * $paidTotalAmount;
         $order->surplus_amount = max($result, 0);
-        $orderModel = Order::where('subscription_id', $subscription->id)->where('period', '!=', 'reset_price')->where('status', 3);
+        $orderModel = Order::where('subscription_id', $subscription->id)->where('period', '!=', 'reset_price')->where('period', '!=', 'week_price')->where('status', 3);
         $order->surplus_order_ids = array_column($orderModel->get()->toArray(), 'id');
     }
 
@@ -261,6 +262,7 @@ class OrderService
             ->where('period', '!=', 'reset_price')
             ->where('period', '!=', 'onetime_price')
             ->where('period', '!=', 'deposit')
+            ->whereIn('period', array_keys(self::STR_TO_TIME))
             ->where('status', 3)
             ->get()
             ->toArray();
@@ -412,6 +414,8 @@ class OrderService
         switch ($str) {
             case 'month_price':
                 return strtotime('+1 month', $timestamp);
+            case 'two_month_price':
+                return strtotime('+2 month', $timestamp);
             case 'quarter_price':
                 return strtotime('+3 month', $timestamp);
             case 'half_year_price':

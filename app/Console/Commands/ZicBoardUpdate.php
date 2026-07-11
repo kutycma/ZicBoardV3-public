@@ -14,7 +14,7 @@ class ZicBoardUpdate extends Command
      *
      * @var string
      */
-    protected $signature = 'zicboard:update {--force-sql : Force database update SQL even when database/update.sql is unchanged} {--skip-database : Skip database SQL and database repair steps}';
+    protected $signature = 'zicboard:update {--force-sql : Force database update SQL even when database/update.sql is unchanged} {--skip-database : Skip database SQL and database repair steps} {--skip-stats : Skip v2_stat_user subscription repair}';
 
     /**
      * The console command description.
@@ -263,8 +263,12 @@ class ZicBoardUpdate extends Command
         $this->repairOrdersSubscriptionSchema();
         $this->line('[repair] device subscription links');
         $this->repairDevicesSubscriptionSchema();
-        $this->line('[repair] stat user subscription links');
-        $this->repairStatsSubscriptionSchema();
+        if (!$this->option('skip-stats')) {
+            $this->line('[repair] stat user subscription links');
+            $this->repairStatsSubscriptionSchema();
+        } else {
+            $this->line('[repair] skipped stat user subscription links (--skip-stats)');
+        }
     }
 
     private function repairWebconSchema()

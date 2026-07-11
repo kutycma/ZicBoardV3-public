@@ -126,7 +126,6 @@ class MigrateV2bZicToZicBoard extends Command
             'd',
             'transfer_enable',
             'expired_at',
-            'auto_renewal',
             'remind_expire',
             'remind_traffic',
             'token',
@@ -250,10 +249,16 @@ class MigrateV2bZicToZicBoard extends Command
 
     private function repairCurrentRuntimeSchema()
     {
+        $this->repairUserRuntimeSchema();
         $this->repairHappSubscribeCacheSchema();
         $this->repairStatOnlineUserSchema();
         $this->repairPlanRuntimeSchema();
         $this->repairPaymentRuntimeSchema();
+    }
+
+    private function repairUserRuntimeSchema()
+    {
+        $this->ensureColumn('v2_user', 'auto_renewal', "ADD `auto_renewal` tinyint(4) NOT NULL DEFAULT '0'" . $this->afterColumn('v2_user', 'speed_limit'));
     }
 
     private function repairHappSubscribeCacheSchema()
