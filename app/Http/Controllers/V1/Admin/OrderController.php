@@ -23,15 +23,16 @@ class OrderController extends Controller
     {
         if ($request->input('filter')) {
             foreach ($request->input('filter') as $filter) {
-                if ($filter['key'] === 'email') {
-                    $user = User::where('email', "%{$filter['value']}%")->first();
-                    if (!$user) continue;
-                    $builder->where('user_id', $user->id);
-                    continue;
-                }
-                if ($filter['condition'] === 'Tương đối') {
+                if (in_array($filter['condition'], ['like', 'Tương đối', '模糊'], true)) {
                     $filter['condition'] = 'like';
-                    $filter['value'] = "%{$filter['value']}%";
+                    $filter['value'] = Helper::likeContains($filter['value']);
+                }
+                if ($filter['key'] === 'email' || $filter['key'] === 'invite_user_email') {
+                    $userIds = User::select('id')
+                        ->where('email', $filter['condition'], $filter['value']);
+                    $column = $filter['key'] === 'email' ? 'user_id' : 'invite_user_id';
+                    $builder->whereIn($column, $userIds);
+                    continue;
                 }
                 $builder->where($filter['key'], $filter['condition'], $filter['value']);
             }

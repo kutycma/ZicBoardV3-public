@@ -52,19 +52,18 @@ class UserController extends Controller
     {
         $filters = $request->input('filter');
         if ($filters) {
-            foreach ($filters as $k => $filter) {
-                if ($filter['condition'] === 'Tương đối') {
+            foreach ($filters as $filter) {
+                if (in_array($filter['condition'], ['like', 'Tương đối', '模糊'], true)) {
                     $filter['condition'] = 'like';
-                    $filter['value'] = "%{$filter['value']}%";
+                    $filter['value'] = Helper::likeContains($filter['value']);
                 }
                 if ($filter['key'] === 'd' || $filter['key'] === 'transfer_enable') {
                     $filter['value'] = $filter['value'] * 1073741824;
                 }
                 if ($filter['key'] === 'invite_by_email') {
-                    $user = User::where('email', $filter['condition'], $filter['value'])->first();
-                    $inviteUserId = isset($user->id) ? $user->id : 0;
-                    $builder->where('invite_user_id', $inviteUserId);
-                    unset($filters[$k]);
+                    $inviteUserIds = User::select('id')
+                        ->where('email', $filter['condition'], $filter['value']);
+                    $builder->whereIn('invite_user_id', $inviteUserIds);
                     continue;
                 }
                 if ($filter['key'] === 'plan_id' && $filter['value'] == 'null') {

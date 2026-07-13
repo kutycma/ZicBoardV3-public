@@ -206,7 +206,7 @@ class SubscriptionController extends Controller
             }
 
             $condition = ($filter['condition'] ?? '=') === '=' ? '=' : 'like';
-            $value = $condition === '=' ? $filter['value'] : "%{$filter['value']}%";
+            $value = $condition === '=' ? $filter['value'] : Helper::likeContains($filter['value']);
             $builder->where($column, $condition, $value);
         }
     }

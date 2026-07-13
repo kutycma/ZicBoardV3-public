@@ -2,6 +2,7 @@
 
 namespace App\Scope;
 
+use App\Utils\Helper;
 use Illuminate\Database\Eloquent\Builder;
 
 trait FilterScope
@@ -40,7 +41,7 @@ trait FilterScope
                     continue;
                 }
                 if ($filter['condition'] === 'like') {
-                    $builder->where($filter['key'], 'like', "%{$filter['value']}%");
+                    $builder->where($filter['key'], 'like', Helper::likeContains($filter['value']));
                     continue;
                 }
             }

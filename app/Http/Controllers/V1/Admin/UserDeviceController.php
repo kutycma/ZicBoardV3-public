@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\UserDeviceReset;
 use App\Models\User;
 use App\Models\UserDevice;
 use App\Services\UserDeviceService;
+use App\Utils\Helper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -138,7 +139,7 @@ class UserDeviceController extends Controller
             }
 
             $condition = $filter['condition'] === '=' ? '=' : 'like';
-            $value = $condition === '=' ? $filter['value'] : "%{$filter['value']}%";
+            $value = $condition === '=' ? $filter['value'] : Helper::likeContains($filter['value']);
             $devices->where($column, $condition, $value);
         }
     }

@@ -15,7 +15,7 @@ class UserFetch extends FormRequest
     {
         return [
             'filter.*.key' => 'required|in:id,email,transfer_enable,device_limit,d,expired_at,uuid,token,invite_by_email,invite_user_id,plan_id,banned,remarks,is_admin,is_manager',
-            'filter.*.condition' => 'required|in:>,<,=,>=,<=,Tương đối,!=',
+            'filter.*.condition' => 'required|in:>,<,=,>=,<=,like,Tương đối,模糊,!=',
             'filter.*.value' => 'required'
         ];
     }

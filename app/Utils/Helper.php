@@ -13,6 +13,11 @@ use Illuminate\Http\Request;
 
 class Helper
 {
+    public static function likeContains($value): string
+    {
+        return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], (string)$value) . '%';
+    }
+
     public static function normalizeWebconDomain($domain): string
     {
         $domain = trim((string)$domain);
