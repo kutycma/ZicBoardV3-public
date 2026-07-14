@@ -331,6 +331,9 @@ class OrderService
         $order = $this->order;
         DB::beginTransaction();
         $order->status = 2;
+        if (in_array((int)$order->commission_status, [0, 1], true)) {
+            $order->commission_status = 3;
+        }
         if (!$order->save()) {
             DB::rollBack();
             return false;

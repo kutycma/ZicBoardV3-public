@@ -125,20 +125,30 @@ class OrderController extends Controller
 
     public function update(OrderUpdate $request)
     {
-        $params = $request->only([
-            'commission_status'
-        ]);
-
         $order = Order::where('trade_no', $request->input('trade_no'))
             ->first();
         if (!$order) {
             abort(500, 'Đơn hàng không tồn tại');
         }
+        if (!in_array((int)$order->status, [3, 4], true)) {
+            abort(422, 'Commission can only be updated for completed orders');
+        }
+        if ((int)$order->commission_status !== 0) {
+            abort(422, 'Commission has already been processed');
+        }
 
         try {
-            $order->update($params);
+            $updated = Order::where('id', $order->id)
+                ->whereIn('status', [3, 4])
+                ->where('commission_status', 0)
+                ->update([
+                    'commission_status' => (int)$request->input('commission_status')
+                ]);
         } catch (\Exception $e) {
             abort(500, 'Cập nhật thất bại');
+        }
+        if (!$updated) {
+            abort(422, 'Commission has already been processed');
         }
 
         return response([

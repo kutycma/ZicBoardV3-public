@@ -15,6 +15,7 @@ class UserUpdate extends FormRequest
     {
         return [
             'email' => 'required|string|regex:/^[^\s@]+@[^\s@]+$/',
+            'invite_user_email' => 'nullable|string|regex:/^[^\s@]+@[^\s@]+$/|exists:v2_user,email',
             'password' => 'nullable|min:8',
             'transfer_enable' => 'numeric',
             'device_limit' => 'nullable|integer',
@@ -45,6 +46,8 @@ class UserUpdate extends FormRequest
         return [
             'email.required' => 'Emailkhông được để trống',
             'email.regex' => 'Emailkhông đúng định dạng',
+            'invite_user_email.regex' => 'Email người mời không đúng định dạng',
+            'invite_user_email.exists' => 'Email người mời không tồn tại',
             'transfer_enable.numeric' => 'Dung lượngkhông đúng định dạng',
             'device_limit.integer' => 'Giới hạn thiết bịkhông đúng định dạng',
             'expired_at.integer' => 'Thời gian hết hạnkhông đúng định dạng',

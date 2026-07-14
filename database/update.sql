@@ -1125,3 +1125,7 @@ ALTER TABLE `v2_user` ADD `billing_name` varchar(128) DEFAULT NULL AFTER `email`
 ALTER TABLE `v2_user` ADD `billing_tax_code` varchar(32) DEFAULT NULL AFTER `billing_name`;
 ALTER TABLE `v2_user` ADD `billing_phone` varchar(32) DEFAULT NULL AFTER `billing_tax_code`;
 ALTER TABLE `v2_user` ADD `billing_address` varchar(255) DEFAULT NULL AFTER `billing_phone`;
+UPDATE `v2_order`
+SET `commission_status` = 3
+WHERE `status` = 2
+  AND `commission_status` IN (0, 1);

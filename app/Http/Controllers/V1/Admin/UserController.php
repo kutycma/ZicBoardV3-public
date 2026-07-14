@@ -316,13 +316,12 @@ class UserController extends Controller
         } else {
             $params['group_id'] = null;
         }
-        if ($request->input('invite_user_email')) {
-            $inviteUser = User::where('email', $request->input('invite_user_email'))->first();
-            if ($inviteUser) {
-                $params['invite_user_id'] = $inviteUser->id;
-            }
-        } else {
-            $params['invite_user_id'] = null;
+        if (array_key_exists('invite_user_email', $params)) {
+            $inviteUserEmail = $params['invite_user_email'];
+            unset($params['invite_user_email']);
+            $params['invite_user_id'] = $inviteUserEmail
+                ? (int)User::where('email', $inviteUserEmail)->value('id')
+                : null;
         }
 
         try {

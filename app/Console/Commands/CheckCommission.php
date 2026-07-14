@@ -62,6 +62,7 @@ class CheckCommission extends Command
     {
         $orders = Order::where('commission_status', 1)
             ->where('invite_user_id', '!=', NULL)
+            ->whereIn('status', [3, 4])
             ->get();
         foreach ($orders as $order) {
             DB::beginTransaction();
