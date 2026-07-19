@@ -20,4 +20,9 @@ class ServerVless extends Model
         'encryption_settings' => 'array',
         'tags' => 'array'
     ];
+
+    public function getFlowAttribute($value)
+    {
+        return $value ?? '';
+    }
 }
