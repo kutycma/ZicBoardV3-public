@@ -8,6 +8,18 @@ if [ ! -f "artisan" ] || [ ! -f "composer.json" ]; then
   echo "Vui lòng chạy install.sh từ thư mục gốc của ZicBoard."
   exit 1
 fi
+if [ "$(uname -s)" != "Linux" ] || ! command -v systemctl >/dev/null 2>&1; then
+  echo "ZicBoard core requires Linux with systemd."
+  exit 1
+fi
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Run install.sh as root so zicboard-core can start automatically."
+  exit 1
+fi
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl is required for the zicboard-core health check."
+  exit 1
+fi
 
 if ! command -v php >/dev/null 2>&1; then
   echo "PHP chưa được cài đặt hoặc không có trong PATH."
@@ -78,32 +90,12 @@ echo "Đang cài zicboard-core..."
 php scripts/core-installer.php install
 php artisan zicboard:core:sync
 
-if [ "$(uname -s)" = "Linux" ] && command -v systemctl >/dev/null 2>&1 && [ "$(id -u)" -eq 0 ]; then
-  cat >/etc/systemd/system/zicboard-core.service <<EOF
-[Unit]
-Description=ZicBoard Core
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=${ROOT_DIR}
-EnvironmentFile=-${ROOT_DIR}/.zicboard/core/core.env
-ExecStart=${ROOT_DIR}/bin/zicboard-core -listen \${ZICBOARD_CORE_LISTEN}
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-  systemctl daemon-reload
-  systemctl enable zicboard-core
-  systemctl restart zicboard-core
-  php scripts/core-installer.php health
-  php artisan zicboard:core:doctor
-  bash scripts/runtime-permissions.sh finalize
-else
-  bash scripts/runtime-permissions.sh finalize
-  echo "Bỏ qua cấu hình systemd. Hãy khởi động bin/zicboard-core thủ công hoặc cài dịch vụ bằng quyền root trên Linux."
-fi
+bash scripts/core-service.sh
+systemctl enable --now zicboard-core
+systemctl is-active --quiet zicboard-core
+systemctl is-active --quiet zicboard-core-health.timer
+php scripts/core-installer.php health
+php artisan zicboard:core:doctor
+bash scripts/runtime-permissions.sh finalize
 
 echo "Cài đặt hoàn tất."

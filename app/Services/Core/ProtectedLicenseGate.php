@@ -4,10 +4,6 @@ namespace App\Services\Core;
 
 class ProtectedLicenseGate
 {
-    private static ?int $lastIntegrityCheck = null;
-    private static bool $requestAllowed = false;
-    private const INTEGRITY_CHECK_INTERVAL = 300; // 5 minutes
-
     public function assertEnabled()
     {
         $this->assertAllowed('protected feature');
@@ -20,10 +16,6 @@ class ProtectedLicenseGate
 
     private function assertAllowed(string $scope)
     {
-        if (self::$requestAllowed) {
-            return;
-        }
-
         try {
             $rpc = new CoreRpcClient();
             $status = $rpc->call('license.status');
@@ -31,33 +23,13 @@ class ProtectedLicenseGate
             abort(503, 'ZicBoard license service is unavailable');
         }
 
-        if (!$this->licenseAllowsProtected($status)) {
-            try {
-                $refreshedStatus = $rpc->call('license.refresh');
-                if (is_array($refreshedStatus)) {
-                    $status = $refreshedStatus;
-                }
-            } catch (\Throwable $e) {
-                \Log::warning('Core license refresh failed: ' . $e->getMessage());
-            }
-        }
 
         if (!$this->licenseAllowsProtected($status)) {
+            $errorCode = is_array($status) ? (string)($status['error_code'] ?? '') : '';
+            if (in_array($errorCode, ['license_server_unreachable', 'license_server_timeout'], true)) {
+                abort(503, 'ZicBoard license service is temporarily unavailable');
+            }
             abort(403, 'ZicBoard license is not active. Please renew your license for ' . $scope);
-        }
-
-        self::$requestAllowed = true;
-
-        // Periodic runtime verification.
-        $now = time();
-        if (self::$lastIntegrityCheck === null || ($now - self::$lastIntegrityCheck) >= self::INTEGRITY_CHECK_INTERVAL) {
-            try {
-                $rpc->verifyCoreIntegrity();
-                self::$lastIntegrityCheck = $now;
-            } catch (\Throwable $e) {
-                \Log::warning('Core binary integrity check failed: ' . $e->getMessage());
-                abort(503, 'Core binary integrity verification failed');
-            }
         }
     }
 

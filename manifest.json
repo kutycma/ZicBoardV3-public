@@ -1,7 +1,8 @@
 ﻿{
-    "panel_version":  "3.1.65",
-    "required_core_version":  "0.2.5",
+    "panel_version":  "3.1.67",
+    "required_core_version":  "0.2.7",
     "core_download_endpoint":  "https://license.zicnet.vn/api/v1/core/download",
+    "license_server_url":  "https://license.zicnet.vn",
     "release_key_id":  "ed25519-v1",
     "release_public_key":  "yMvWkOXndjlt+gaWKjNpPMLA6nV5cJWQ8SLhUSgTsR8=",
     "supported_targets":  [

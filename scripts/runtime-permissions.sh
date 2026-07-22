@@ -9,13 +9,10 @@ RUNTIME_DIRS=(
   "bootstrap/cache"
   "config/theme"
   "public/theme"
-  "bin"
-  ".zicboard"
 )
 
 PRIVATE_FILES=(
   ".env"
-  ".zicboard/core/core.env"
 )
 
 usage() {
@@ -128,7 +125,7 @@ safe_chown_runtime() {
 }
 
 create_runtime_dirs() {
-  mkdir -p storage bootstrap/cache config/theme public/theme bin .zicboard/core
+  mkdir -p storage bootstrap/cache config/theme public/theme
 }
 
 chmod_runtime_dirs() {
@@ -144,9 +141,7 @@ chmod_runtime_files() {
     find "$path" -type f -exec chmod 664 {} + 2>/dev/null || echo "[runtime-permissions] WARN: unable to chmod files under $path"
   done
 
-  if [ -f "bin/zicboard-core" ]; then
-    chmod 755 bin/zicboard-core || echo "[runtime-permissions] WARN: unable to chmod bin/zicboard-core"
-  fi
+
 }
 
 chmod_private_files() {
@@ -155,9 +150,7 @@ chmod_private_files() {
     chmod 600 "$path" || echo "[runtime-permissions] WARN: unable to chmod $path"
   done
 
-  if [ -d ".zicboard/core" ]; then
-    find .zicboard/core -maxdepth 1 -type f -name '*.json' -exec chmod 600 {} + 2>/dev/null || echo "[runtime-permissions] WARN: unable to chmod .zicboard/core/*.json"
-  fi
+
 }
 
 apply_runtime_permissions() {

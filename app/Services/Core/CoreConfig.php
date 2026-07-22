@@ -190,11 +190,15 @@ class CoreConfig
     public static function isLocalRpcUrl(string $rpcUrl): bool
     {
         $parts = parse_url($rpcUrl);
-        if (!is_array($parts) || strtolower((string)($parts['scheme'] ?? '')) !== 'http') {
+        if (!is_array($parts)
+            || strtolower((string)($parts['scheme'] ?? '')) !== 'http'
+            || strtolower(trim((string)($parts['host'] ?? ''))) !== '127.0.0.1'
+            || (int)($parts['port'] ?? 0) !== 18080
+            || (string)($parts['path'] ?? '') !== '/rpc'
+            || isset($parts['user'], $parts['pass'], $parts['query'], $parts['fragment'])) {
             return false;
         }
-        $host = strtolower(trim((string)($parts['host'] ?? '')));
-        return in_array($host, ['127.0.0.1', 'localhost', '::1'], true);
+        return true;
     }
 
     public static function cachedCoreConfig(): array
@@ -237,60 +241,7 @@ class CoreConfig
 
     private static function resolveRpcUrl(array $env, array $coreEnv): array
     {
-        $configUrl = trim((string)config('core.rpc_url', ''));
-        if ($configUrl !== '' && $configUrl !== self::DEFAULT_RPC_URL) {
-            return [$configUrl, 'laravel_config'];
-        }
-
-        $envUrl = trim((string)($env['ZICBOARD_CORE_RPC_URL'] ?? ''));
-        if ($envUrl !== '') {
-            return [$envUrl, 'env_file'];
-        }
-
-        $coreEnvUrl = trim((string)($coreEnv['ZICBOARD_CORE_RPC_URL'] ?? ''));
-        if ($coreEnvUrl !== '') {
-            return [$coreEnvUrl, 'core_env'];
-        }
-
-        $listen = trim((string)($coreEnv['ZICBOARD_CORE_LISTEN'] ?? ''));
-        if ($listen !== '') {
-            return [self::deriveRpcUrlFromListen($listen), 'core_env_listen'];
-        }
-
-        if ($configUrl !== '') {
-            return [$configUrl, 'laravel_config_default'];
-        }
-
-        return [self::DEFAULT_RPC_URL, 'default'];
-    }
-
-    private static function deriveRpcUrlFromListen(string $listen): string
-    {
-        $listen = trim($listen);
-        if (stripos($listen, 'http://') === 0) {
-            return rtrim($listen, '/') . '/rpc';
-        }
-
-        $host = '127.0.0.1';
-        $port = '18080';
-        if (preg_match('/^\[([^\]]+)\]:(\d+)$/', $listen, $matches)) {
-            $host = $matches[1];
-            $port = $matches[2];
-        } elseif (preg_match('/^([^:]+):(\d+)$/', $listen, $matches)) {
-            $host = $matches[1];
-            $port = $matches[2];
-        } elseif (preg_match('/^:(\d+)$/', $listen, $matches)) {
-            $port = $matches[1];
-        }
-
-        if (in_array($host, ['', '0.0.0.0', '::'], true)) {
-            $host = '127.0.0.1';
-        }
-        if ($host === '::1') {
-            $host = '[::1]';
-        }
-
-        return 'http://' . $host . ':' . $port . '/rpc';
+        return [self::DEFAULT_RPC_URL, 'pinned_loopback'];
     }
 
     private static function parseEnvValue(string $value): string

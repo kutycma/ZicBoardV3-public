@@ -254,6 +254,7 @@ Installer sẽ:
 - tải `bin/zicboard-core`;
 - verify checksum và chữ ký;
 - tạo `zicboard-core.service`;
+- tạo health timer tự kiểm tra core mỗi phút;
 - health check license/core.
 
 Sau khi cài, các API admin/user/subscription/server yêu cầu license core đang
@@ -275,9 +276,10 @@ Khi hỏi license key, nhập key được cấp.
 Sau khi cài xong:
 
 ```bash
-chown -R www:www /www/wwwroot/panel.example.com
-chmod -R 775 storage bootstrap/cache config/theme public/theme bin .zicboard
-chmod 600 .env .zicboard/core/core.env
+cd /www/wwwroot/panel.example.com
+bash scripts/runtime-permissions.sh finalize
+bash scripts/core-service.sh
+systemctl restart zicboard-core
 ```
 
 ## 8. Cấu Hình Website Root Là `public/`
@@ -404,15 +406,17 @@ Kiểm tra core:
 
 ```bash
 systemctl status zicboard-core --no-pager
+systemctl status zicboard-core-health.timer --no-pager
 curl http://127.0.0.1:18080/health
 bin/zicboard-core status
 php scripts/core-installer.php status
 ```
 
-Kết quả `/health` phải có:
+Kết quả `/health` phải có `status` là `ok` hoặc `degraded` và `schema_version=1`.
+Trạng thái license/protected feature kiểm tra bằng RPC đã xác thực:
 
-```json
-"protected_features_enabled": true
+```bash
+php artisan zicboard:core:doctor
 ```
 
 Kiểm tra web:
@@ -514,8 +518,10 @@ reset activation trước khi cài hoặc kích hoạt lại.
 
 ```bash
 tail -n 200 storage/logs/laravel.log
-chown -R www:www /www/wwwroot/panel.example.com
-chmod -R 775 storage bootstrap/cache config/theme public/theme bin .zicboard
+cd /www/wwwroot/panel.example.com
+bash scripts/runtime-permissions.sh finalize
+bash scripts/core-service.sh
+systemctl restart zicboard-core
 php artisan config:clear
 php artisan cache:clear
 ```
@@ -533,7 +539,8 @@ Sau khi cài xong cần đạt:
 - `.env` không truy cập được qua trình duyệt.
 - `bin/`, `storage/`, `.zicboard/` không truy cập được qua trình duyệt.
 - `zicboard-core.service` đang running.
-- `/health` local có `protected_features_enabled=true`.
+- `zicboard-core-health.timer` đang active và kiểm tra mỗi phút.
+- `/health` local trả JSON hợp lệ với `status=ok|degraded`; `zicboard:core:doctor` pass.
 - Cron scheduler chạy mỗi phút.
 - Horizon queue đang chạy.
 - Database đã backup.

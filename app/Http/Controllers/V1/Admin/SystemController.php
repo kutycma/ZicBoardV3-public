@@ -140,26 +140,29 @@ class SystemController extends Controller
             $rpc = new CoreRpcClient();
             $status = $rpc->call($refresh ? 'license.refresh' : 'license.status');
             $normalized = $this->normalizeCoreLicenseStatus(is_array($status) ? $status : [], true, null, null);
-            if (!$normalized['requires_renewal']) {
-                Cache::put(CacheKey::get('CORE_LICENSE_LAST_GOOD_STATUS', null), $normalized + ['cached_at' => time()], 120);
+            if (!$normalized['requires_renewal'] && !$normalized['service_unavailable']) {
+                Cache::put(CacheKey::get('CORE_LICENSE_LAST_GOOD_STATUS', null), $normalized + ['cached_at' => time()], 900);
             }
             return $normalized;
         } catch (\Throwable $e) {
             $cached = Cache::get(CacheKey::get('CORE_LICENSE_LAST_GOOD_STATUS', null));
             if (is_array($cached)) {
+                $cached['available'] = false;
+                $cached['service_unavailable'] = true;
+                $cached['requires_renewal'] = false;
                 $cached['last_known_good'] = true;
                 $cached['stale'] = true;
-                $cached['last_refresh_error'] = $e->getMessage();
-                $cached['error'] = $e->getMessage();
-                $cached['error_code'] = $e instanceof CoreRpcException ? $e->getCoreCode() : null;
-                $cached['message'] = 'ZicBoard license status is using the last successful core check because the latest RPC check failed.';
+                $cached['last_refresh_error'] = $e instanceof CoreRpcException ? $e->getCoreCode() : 'core_rpc_error';
+                $cached['error'] = null;
+                $cached['error_code'] = $e instanceof CoreRpcException ? $e->getCoreCode() : 'core_rpc_error';
+                $cached['message'] = 'ZicBoard core is temporarily unavailable; showing the last successful license status.';
                 return $cached;
             }
             return $this->normalizeCoreLicenseStatus(
                 [],
                 false,
-                $e->getMessage(),
-                $e instanceof CoreRpcException ? $e->getCoreCode() : null
+                null,
+                $e instanceof CoreRpcException ? $e->getCoreCode() : 'core_rpc_error'
             );
         }
     }
@@ -176,23 +179,42 @@ class SystemController extends Controller
             ? (int)$status['license_expires_at']
             : $entitlementExpiresAt;
         $daysUntilExpiry = $licenseExpiresAt ? (int)ceil(($licenseExpiresAt - time()) / 86400) : null;
-        $renewalWarning = $available
+        $resolvedErrorCode = $errorCode ?: ($status['error_code'] ?? null);
+        $serverUnavailable = !$available || in_array($resolvedErrorCode, [
+            CoreRpcException::UNREACHABLE,
+            'license_server_unreachable',
+            'license_server_timeout',
+        ], true);
+        $requiresRenewal = !$serverUnavailable && (
+            in_array($resolvedErrorCode, [
+                'license_inactive',
+                'license_expired',
+                'license_suspended',
+                'license_revoked',
+                'entitlement_invalid',
+            ], true)
+            || in_array($state, ['expired', 'suspended', 'revoked', 'inactive', 'invalid', 'bound', 'blocked'], true)
+            || (!$resolvedErrorCode && (!$protected || $state !== 'active'))
+        );
+        $renewalWarning = !$serverUnavailable
             && $protected
             && $state === 'active'
             && $licenseExpiresAt
             && $daysUntilExpiry !== null
             && $daysUntilExpiry <= 14;
-        $requiresRenewal = !$available || !$protected || $state !== 'active';
-        $message = $requiresRenewal
-            ? 'ZicBoard license is not active. Please renew your license to continue using protected features.'
-            : 'ZicBoard license is active.';
+        $message = $serverUnavailable
+            ? 'ZicBoard protection service is temporarily unavailable.'
+            : ($requiresRenewal
+                ? 'ZicBoard license is not active. Please renew your license to continue using protected features.'
+                : 'ZicBoard license is active.');
 
         return [
-            'available' => $available,
+            'available' => !$serverUnavailable,
             'status' => $state,
             'active' => $active,
             'protected_features_enabled' => $protected,
             'offline_grace' => !empty($status['offline_grace']),
+            'service_unavailable' => $serverUnavailable,
             'requires_renewal' => $requiresRenewal,
             'renewal_warning' => $renewalWarning,
             'renewal_warning_days' => 14,
@@ -206,10 +228,13 @@ class SystemController extends Controller
             'grace_until' => isset($status['grace_until']) ? (int)$status['grace_until'] : null,
             'last_refresh_at' => isset($status['last_refresh_at']) ? (int)$status['last_refresh_at'] : null,
             'blocked_at' => isset($status['blocked_at']) ? (int)$status['blocked_at'] : null,
-            'error' => $error ?: ($status['error'] ?? null),
-            'error_code' => $errorCode,
+            'error' => null,
+            'error_code' => $resolvedErrorCode,
             'last_known_good' => false,
-            'stale' => false,
+            'stale' => $serverUnavailable && in_array($resolvedErrorCode, [
+                'license_server_unreachable',
+                'license_server_timeout',
+            ], true),
         ];
     }
 }

@@ -341,7 +341,7 @@ class UserController extends Controller
                         'transfer_enable' => $params['transfer_enable'] ?? $subscription->transfer_enable,
                         'u' => $params['u'] ?? $subscription->u,
                         'd' => $params['d'] ?? $subscription->d,
-                        'expired_at' => $params['expired_at'] ?? $subscription->expired_at
+                        'expired_at' => array_key_exists('expired_at', $params) ? $params['expired_at'] : $subscription->expired_at
                     ]);
                     $subscriptionService->syncUserSummary($subscription);
                     (new UserDeviceService())->ensureWaitingSlot($subscription);

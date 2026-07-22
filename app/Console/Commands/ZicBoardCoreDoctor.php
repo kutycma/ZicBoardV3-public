@@ -110,7 +110,7 @@ class ZicBoardCoreDoctor extends Command
                 $this->fail('core_health_failed', 'unexpected health status=' . $status);
                 return;
             }
-            $this->ok('core.health', 'status=' . $status . ' protected=' . (empty($health['protected_features_enabled']) ? 'false' : 'true'));
+            $this->ok('core.health', 'status=' . $status . ' schema_version=' . (int)($health['schema_version'] ?? 0));
         } catch (CoreRpcException $e) {
             $this->fail($e->getCoreCode(), $e->getMessage());
         } catch (\Throwable $e) {
@@ -141,7 +141,9 @@ class ZicBoardCoreDoctor extends Command
 
             $active = !empty($status['active']) && !empty($status['protected_features_enabled']) && (string)($status['status'] ?? '') === 'active';
             if (!$active) {
-                $this->fail(CoreRpcException::LICENSE_INACTIVE, 'license.status is not active for protected features');
+                $state = (string)($status['status'] ?? 'unknown');
+                $errorCode = (string)($status['error_code'] ?? '');
+                $this->warn('[WARN] rpc.license_status - protected features disabled (status=' . $state . ($errorCode !== '' ? ', error_code=' . $errorCode : '') . ')');
                 return;
             }
 

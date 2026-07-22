@@ -49,6 +49,18 @@ function installOrUpdateCore(string $root, string $action): void
     }
 
     $runtimeDir = $root . DIRECTORY_SEPARATOR . '.zicboard' . DIRECTORY_SEPARATOR . 'core';
+    foreach ([
+        $root . DIRECTORY_SEPARATOR . '.env',
+        $root . DIRECTORY_SEPARATOR . '.zicboard',
+        $runtimeDir,
+        $runtimeDir . DIRECTORY_SEPARATOR . 'runtime',
+        $runtimeDir . DIRECTORY_SEPARATOR . 'core.env',
+        $runtimeDir . DIRECTORY_SEPARATOR . 'state.json',
+        $root . DIRECTORY_SEPARATOR . 'bin',
+        $root . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'zicboard-core',
+    ] as $protectedPath) {
+        rejectSymlink($protectedPath);
+    }
     ensureDir($runtimeDir);
     ensureDir($root . DIRECTORY_SEPARATOR . 'bin');
 
@@ -57,10 +69,15 @@ function installOrUpdateCore(string $root, string $action): void
     if (empty($state['install_id'])) {
         $state['install_id'] = generateUuid();
     }
+    $previousState = $state;
     $previousCoreState = coreStateSnapshot($state);
 
     $env = readEnvFile($root . DIRECTORY_SEPARATOR . '.env');
-    $licenseKey = getenv('ZICBOARD_LICENSE_KEY') ?: ($env['ZICBOARD_LICENSE_KEY'] ?? '');
+    $coreEnv = readEnvFile($runtimeDir . DIRECTORY_SEPARATOR . 'core.env');
+    $licenseKey = getenv('ZICBOARD_LICENSE_KEY')
+        ?: (($coreEnv['ZICBOARD_LICENSE_KEY'] ?? '') !== ''
+            ? $coreEnv['ZICBOARD_LICENSE_KEY']
+            : ($env['ZICBOARD_LICENSE_KEY'] ?? ''));
     if ($licenseKey === '') {
         throw new RuntimeException('ZICBOARD_LICENSE_KEY is not configured in .env or environment');
     }
@@ -96,6 +113,7 @@ function installOrUpdateCore(string $root, string $action): void
 
     $tmpPath = $runtimeDir . DIRECTORY_SEPARATOR . 'zicboard-core.tmp';
     $binaryPath = $root . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'zicboard-core';
+    rejectSymlink($tmpPath);
     downloadFile((string)$download['download_url'], $tmpPath);
 
     $actualHash = hash_file('sha256', $tmpPath);
@@ -107,6 +125,9 @@ function installOrUpdateCore(string $root, string $action): void
     verifySignature($manifest, $download, $actualHash);
 
     $backupPath = null;
+    if (is_link($binaryPath)) {
+        throw new RuntimeException('Refusing to replace symlinked zicboard-core binary');
+    }
     if (is_file($binaryPath)) {
         $backupPath = $runtimeDir . DIRECTORY_SEPARATOR . 'zicboard-core.' . date('YmdHis') . '.bak';
         if (!rename($binaryPath, $backupPath)) {
@@ -137,18 +158,35 @@ function installOrUpdateCore(string $root, string $action): void
     if (!empty($download['activation_id'])) {
         $state['activation_id'] = $download['activation_id'];
     }
-    writeJsonFile($statePath, $state);
-    writeCoreEnvironment($root, $runtimeDir, $manifest, $download, $licenseKey, $state, $target);
+    try {
+        writeJsonFile($statePath, $state);
+        writeCoreEnvironment($root, $runtimeDir, $manifest, $download, $licenseKey, $state, $target);
+    } catch (Throwable $e) {
+        if (is_file($binaryPath)) {
+            @rename($binaryPath, $runtimeDir . DIRECTORY_SEPARATOR . 'zicboard-core.failed.' . date('YmdHis'));
+        }
+        if ($backupPath && is_file($backupPath)) {
+            @rename($backupPath, $binaryPath);
+        }
+        if (!$backupPath) {
+            @unlink($binaryPath);
+        }
+        try {
+            writeJsonFile($statePath, $previousState);
+        } catch (Throwable $rollbackError) {
+            // The caller keeps its own backup; never hide the original failure.
+        }
+        throw $e;
+    }
 
     echo "Installed zicboard-core {$state['core_version']} for {$target}.\n";
 }
 
 function healthCheck(string $root): void
 {
-    $url = getenv('ZICBOARD_CORE_HEALTH_URL') ?: 'http://127.0.0.1:18080/health';
+    $url = 'http://127.0.0.1:18080/health';
     $lastError = 'no response';
     $deadline = time() + 45;
-    $lastRpcAttempt = 0;
     $state = readJsonFile($root . DIRECTORY_SEPARATOR . '.zicboard' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'state.json', []);
     $expectedHash = strtolower(trim((string)($state['core_sha256'] ?? '')));
 
@@ -160,90 +198,45 @@ function healthCheck(string $root): void
             ],
         ]);
         $body = @file_get_contents($url, false, $context);
-        if ($body !== false) {
+        $httpStatus = httpStatusFromHeaders($http_response_header ?? []);
+        if ($body !== false && $httpStatus === 200) {
             $decoded = json_decode($body, true);
-            if (is_array($decoded) && in_array(($decoded['status'] ?? null), ['ok', 'degraded'], true)) {
-                $runningHash = strtolower(trim((string)($decoded['core_sha256'] ?? '')));
-                if ($expectedHash !== '' && $runningHash !== '' && !hash_equals($expectedHash, $runningHash)) {
-                    throw new RuntimeException('Core health check failed: running core checksum does not match installed artifact');
-                }
-
-                $license = $decoded['license'] ?? $decoded;
-                if (!empty($license['protected_features_enabled'])) {
-                    finishCoreHealthCheck($root);
-                    return;
-                }
-
-                if (time() - $lastRpcAttempt >= 5) {
-                    $lastRpcAttempt = time();
-                    try {
-                        $rpcStatus = coreRpcCall($root, 'license.refresh');
-                        if (is_array($rpcStatus) && !empty($rpcStatus['protected_features_enabled'])) {
-                            finishCoreHealthCheck($root);
-                            return;
-                        }
-                        $license = is_array($rpcStatus) ? $rpcStatus : $license;
-                    } catch (Throwable $e) {
-                        $lastError = $e->getMessage();
-                        sleep(2);
-                        continue;
+            if (is_array($decoded)
+                && in_array(($decoded['status'] ?? null), ['ok', 'degraded'], true)
+                && (int)($decoded['schema_version'] ?? 0) === 1) {
+                try {
+                    $build = coreRpcCall($root, 'build.info');
+                    $runningHash = strtolower(trim((string)($build['core_sha256'] ?? '')));
+                    $runningVersion = (string)($build['version'] ?? '');
+                    if (($runningHash === '' && ($runningVersion === '' || version_compare($runningVersion, '0.2.7', '>=')))
+                        || ($runningHash !== '' && $expectedHash !== '' && !hash_equals($expectedHash, $runningHash))) {
+                        throw new RuntimeException('running core checksum does not match installed artifact');
                     }
+                    $license = coreRpcCall($root, 'license.status');
+                    if (!is_array($license)) {
+                        throw new RuntimeException('license.status returned invalid data');
+                    }
+                    $licenseState = (string)($license['status'] ?? 'unknown');
+                    $licenseCode = (string)($license['error_code'] ?? '');
+                    if (!empty($license['protected_features_enabled'])) {
+                        echo "Core health check passed; license status={$licenseState}.\n";
+                    } else {
+                        echo "Core health check passed; protected features remain disabled (status={$licenseState}" . ($licenseCode !== '' ? ", error_code={$licenseCode}" : '') . ").\n";
+                    }
+                    return;
+                } catch (Throwable $e) {
+                    $lastError = $e->getMessage();
                 }
-
-                $lastError = 'license is not active for protected features: ' . ($license['error'] ?? $license['status'] ?? 'unknown');
             } else {
-                $lastError = 'invalid response';
+                $lastError = 'invalid core health response';
             }
+        } else {
+            $lastError = $httpStatus > 0 ? "core health returned HTTP {$httpStatus}" : 'core health did not respond';
         }
         sleep(2);
     } while (time() < $deadline);
 
     throw new RuntimeException('Core health check failed: ' . $lastError);
-}
-
-function assertCoreCanEncryptHappSubscribe(string $root): void
-{
-    $result = coreRpcCall($root, 'subscription.happ_encrypt', [
-        'url' => 'https://example.com/api/v3/client/subscribe?token=health-check',
-    ]);
-    if (!is_array($result) || empty($result['url']) || !is_string($result['url'])) {
-        throw new RuntimeException('Core health check failed: subscription.happ_encrypt returned no encrypted URL');
-    }
-}
-
-function finishCoreHealthCheck(string $root): void
-{
-    try {
-        assertCoreCanEncryptHappSubscribe($root);
-        echo "Core health check passed.\n";
-        return;
-    } catch (Throwable $e) {
-        if (!shouldWarnOnlyForHappHealthFailure($e)) {
-            throw $e;
-        }
-        echo "Core health check passed with warning: Happ encrypted subscription check failed: " . $e->getMessage() . "\n";
-    }
-}
-
-function shouldWarnOnlyForHappHealthFailure(Throwable $e): bool
-{
-    $strict = strtolower(trim((string)(getenv('ZICBOARD_CORE_STRICT_HAPP_HEALTH') ?: '')));
-    if (in_array($strict, ['1', 'true', 'yes', 'on'], true)) {
-        return false;
-    }
-
-    $message = strtolower($e->getMessage());
-    foreach ([
-        'happ api',
-        'unable to connect to happ',
-        'missing encrypted url',
-        'subscription.happ_encrypt returned no encrypted url',
-    ] as $needle) {
-        if (strpos($message, $needle) !== false) {
-            return true;
-        }
-    }
-    return false;
 }
 
 function coreRpcCall(string $root, string $method, array $payload = [])
@@ -257,10 +250,7 @@ function coreRpcCall(string $root, string $method, array $payload = [])
         throw new RuntimeException('ZICBOARD_CORE_RPC_SECRET is not configured');
     }
 
-    $url = getenv('ZICBOARD_CORE_RPC_URL') ?: ($env['ZICBOARD_CORE_RPC_URL'] ?? 'http://127.0.0.1:18080/rpc');
-    if (stripos((string)$url, 'http://127.0.0.1:') !== 0 && stripos((string)$url, 'http://localhost:') !== 0) {
-        throw new RuntimeException('ZICBOARD_CORE_RPC_URL must point to localhost');
-    }
+    $url = 'http://127.0.0.1:18080/rpc';
 
     $body = json_encode([
         'request_id' => bin2hex(random_bytes(16)),
@@ -590,8 +580,11 @@ function verifySignature(array $manifest, array $download, string $sha256): void
 function writeCoreEnvironment(string $root, string $runtimeDir, array $manifest, array $download, string $licenseKey, array $state, string $target): void
 {
     $env = readEnvFile($root . DIRECTORY_SEPARATOR . '.env');
-    $rpcSecret = $env['ZICBOARD_CORE_RPC_SECRET'] ?? '';
-    if ($rpcSecret === '') {
+    $coreEnv = readEnvFile($runtimeDir . DIRECTORY_SEPARATOR . 'core.env');
+    $rpcSecret = validRpcSecret($coreEnv['ZICBOARD_CORE_RPC_SECRET'] ?? '')
+        ? $coreEnv['ZICBOARD_CORE_RPC_SECRET']
+        : ($env['ZICBOARD_CORE_RPC_SECRET'] ?? '');
+    if (!validRpcSecret($rpcSecret)) {
         $rpcSecret = bin2hex(random_bytes(32));
     }
     upsertEnvValue($root . DIRECTORY_SEPARATOR . '.env', 'ZICBOARD_CORE_RPC_SECRET', $rpcSecret);
@@ -604,6 +597,14 @@ function writeCoreEnvironment(string $root, string $runtimeDir, array $manifest,
     if (stripos($licenseServerUrl, 'https://') !== 0) {
         throw new RuntimeException('License server URL must use HTTPS');
     }
+    $pinnedLicenseServerUrl = rtrim(trim((string)($manifest['license_server_url'] ?? '')), '/');
+    if ($pinnedLicenseServerUrl === '' || stripos($pinnedLicenseServerUrl, 'https://') !== 0) {
+        throw new RuntimeException('manifest.json is missing a pinned HTTPS license_server_url');
+    }
+    if (!hash_equals($pinnedLicenseServerUrl, rtrim($licenseServerUrl, '/'))) {
+        throw new RuntimeException('License server URL does not match the pinned manifest origin');
+    }
+    $licenseServerUrl = $pinnedLicenseServerUrl;
     $refreshInterval = trim((string)($env['ZICBOARD_CORE_REFRESH_INTERVAL'] ?? '15m'));
     if ($refreshInterval === '') {
         $refreshInterval = '15m';
@@ -615,7 +616,7 @@ function writeCoreEnvironment(string $root, string $runtimeDir, array $manifest,
         'ZICBOARD_LICENSE_KEY' => $licenseKey,
         'ZICBOARD_INSTALL_ID' => $state['install_id'],
         'ZICBOARD_LICENSE_PUBLIC_KEY' => $manifest['release_public_key'],
-        'ZICBOARD_CORE_ENTITLEMENT_PATH' => $runtimeDir . DIRECTORY_SEPARATOR . 'entitlement.json',
+        'ZICBOARD_CORE_ENTITLEMENT_PATH' => $runtimeDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'entitlement.json',
         'ZICBOARD_PANEL_VERSION' => (string)($manifest['panel_version'] ?? ''),
         'ZICBOARD_CORE_TARGET' => $target,
         'ZICBOARD_CORE_REFRESH_INTERVAL' => $refreshInterval,
@@ -624,14 +625,24 @@ function writeCoreEnvironment(string $root, string $runtimeDir, array $manifest,
     foreach ($values as $key => $value) {
         $lines[] = $key . '=' . str_replace(["\r", "\n"], '', (string)$value);
     }
-    file_put_contents($runtimeDir . DIRECTORY_SEPARATOR . 'core.env', implode("\n", $lines) . "\n");
-    @chmod($runtimeDir . DIRECTORY_SEPARATOR . 'core.env', 0600);
+    $coreEnvPath = $runtimeDir . DIRECTORY_SEPARATOR . 'core.env';
+    rejectSymlink($coreEnvPath);
+    $coreEnvTmp = $coreEnvPath . '.tmp';
+    rejectSymlink($coreEnvTmp);
+    if (file_put_contents($coreEnvTmp, implode("\n", $lines) . "\n", LOCK_EX) === false || !rename($coreEnvTmp, $coreEnvPath)) {
+        @unlink($coreEnvTmp);
+        throw new RuntimeException('Unable to write core.env');
+    }
+    @chmod($coreEnvPath, 0600);
 }
 
 function upsertEnvValue(string $path, string $key, string $value): void
 {
+    rejectSymlink($path);
     if (!is_file($path)) {
-        file_put_contents($path, "{$key}={$value}\n");
+        if (file_put_contents($path, "{$key}={$value}\n", LOCK_EX) === false) {
+            throw new RuntimeException("Unable to write environment file: {$path}");
+        }
         return;
     }
     $lines = file($path, FILE_IGNORE_NEW_LINES);
@@ -645,7 +656,9 @@ function upsertEnvValue(string $path, string $key, string $value): void
     if (!$updated) {
         $lines[] = $key . '=' . str_replace(["\r", "\n"], '', $value);
     }
-    file_put_contents($path, implode("\n", $lines) . "\n");
+    if (file_put_contents($path, implode("\n", $lines) . "\n", LOCK_EX) === false) {
+        throw new RuntimeException("Unable to write environment file: {$path}");
+    }
 }
 
 function readJsonFile(string $path, $default)
@@ -665,7 +678,14 @@ function readJsonFile(string $path, $default)
 function writeJsonFile(string $path, array $data): void
 {
     ensureDir(dirname($path));
-    file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+    rejectSymlink($path);
+    $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    $tmp = $path . '.tmp';
+    rejectSymlink($tmp);
+    if (file_put_contents($tmp, $encoded, LOCK_EX) === false || !rename($tmp, $path)) {
+        @unlink($tmp);
+        throw new RuntimeException("Unable to write JSON state: {$path}");
+    }
 }
 
 function readEnvFile(string $path): array
@@ -683,6 +703,18 @@ function readEnvFile(string $path): array
         $result[trim($key)] = trim($value, " \t\n\r\0\x0B\"'");
     }
     return $result;
+}
+
+function validRpcSecret(string $secret): bool
+{
+    return strlen(trim($secret)) >= 32 && !preg_match('/[\r\n]/', $secret);
+}
+
+function rejectSymlink(string $path): void
+{
+    if (is_link($path)) {
+        throw new RuntimeException("Refusing to follow symlink in core trust boundary: {$path}");
+    }
 }
 
 function ensureDir(string $path): void
