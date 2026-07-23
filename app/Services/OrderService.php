@@ -93,7 +93,7 @@ class OrderService
         }
         switch ((string)$order->period) {
             case 'onetime_price':
-                $this->buyByOneTime($order, $plan);
+                $this->buyByOneTime($plan);
                 break;
             case 'reset_price':
                 $this->buyByResetTraffic();
@@ -392,17 +392,10 @@ class OrderService
         $this->subscription->expired_at = $this->getTime($order->period, $this->subscription->expired_at);
     }
 
-    private function buyByOneTime(Order $order, Plan $plan)
+    private function buyByOneTime(Plan $plan)
     {
-        $transfer_enable = $plan->transfer_enable;
-        if (!$order->surplus_order_ids) {
-            $notUsedTraffic = ($this->subscription->transfer_enable - ($this->subscription->u + $this->subscription->d)) / 1073741824;
-            if ($notUsedTraffic > 0 && $this->subscription->expired_at == NULL) {
-                $transfer_enable += $notUsedTraffic;
-            }
-        }
         $this->buyByResetTraffic();
-        $this->subscription->transfer_enable = $transfer_enable * 1073741824;
+        $this->subscription->transfer_enable = $plan->transfer_enable * 1073741824;
         $this->subscription->device_limit = $plan->device_limit;
         $this->subscription->plan_id = $plan->id;
         $this->subscription->group_id = $plan->group_id;
