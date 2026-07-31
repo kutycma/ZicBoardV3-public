@@ -19,6 +19,7 @@ use App\Models\StatServer;
 use App\Models\StatUser;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\ServerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -476,6 +477,13 @@ class StatController extends Controller
                 'points' => array_values($points),
                 'servers' => $servers
             ]
+        ];
+    }
+
+    public function getNodeOnlineStats()
+    {
+        return [
+            'data' => (new ServerService())->getNodeOnlineStats()
         ];
     }
 

@@ -494,6 +494,55 @@ class ServerService
         }
     }
 
+    public function getNodeOnlineStats()
+    {
+        $freshAfter = time() - 300;
+        $items = [];
+
+        foreach ($this->getAllServers() as $server) {
+            if (!empty($server['parent_id'])) {
+                continue;
+            }
+
+            $hasFreshLoadIp = false;
+            foreach (($server['load_ip_online'] ?? []) as $loadIp) {
+                if ((int)($loadIp['last_push_at'] ?? 0) >= $freshAfter) {
+                    $hasFreshLoadIp = true;
+                    break;
+                }
+            }
+
+            $hasFreshPush = (int)($server['last_push_at'] ?? 0) >= $freshAfter;
+            $items[] = [
+                'server_id' => (int)$server['id'],
+                'server_type' => (string)$server['type'],
+                'server_name' => (string)($server['name'] ?? ''),
+                'online' => ($hasFreshLoadIp || $hasFreshPush)
+                    ? max(0, (int)($server['online'] ?? 0))
+                    : 0
+            ];
+        }
+
+        usort($items, function ($left, $right) {
+            $onlineComparison = $right['online'] <=> $left['online'];
+            if ($onlineComparison !== 0) {
+                return $onlineComparison;
+            }
+
+            $nameComparison = strcasecmp($left['server_name'], $right['server_name']);
+            if ($nameComparison !== 0) {
+                return $nameComparison;
+            }
+
+            $typeComparison = strcmp($left['server_type'], $right['server_type']);
+            return $typeComparison !== 0
+                ? $typeComparison
+                : $left['server_id'] <=> $right['server_id'];
+        });
+
+        return $items;
+    }
+
     public function getAllServers()
     {
         $servers = array_merge(
