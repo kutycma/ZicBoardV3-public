@@ -26,6 +26,11 @@ class ServerZicnode extends Model
         'warp_settings' => 'array',
     ];
 
+    public function getFlowAttribute($value)
+    {
+        return $value ?? '';
+    }
+
     public function getTable()
     {
         if (self::$resolvedTable) {

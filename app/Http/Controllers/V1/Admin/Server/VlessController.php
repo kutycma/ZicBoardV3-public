@@ -47,10 +47,15 @@ class VlessController extends Controller
             $params = LegacyTlsSettingsService::prepareParamsForSave('vless', $params, $server);
         }
 
+        $userFlow = $params['flow'] ?? null;
+
         if (!$server) {
             $params = LegacyTlsSettingsService::prepareParamsForSave('vless', $params);
         }
         $params = (new ProtectedFeatureService())->prepareServerParams('vless', $params);
+        
+        $params['flow'] = $userFlow;
+
         if ($params['network'] != 'tcp') {
             $params['flow'] = null;
         }

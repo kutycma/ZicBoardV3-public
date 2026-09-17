@@ -64,7 +64,15 @@ class ZicnodeController extends Controller
 
         $params = $this->normalizeWarpSettings($params);
         $params = ProtectedFeatureService::sanitizeZicnodeTlsSettings($params);
+        
+        $userFlow = $params['flow'] ?? null;
+        
         $params = (new ProtectedFeatureService())->prepareServerParams('zicnode', $params);
+
+        $params['flow'] = $userFlow;
+        if ($params['network'] != 'tcp') {
+            $params['flow'] = null;
+        }
 
         if ($server) {
             try {
