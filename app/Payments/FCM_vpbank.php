@@ -7,6 +7,8 @@ use App\Models\Order;
 /** VPBank FCM gateway: verification only; activation stays in the payment controller. */
 class FCM_vpbank
 {
+    private const BANK_BIN = '970432';
+
     protected $config;
 
     public function __construct($config)
@@ -17,17 +19,15 @@ class FCM_vpbank
     public function form()
     {
         $fields = [
-            'bank_bin' => ['Mã BIN ngân hàng', 'BIN 6 số của ngân hàng nhận; VPBank: 970432.', '970432'],
             'account_no' => ['Số tài khoản nhận', 'Số tài khoản đầy đủ, chỉ gồm chữ số; ví dụ 22928081994.', ''],
             'account_name' => ['Tên chủ tài khoản', 'Tên người nhận để quản trị viên đối chiếu, ví dụ NGUYEN VAN QUANG; không ghi vào QR.', ''],
-            'bank_name' => ['Tên ngân hàng', 'Tên hiển thị trong cấu hình quản trị, ví dụ VPBank; không ghi vào QR.', 'VPBank'],
             'content_prefix' => ['Tiền tố chuyển khoản', 'Bắt buộc 2–10 ký tự A-Z hoặc 0-9; tự chuyển thành chữ hoa. Ví dụ ZBV tạo mã ZBV1234 cho đơn 1234.', ''],
-            'webhook_secret' => ['Khóa HMAC webhook', 'Nhập secret của route từ vpb-gateway. Giữ bí mật, không dùng khóa mẫu.', ''],
+            'webhook_secret' => ['Khóa HMAC webhook', 'Dán secret của route vpb-gateway, dài ≥ 32 ký tự. Tải lại trang admin trước khi sửa cổng; giữ bí mật khóa.', ''],
             'allowed_accounts' => ['Tài khoản webhook được phép', 'Tùy chọn: các số tài khoản hoặc dạng che như XXXXXX1994, cách nhau bằng dấu phẩy. So khớp chính xác (không phân biệt hoa/thường); để trống để bỏ kiểm tra.', ''],
         ];
         $form = [];
         foreach ($fields as $key => $field) {
-            $form[$key] = ['label' => $field[0], 'description' => $field[1], 'type' => 'input', 'value' => $field[2]];
+            $form[$key] = ['label' => $field[0], 'description' => $field[1], 'type' => 'input'];
         }
         return $form;
     }
@@ -57,7 +57,7 @@ class FCM_vpbank
 
     public function pay($order)
     {
-        $bin = trim((string) ($this->config['bank_bin'] ?? '970432'));
+        $bin = self::BANK_BIN;
         $account = trim((string) ($this->config['account_no'] ?? ''));
         $id = (string) ($order['order_id'] ?? '');
         if (!preg_match('/\A[0-9]{6}\z/', $bin) || !preg_match('/\A[0-9]{1,30}\z/', $account)
@@ -89,7 +89,7 @@ class FCM_vpbank
         $timestamp = (string) $request->header('X-VPG-Timestamp', '');
         $signature = (string) $request->header('X-VPG-Signature', '');
         $secret = (string) ($this->config['webhook_secret'] ?? '');
-        if ($secret === '' || !preg_match('/\A[0-9]{1,12}\z/', $timestamp)
+        if (strlen($secret) < 32 || !preg_match('/\A[0-9]{1,12}\z/', $timestamp)
             || abs(time() - (int) $timestamp) > 300
             || !hash_equals('sha256=' . hash_hmac('sha256', $timestamp . '.' . $raw, $secret), $signature)) {
             return false;
