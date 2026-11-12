@@ -11,7 +11,7 @@
     ],
     "license": "proprietary",
     "require": {
-        "php": "^7.3.0 || ^8.0",
+        "php": "^7.4 || ^8.0",
         "fideloper/proxy": "^4.4",
         "firebase/php-jwt": "^6.3@stable || ^7.0",
         "google/recaptcha": "^1.2",
@@ -19,12 +19,13 @@
         "laravel/framework": "^8.0",
         "laravel/horizon": "^5.9.6",
         "laravel/tinker": "^2.5",
+        "league/commonmark": "^1.6",
         "linfo/linfo": "^4.0",
         "paragonie/sodium_compat": "^1.20",
         "php-curl-class/php-curl-class": "^8.6",
         "rybakit/msgpack": "^0.9.1",
         "stripe/stripe-php": "^v14.9.0",
-        "symfony/yaml": "^4.3"
+        "symfony/yaml": "^5.4"
     },
     "config": {
         "optimize-autoloader": true,

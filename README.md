@@ -6,7 +6,7 @@ configuration namespace to ZicBoard.
 
 ## Requirements
 
-- PHP 7.3 or later
+- PHP 7.4 through 8.5
 - Composer
 - MySQL 5.5 or later
 - Redis
@@ -48,7 +48,7 @@ For public release installations, use:
 bash update.sh
 ```
 
-The script updates the PHP panel with `git pull --ff-only`, installs PHP
+The script updates the PHP panel by fetching the selected branch and running `git reset --hard` to its fetched commit, installs PHP
 dependencies, applies ZicBoard migrations, downloads the free core from official GitHub Releases when
 available, and verifies the local health endpoint.
 
