@@ -72,20 +72,6 @@ else
   CORE_SECRET="$(grep '^ZICBOARD_CORE_RPC_SECRET=' .env | tail -n1 | cut -d= -f2-)"
 fi
 
-if ! grep -Eq '^ZICBOARD_LICENSE_KEY=.+' .env; then
-  printf 'Nhập license key ZicBoard: '
-  read -r LICENSE_KEY
-  if [ -z "$LICENSE_KEY" ]; then
-    echo "Bắt buộc nhập license key."
-    exit 1
-  fi
-  if grep -q '^ZICBOARD_LICENSE_KEY=' .env; then
-    sed -i "s|^ZICBOARD_LICENSE_KEY=.*|ZICBOARD_LICENSE_KEY=${LICENSE_KEY}|" .env
-  else
-    printf '\nZICBOARD_LICENSE_KEY=%s\n' "$LICENSE_KEY" >> .env
-  fi
-fi
-
 echo "Đang cài zicboard-core..."
 php scripts/core-installer.php install
 php artisan zicboard:core:sync

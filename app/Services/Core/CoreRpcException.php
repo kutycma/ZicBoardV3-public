@@ -13,7 +13,6 @@ class CoreRpcException extends RuntimeException
     public const URL_NOT_LOCAL = 'core_rpc_url_not_local';
     public const UNREACHABLE = 'core_rpc_unreachable';
     public const UNAUTHORIZED = 'core_rpc_unauthorized';
-    public const LICENSE_INACTIVE = 'core_license_inactive';
     public const ERROR = 'core_rpc_error';
 
     private string $coreCode;

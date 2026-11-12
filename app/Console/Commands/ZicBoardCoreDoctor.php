@@ -11,7 +11,7 @@ class ZicBoardCoreDoctor extends Command
 {
     protected $signature = 'zicboard:core:doctor';
 
-    protected $description = 'Check ZicBoard panel-to-core RPC configuration, connectivity, integrity, and license status';
+    protected $description = 'Check ZicBoard panel-to-core RPC configuration, connectivity, and integrity';
 
     private bool $hasError = false;
 
@@ -31,7 +31,7 @@ class ZicBoardCoreDoctor extends Command
         $client = new CoreRpcClient(null, $config);
         $this->checkHealth($client);
         $this->checkIntegrity($client);
-        $this->checkSignedRpcAndLicense($client);
+        $this->checkSignedRpc($client);
 
         if ($this->hasError) {
             $this->error('Core doctor found errors. Run php artisan zicboard:core:sync, restart zicboard-core/PHP-FPM, then run this command again.');
@@ -130,28 +130,15 @@ class ZicBoardCoreDoctor extends Command
         }
     }
 
-    private function checkSignedRpcAndLicense(CoreRpcClient $client): void
+    private function checkSignedRpc(CoreRpcClient $client): void
     {
         try {
-            $status = $client->call('license.status');
-            if (!is_array($status)) {
-                $this->fail(CoreRpcException::ERROR, 'license.status returned invalid data');
+            $result = $client->call('device.node_ids', ['device_ids' => []]);
+            if (!is_array($result)) {
+                $this->fail(CoreRpcException::ERROR, 'Signed RPC returned invalid data');
                 return;
             }
-
-            $active = !empty($status['active']) && !empty($status['protected_features_enabled']) && (string)($status['status'] ?? '') === 'active';
-            if (!$active) {
-                $state = (string)($status['status'] ?? 'unknown');
-                $errorCode = (string)($status['error_code'] ?? '');
-                $this->warn('[WARN] rpc.license_status - protected features disabled (status=' . $state . ($errorCode !== '' ? ', error_code=' . $errorCode : '') . ')');
-                return;
-            }
-
-            $detail = 'status=active protected=true';
-            if (!empty($status['license_id'])) {
-                $detail .= ' license_id=' . $status['license_id'];
-            }
-            $this->ok('rpc.license_status', $detail);
+            $this->ok('rpc.signed', 'Signed RPC is available');
         } catch (CoreRpcException $e) {
             $this->fail($e->getCoreCode(), $e->getMessage());
         } catch (\Throwable $e) {

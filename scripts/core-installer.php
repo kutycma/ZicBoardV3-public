@@ -40,13 +40,15 @@ function installOrUpdateCore(string $root, string $action): void
         throw new RuntimeException("Unsupported core target: {$target}");
     }
 
-    $endpoint = (string)($manifest['core_download_endpoint'] ?? '');
-    if ($endpoint === '' || strpos($endpoint, 'license.zicboard.example') !== false) {
-        throw new RuntimeException('core_download_endpoint is not configured in manifest.json');
+    $source = rtrim((string)($manifest['core_release_source'] ?? ''), '/');
+    if ($source !== 'https://github.com/kutycma/ZicBoardV3-public/releases/download') {
+        throw new RuntimeException('Unexpected core_release_source');
     }
-    if (stripos($endpoint, 'https://') !== 0) {
-        throw new RuntimeException('core_download_endpoint must use HTTPS');
+    $version = (string)($manifest['required_core_version'] ?? '');
+    if (!preg_match('/^\d+\.\d+\.\d+$/D', $version)) {
+        throw new RuntimeException('Invalid required_core_version');
     }
+    $assetUrl = $source . '/core-v' . $version . '/zicboard-core-' . $target;
 
     $runtimeDir = $root . DIRECTORY_SEPARATOR . '.zicboard' . DIRECTORY_SEPARATOR . 'core';
     foreach ([
@@ -70,47 +72,18 @@ function installOrUpdateCore(string $root, string $action): void
         $state['install_id'] = generateUuid();
     }
     $previousState = $state;
+    $previousEnvironment = is_file($runtimeDir . '/core.env') ? (string)file_get_contents($runtimeDir . '/core.env') : null;
     $previousCoreState = coreStateSnapshot($state);
 
-    $env = readEnvFile($root . DIRECTORY_SEPARATOR . '.env');
-    $coreEnv = readEnvFile($runtimeDir . DIRECTORY_SEPARATOR . 'core.env');
-    $licenseKey = getenv('ZICBOARD_LICENSE_KEY')
-        ?: (($coreEnv['ZICBOARD_LICENSE_KEY'] ?? '') !== ''
-            ? $coreEnv['ZICBOARD_LICENSE_KEY']
-            : ($env['ZICBOARD_LICENSE_KEY'] ?? ''));
-    if ($licenseKey === '') {
-        throw new RuntimeException('ZICBOARD_LICENSE_KEY is not configured in .env or environment');
-    }
-
-    $request = [
-        'action' => $action,
-        'license_key' => $licenseKey,
-        'install_id' => $state['install_id'],
-        'machine_fingerprint' => machineFingerprint(),
-        'panel_version' => $manifest['panel_version'] ?? '',
-        'required_core_version' => $manifest['required_core_version'] ?? '',
-        'target' => $target,
-        'current_core_version' => $state['core_version'] ?? null,
+    $download = [
+        'version' => $version,
+        'download_url' => $assetUrl,
+        'sha256' => trim(downloadReleaseText($assetUrl . '.sha256', $runtimeDir)),
+        'signature' => trim(downloadReleaseText($assetUrl . '.sig', $runtimeDir)),
     ];
-
-    $download = postJson($endpoint, $request);
-    if (empty($download['download_url'])) {
-        throw new RuntimeException('License server response is missing download_url');
+    if (!preg_match('/^[a-f0-9]{64}$/D', $download['sha256'])) {
+        throw new RuntimeException('Release checksum must be lowercase SHA256 hex');
     }
-    if (stripos((string)$download['download_url'], 'https://') !== 0) {
-        throw new RuntimeException('Core download URL must use HTTPS');
-    }
-    if (empty($download['sha256'])) {
-        throw new RuntimeException('License server response is missing sha256');
-    }
-    $pinnedPublicKey = trim((string)($manifest['release_public_key'] ?? ''));
-    if ($pinnedPublicKey === '') {
-        throw new RuntimeException('release_public_key is not configured in manifest.json');
-    }
-    if (!empty($download['public_key']) && !hash_equals($pinnedPublicKey, (string)$download['public_key'])) {
-        throw new RuntimeException('License server public key does not match manifest.json');
-    }
-
     $tmpPath = $runtimeDir . DIRECTORY_SEPARATOR . 'zicboard-core.tmp';
     $binaryPath = $root . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'zicboard-core';
     rejectSymlink($tmpPath);
@@ -149,18 +122,25 @@ function installOrUpdateCore(string $root, string $action): void
     $state['core_sha256'] = $actualHash;
     $state['updated_at'] = gmdate('c');
     if ($backupPath) {
+        if ($previousEnvironment !== null) {
+            rejectSymlink($backupPath . '.env');
+            if (file_put_contents($backupPath . '.env', $previousEnvironment, LOCK_EX) === false) {
+                @rename($binaryPath, $tmpPath);
+                @rename($backupPath, $binaryPath);
+                throw new RuntimeException('Unable to preserve rollback core environment');
+            }
+            @chmod($backupPath . '.env', 0600);
+        }
         $state['last_core_backup'] = $backupPath;
         $state['last_core_state'] = $previousCoreState;
     } else {
         unset($state['last_core_backup']);
         unset($state['last_core_state']);
     }
-    if (!empty($download['activation_id'])) {
-        $state['activation_id'] = $download['activation_id'];
-    }
+    unset($state['activation_id']);
     try {
         writeJsonFile($statePath, $state);
-        writeCoreEnvironment($root, $runtimeDir, $manifest, $download, $licenseKey, $state, $target);
+        writeCoreEnvironment($root, $runtimeDir, $manifest, $state, $target);
     } catch (Throwable $e) {
         if (is_file($binaryPath)) {
             @rename($binaryPath, $runtimeDir . DIRECTORY_SEPARATOR . 'zicboard-core.failed.' . date('YmdHis'));
@@ -212,17 +192,7 @@ function healthCheck(string $root): void
                         || ($runningHash !== '' && $expectedHash !== '' && !hash_equals($expectedHash, $runningHash))) {
                         throw new RuntimeException('running core checksum does not match installed artifact');
                     }
-                    $license = coreRpcCall($root, 'license.status');
-                    if (!is_array($license)) {
-                        throw new RuntimeException('license.status returned invalid data');
-                    }
-                    $licenseState = (string)($license['status'] ?? 'unknown');
-                    $licenseCode = (string)($license['error_code'] ?? '');
-                    if (!empty($license['protected_features_enabled'])) {
-                        echo "Core health check passed; license status={$licenseState}.\n";
-                    } else {
-                        echo "Core health check passed; protected features remain disabled (status={$licenseState}" . ($licenseCode !== '' ? ", error_code={$licenseCode}" : '') . ").\n";
-                    }
+                    echo "Core health check passed.\n";
                     return;
                 } catch (Throwable $e) {
                     $lastError = $e->getMessage();
@@ -322,6 +292,15 @@ function rollbackCore(string $root): void
         throw new RuntimeException('Unable to restore previous core binary');
     }
     @chmod($binaryPath, 0755);
+    if (is_file($backupPath . '.env')) {
+        $envPath = dirname($statePath) . DIRECTORY_SEPARATOR . 'core.env';
+        rejectSymlink($envPath);
+        rejectSymlink($backupPath . '.env');
+        if (!copy($backupPath . '.env', $envPath)) {
+            throw new RuntimeException('Unable to restore previous core environment');
+        }
+        @chmod($envPath, 0600);
+    }
     if ($previousCoreState) {
         restoreCoreState($state, $previousCoreState);
     } elseif (is_file($binaryPath)) {
@@ -386,68 +365,6 @@ function detectTarget(): string
     throw new RuntimeException("Unsupported CPU architecture: {$machine}");
 }
 
-function postJson(string $url, array $payload): array
-{
-    $body = json_encode($payload, JSON_UNESCAPED_SLASHES);
-    if ($body === false) {
-        throw new RuntimeException('Unable to encode license request');
-    }
-
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 20,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        ]);
-        if (defined('CURLOPT_PROTOCOLS') && defined('CURLPROTO_HTTPS')) {
-            curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
-        }
-        $response = curl_exec($ch);
-        $error = curl_error($ch);
-        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        if ($response === false) {
-            throw new RuntimeException('License server request failed: ' . $error);
-        }
-        if ($status < 200 || $status >= 300) {
-            throw new RuntimeException("License server returned HTTP {$status}: " . responseErrorMessage((string)$response));
-        }
-    } else {
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/json\r\n",
-                'content' => $body,
-                'timeout' => 20,
-                'ignore_errors' => true,
-            ],
-            'ssl' => [
-                'verify_peer' => true,
-                'verify_peer_name' => true,
-            ],
-        ]);
-        $response = @file_get_contents($url, false, $context);
-        if ($response === false) {
-            throw new RuntimeException('License server request failed');
-        }
-        $status = httpStatusFromHeaders($http_response_header ?? []);
-        if ($status !== 0 && ($status < 200 || $status >= 300)) {
-            throw new RuntimeException("License server returned HTTP {$status}: " . responseErrorMessage((string)$response));
-        }
-    }
-
-    $decoded = json_decode($response, true);
-    if (!is_array($decoded)) {
-        throw new RuntimeException('License server returned invalid JSON');
-    }
-    return $decoded;
-}
-
 function httpStatusFromHeaders(array $headers): int
 {
     foreach ($headers as $header) {
@@ -475,8 +392,11 @@ function responseErrorMessage(string $body): string
     return strlen($text) > 240 ? substr($text, 0, 240) : $text;
 }
 
-function downloadFile(string $url, string $destination): void
+function downloadFile(string $url, string $destination, int $redirects = 0): void
 {
+    if (stripos($url, 'https://') !== 0 || $redirects > 5) {
+        throw new RuntimeException('Downloads require HTTPS with at most five redirects');
+    }
     $maxBytes = (int)(getenv('ZICBOARD_CORE_MAX_BYTES') ?: 104857600);
     if ($maxBytes <= 0) {
         $maxBytes = 104857600;
@@ -484,6 +404,7 @@ function downloadFile(string $url, string $destination): void
     $context = stream_context_create([
         'http' => [
             'timeout' => 60,
+            'follow_location' => 0,
             'ignore_errors' => true,
         ],
         'ssl' => [
@@ -496,6 +417,16 @@ function downloadFile(string $url, string $destination): void
         throw new RuntimeException('Unable to open core download URL');
     }
     $status = httpStatusFromHeaders($http_response_header ?? []);
+    if (in_array($status, [301, 302, 303, 307, 308], true)) {
+        fclose($input);
+        foreach ($http_response_header ?? [] as $header) {
+            if (stripos($header, 'Location:') === 0) {
+                downloadFile(trim(substr($header, 9)), $destination, $redirects + 1);
+                return;
+            }
+        }
+        throw new RuntimeException('Release redirect is missing Location');
+    }
     if ($status !== 0 && ($status < 200 || $status >= 300)) {
         $body = (string)stream_get_contents($input, 1048576);
         fclose($input);
@@ -577,7 +508,7 @@ function verifySignature(array $manifest, array $download, string $sha256): void
     }
 }
 
-function writeCoreEnvironment(string $root, string $runtimeDir, array $manifest, array $download, string $licenseKey, array $state, string $target): void
+function writeCoreEnvironment(string $root, string $runtimeDir, array $manifest, array $state, string $target): void
 {
     $env = readEnvFile($root . DIRECTORY_SEPARATOR . '.env');
     $coreEnv = readEnvFile($runtimeDir . DIRECTORY_SEPARATOR . 'core.env');
@@ -588,39 +519,19 @@ function writeCoreEnvironment(string $root, string $runtimeDir, array $manifest,
         $rpcSecret = bin2hex(random_bytes(32));
     }
     upsertEnvValue($root . DIRECTORY_SEPARATOR . '.env', 'ZICBOARD_CORE_RPC_SECRET', $rpcSecret);
-    upsertEnvValue($root . DIRECTORY_SEPARATOR . '.env', 'ZICBOARD_LICENSE_KEY', $licenseKey);
-
-    $licenseServerUrl = trim((string)($download['license_server_url'] ?? ''));
-    if ($licenseServerUrl === '') {
-        throw new RuntimeException('License server response is missing license_server_url');
-    }
-    if (stripos($licenseServerUrl, 'https://') !== 0) {
-        throw new RuntimeException('License server URL must use HTTPS');
-    }
-    $pinnedLicenseServerUrl = rtrim(trim((string)($manifest['license_server_url'] ?? '')), '/');
-    if ($pinnedLicenseServerUrl === '' || stripos($pinnedLicenseServerUrl, 'https://') !== 0) {
-        throw new RuntimeException('manifest.json is missing a pinned HTTPS license_server_url');
-    }
-    if (!hash_equals($pinnedLicenseServerUrl, rtrim($licenseServerUrl, '/'))) {
-        throw new RuntimeException('License server URL does not match the pinned manifest origin');
-    }
-    $licenseServerUrl = $pinnedLicenseServerUrl;
     $refreshInterval = trim((string)($env['ZICBOARD_CORE_REFRESH_INTERVAL'] ?? '15m'));
     if ($refreshInterval === '') {
         $refreshInterval = '15m';
     }
-    $values = [
+    // Keep legacy settings inert for safe rollback to a licensed core/panel.
+    $values = array_merge($coreEnv, [
         'ZICBOARD_CORE_RPC_SECRET' => $rpcSecret,
         'ZICBOARD_CORE_LISTEN' => '127.0.0.1:18080',
-        'ZICBOARD_LICENSE_SERVER_URL' => $licenseServerUrl,
-        'ZICBOARD_LICENSE_KEY' => $licenseKey,
         'ZICBOARD_INSTALL_ID' => $state['install_id'],
-        'ZICBOARD_LICENSE_PUBLIC_KEY' => $manifest['release_public_key'],
-        'ZICBOARD_CORE_ENTITLEMENT_PATH' => $runtimeDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'entitlement.json',
         'ZICBOARD_PANEL_VERSION' => (string)($manifest['panel_version'] ?? ''),
         'ZICBOARD_CORE_TARGET' => $target,
         'ZICBOARD_CORE_REFRESH_INTERVAL' => $refreshInterval,
-    ];
+    ]);
     $lines = [];
     foreach ($values as $key => $value) {
         $lines[] = $key . '=' . str_replace(["\r", "\n"], '', (string)$value);
@@ -744,4 +655,19 @@ function generateUuid(): string
     $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
     $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
+function downloadReleaseText(string $url, string $runtimeDir): string
+{
+    $path = $runtimeDir . DIRECTORY_SEPARATOR . 'release-metadata.tmp';
+    rejectSymlink($path);
+    try {
+        downloadFile($url, $path);
+        if (filesize($path) > 1024) {
+            throw new RuntimeException('Release metadata exceeds allowed size');
+        }
+        return (string)file_get_contents($path);
+    } finally {
+        @unlink($path);
+    }
 }

@@ -1,6 +1,6 @@
-# Hướng Dẫn Người Mua ZicBoard Setup Trên aaPanel
+# Hướng Dẫn Cài ZicBoard Free Edition Setup Trên aaPanel
 
-Tài liệu này dành cho người mua ZicBoard. Bạn chỉ cần server, domain, repo/file cài đặt ZicBoard và license key được cấp. Bạn không cần build core, không cần cài license server. Trong lúc cài đặt, hệ thống tự kết nối tới `https://license.zicnet.vn` để kiểm tra license và tải core hợp lệ.
+Tài liệu này dành cho người dùng ZicBoard Free Edition (panel 3.2.0, core 0.3.0). Không cần mua, nhập key hay kích hoạt. Installer tải core từ GitHub Releases chính thức của kutycma/ZicBoardV3-public và kiểm tra checksum, chữ ký.
 
 Nguồn tham khảo aaPanel chính thức:
 
@@ -15,9 +15,8 @@ Chuẩn bị:
 - RAM tối thiểu 2 GB. Nếu ít hơn, Composer có thể lỗi thiếu RAM.
 - Quyền root SSH.
 - Domain đã trỏ A record về IP VPS, ví dụ `panel.example.com`.
-- License key ZicBoard.
-- Public repo URL hoặc file zip ZicBoard do bên bán cung cấp.
-- VPS phải truy cập HTTPS outbound được tới `license.zicnet.vn`.
+- Repo public chính thức: https://github.com/kutycma/ZicBoardV3-public.
+- VPS phải truy cập HTTPS outbound tới GitHub Releases và máy chủ tải asset của GitHub.
 
 Port nên mở:
 
@@ -208,7 +207,7 @@ mv panel.example.com panel.example.com.default.$(date +%Y%m%d%H%M%S)
 Clone repo public:
 
 ```bash
-git clone YOUR_ZICBOARD_PUBLIC_REPO_URL panel.example.com
+git clone https://github.com/kutycma/ZicBoardV3-public.git panel.example.com
 cd panel.example.com
 ```
 
@@ -249,17 +248,14 @@ Installer sẽ:
 - tạo thư mục runtime;
 - chạy trình cài đặt ZicBoard;
 - yêu cầu nhập database;
-- yêu cầu nhập license key;
-- gửi license tới `https://license.zicnet.vn` để activate;
+- tải core từ GitHub Releases chính thức (tag `core-v0.3.0`);
 - tải `bin/zicboard-core`;
 - verify checksum và chữ ký;
 - tạo `zicboard-core.service`;
 - tạo health timer tự kiểm tra core mỗi phút;
-- health check license/core.
+- health check core.
 
-Sau khi cài, các API admin/user/subscription/server yêu cầu license core đang
-active. Nếu core service dừng hoặc license hết hạn, panel sẽ trả lỗi license
-cho các thao tác vận hành chính.
+Sau khi cài, tất cả tính năng đều được bật miễn phí. Core service cần hoạt động để phục vụ các thao tác sử dụng core.
 
 Khi trình cài hỏi database, nhập:
 
@@ -271,7 +267,6 @@ DB_USERNAME=<database username đã tạo>
 DB_PASSWORD=<database password đã tạo>
 ```
 
-Khi hỏi license key, nhập key được cấp.
 
 Sau khi cài xong:
 
@@ -413,7 +408,7 @@ php scripts/core-installer.php status
 ```
 
 Kết quả `/health` phải có `status` là `ok` hoặc `degraded` và `schema_version=1`.
-Trạng thái license/protected feature kiểm tra bằng RPC đã xác thực:
+Trạng thái core và tính năng kiểm tra bằng RPC đã xác thực:
 
 ```bash
 php artisan zicboard:core:doctor
@@ -436,7 +431,7 @@ Nếu dùng Supervisor Manager, kiểm tra trạng thái trong aaPanel.
 
 ## 14. Cập Nhật ZicBoard
 
-Backup database trong aaPanel trước khi update.
+Backup database, .env và cấu hình trước khi update. Bản 3.1.x phải chạy update.sh trước hạn tắt server cũ; xem [thông báo chuyển đổi](THONG-BAO-FREE-EDITION.md).
 
 Sau đó chạy:
 
@@ -482,7 +477,7 @@ composer install --no-dev --optimize-autoloader
 
 ### Composer command not found
 
-Installer thương mại không tự tải `composer.phar`. Cài Composer trước rồi chạy lại:
+Installer không tự tải `composer.phar`. Cài Composer trước rồi chạy lại:
 
 ```bash
 php -r "copy('https://getcomposer.org/composer-stable.phar', 'composer.phar');"
@@ -493,11 +488,11 @@ composer --version
 
 ### Thiếu composer.lock
 
-Bản thương mại bắt buộc phải có `composer.lock`. Nếu thiếu file này, dừng cài đặt và yêu cầu bên bán phát hành lại gói public đã khóa dependency. Không tự resolve dependency trực tiếp trên máy khách.
+Bản public bắt buộc phải có `composer.lock`. Nếu thiếu file này, dừng cài đặt và tải lại gói public chính thức có dependency đã khóa. Không tự resolve dependency trực tiếp trên máy khách.
 
-### License không active
+### Không tải được core hoặc core không chạy
 
-Gửi cho bên bán output:
+Kiểm tra kết nối HTTPS tới GitHub Releases, kiến trúc máy (amd64/arm64), dung lượng đĩa và log:
 
 ```bash
 php scripts/core-installer.php status
@@ -505,14 +500,7 @@ curl http://127.0.0.1:18080/health
 journalctl -u zicboard-core -n 100 --no-pager
 ```
 
-Đồng thời kiểm tra server của bạn có truy cập được license service:
-
-```bash
-curl -I https://license.zicnet.vn
-```
-
-Nếu VPS vừa đổi IP outbound hoặc được chuyển sang máy mới, liên hệ bên bán để
-reset activation trước khi cài hoặc kích hoạt lại.
+Không bỏ qua kiểm tra chữ ký/checksum. Chỉ tải binary từ GitHub Releases chính thức. Không cần reset activation khi chuyển VPS; sao lưu cấu hình và database trước khi chuyển.
 
 ### Website báo 500
 
@@ -544,4 +532,4 @@ Sau khi cài xong cần đạt:
 - Cron scheduler chạy mỗi phút.
 - Horizon queue đang chạy.
 - Database đã backup.
-- License key được lưu riêng, không public.
+- Core tải từ nguồn chính thức, checksum và chữ ký hợp lệ.

@@ -349,13 +349,7 @@ class ZicnodeController extends Controller
         if (!$server) {
             abort(500, 'Máy chủ không tồn tại');
         }
-        if (array_key_exists('show', $params) && (int)($params['show'] ?? 0) === 1) {
-            $payload = $server->toArray();
-            $payload['type'] = 'zicnode';
-            if (ProtectedFeatureService::serverUsesProtected($payload)) {
-                (new ProtectedFeatureService())->ensureEnabled();
-            }
-        }
+
         try {
             $server->update($params);
         } catch (\Exception $e) {

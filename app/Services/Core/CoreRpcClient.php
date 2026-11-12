@@ -75,7 +75,7 @@ class CoreRpcClient
             $code = $error['code'] ?? 'core_rpc_error';
             $message = $error['message'] ?? 'Core RPC request failed';
             $mappedCode = $this->mapErrorCode((string)$code, (string)$message);
-            if ($mappedCode === CoreRpcException::UNAUTHORIZED || $mappedCode === CoreRpcException::LICENSE_INACTIVE) {
+            if ($mappedCode === CoreRpcException::UNAUTHORIZED) {
                 \Log::warning('Core RPC rejected request: ' . $mappedCode . ' ' . $message);
             }
             throw new CoreRpcException($mappedCode, $this->safeErrorMessage($mappedCode));
@@ -154,26 +154,10 @@ class CoreRpcClient
 
     private function safeErrorMessage(string $code): string
     {
-        if (in_array($code, ['license_server_unreachable', 'license_server_timeout'], true)) {
-            return 'ZicBoard license server is temporarily unavailable';
-        }
-        if (in_array($code, [
-            'license_required',
-            'license_inactive',
-            'license_expired',
-            'license_suspended',
-            'license_revoked',
-            CoreRpcException::LICENSE_INACTIVE,
-        ], true)) {
-            return 'ZicBoard license is not active';
-        }
-        if ($code === 'entitlement_invalid') {
-            return 'ZicBoard license entitlement is invalid';
-        }
         if ($code === CoreRpcException::UNAUTHORIZED) {
             return 'ZicBoard core authorization failed';
         }
-        return 'ZicBoard core protected operation failed';
+        return 'ZicBoard core operation failed';
     }
 
     private function mapErrorCode(string $code, string $message): string
@@ -181,9 +165,6 @@ class CoreRpcClient
         $lowerMessage = strtolower($message);
         if ($code === 'unauthorized' || strpos($lowerMessage, 'signature') !== false || strpos($lowerMessage, 'timestamp') !== false) {
             return CoreRpcException::UNAUTHORIZED;
-        }
-        if ($code === 'license_required' || strpos($lowerMessage, 'license') !== false && strpos($lowerMessage, 'required') !== false) {
-            return CoreRpcException::LICENSE_INACTIVE;
         }
         return $code !== '' ? $code : CoreRpcException::ERROR;
     }

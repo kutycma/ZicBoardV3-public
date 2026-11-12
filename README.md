@@ -1,4 +1,4 @@
-# ZicBoard
+# ZicBoard Free Edition
 
 ZicBoard is a proxy subscription and management panel developed from Xiao V2Board.
 This project keeps that foundation while moving the product name, commands, and
@@ -49,7 +49,7 @@ bash update.sh
 ```
 
 The script updates the PHP panel with `git pull --ff-only`, installs PHP
-dependencies, applies ZicBoard migrations, prepares the licensed runtime when
+dependencies, applies ZicBoard migrations, downloads the free core from official GitHub Releases when
 available, and verifies the local health endpoint.
 
 `update.sh` only runs database update/repair steps when tracked files under
@@ -60,11 +60,13 @@ To force database update/repair anyway, run:
 ZICBOARD_UPDATE_FORCE_DB=1 bash update.sh
 ```
 
-## Commercial License
+## Free Edition
 
-Some commercial features require a valid ZicBoard license. The installer and
-update script will prepare the licensed runtime automatically when the server is
-configured with a valid license key.
+Panel 3.2.0 and core 0.3.0 enable all features without a license key or activation.
+Run `bash install.sh` for a complete installation, including the core service.
+The installer obtains the binary from official [GitHub Releases](https://github.com/kutycma/ZicBoardV3-public/releases) and verifies its checksum and signature.
+
+Existing 3.1.x installations must back up the database and configuration, then run `bash update.sh` before the legacy license server shuts down. See the [transition announcement](docs/THONG-BAO-FREE-EDITION.md). Running only the Artisan update command does not replace the legacy core.
 
 ## Configuration
 
@@ -79,6 +81,4 @@ contributors whose work provides the base for this project.
 
 ## License
 
-ZicBoard commercial additions are distributed only under the commercial
-license in `LICENSE`. Portions originating from Xiao V2Board retain their
-upstream MIT notice as stated in that file.
+The panel (PHP, configurations, compiled UI, and scripts) is licensed under [GPL-3.0](LICENSE), with the upstream Xiao V2Board MIT notice preserved. The closed-source core binary is separately licensed as [freeware](LICENSE-CORE.md), including free commercial operation of your own panel. Obtain it only from official GitHub Releases; redistribution is restricted.

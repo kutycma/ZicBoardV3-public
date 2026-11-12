@@ -204,9 +204,6 @@ migrate_legacy_core_service() {
   if [ ! -f "${ROOT_DIR}/bin/zicboard-core" ] || [ ! -f "${ROOT_DIR}/.zicboard/core/core.env" ]; then
     return
   fi
-  if ! grep -Fqx "ZICBOARD_CORE_ENTITLEMENT_PATH=${ROOT_DIR}/.zicboard/core/runtime/entitlement.json" "${ROOT_DIR}/.zicboard/core/core.env"; then
-    return
-  fi
   if core_service_is_hardened; then
     return
   fi

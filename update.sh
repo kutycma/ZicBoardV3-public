@@ -126,6 +126,7 @@ CORE_RUNTIME_BACKUP_DIR=""
 CORE_UNIT_BACKUP_DIR=""
 CORE_BINARY_BACKUP_PATH=""
 CORE_RUNTIME_PATHS=(
+  ".env"
   ".zicboard/core/core.env"
   ".zicboard/core/state.json"
   ".zicboard/core/entitlement.json"
@@ -134,6 +135,8 @@ CORE_RUNTIME_PATHS=(
   ".zicboard/core/runtime/entitlement.json.blocked"
 )
 CORE_ROLLBACK_PATHS=(
+  ".env"
+  ".zicboard/core/core.env"
   ".zicboard/core/state.json"
   ".zicboard/core/entitlement.json"
   ".zicboard/core/entitlement.json.blocked"

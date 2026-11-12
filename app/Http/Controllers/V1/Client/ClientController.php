@@ -11,7 +11,6 @@ use App\Protocols\ClashMeta;
 use App\Services\ServerService;
 use App\Services\UserService;
 use App\Services\UserDeviceService;
-use App\Services\Core\ProtectedFeatureService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 
@@ -47,9 +46,7 @@ class ClientController extends Controller
             } else {
                 $serverService = new ServerService();
                 $servers = $serverService->getAvailableServers($user);
-                if ($this->usesProtectedFeature($servers)) {
-                    (new ProtectedFeatureService())->ensureEnabled();
-                }
+
                 $this->applyCustomSni($servers, $customSni);
             }
             if ($this->isHappClient($requestFlag, $userAgent)) {
@@ -142,16 +139,6 @@ class ClientController extends Controller
     private function isHappClient(string $flag, string $userAgent): bool
     {
         return strpos($flag, 'happ') !== false || strpos($userAgent, 'happ') !== false;
-    }
-
-    private function usesProtectedFeature(array $servers)
-    {
-        foreach ($servers as $server) {
-            if (ProtectedFeatureService::serverUsesProtected($server)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private function applyCustomSni(&$servers, $customSni)

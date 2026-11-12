@@ -1599,7 +1599,7 @@ class MigrateV2bZicToZicBoard extends Command
             $this->line('- Hoac: SELECT uuid, COUNT(*) FROM v2_user GROUP BY uuid HAVING COUNT(*) > 1;');
             $this->line('- Sua token/uuid cho moi user thanh gia tri duy nhat, sau do chay lai command.');
         } elseif (strpos($message, 'bi thieu token') !== false || strpos($message, 'bi thieu uuid') !== false) {
-            $this->line('- Tao token/uuid cho cac user bi thieu truoc khi migrate. Khong nen de trong vi link sub va license phu thuoc vao hai gia tri nay.');
+            $this->line('- Tao token/uuid cho cac user bi thieu truoc khi migrate. Khong nen de trong vi link sub phu thuoc vao hai gia tri nay.');
         } elseif (strpos($message, 'Illegal mix of collations') !== false) {
             $this->line('- Schema legacy va schema moi dang khac collation. Hay cap nhat code moi roi chay lai command, command se tu can collation cua v2_user_subscription theo v2_user.');
             $this->line('- Neu can sua tay tren database, hay de token/uuid/name_sni/network_settings/remarks cua v2_user_subscription cung charset/collation voi cac cot tuong ung trong v2_user.');

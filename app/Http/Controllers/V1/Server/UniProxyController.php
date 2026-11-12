@@ -40,9 +40,7 @@ class UniProxyController extends Controller
         $this->serverService = new ServerService();
         $this->nodeInfo = $this->serverService->getServer($this->nodeId, $this->nodeType);
         if (!$this->nodeInfo) abort(500, 'Máy chủ không tồn tại');
-        if ($this->usesProtectedFeature()) {
-            (new ProtectedFeatureService())->ensureEnabled();
-        }
+
     }
 
     private function usesProtectedFeature()
